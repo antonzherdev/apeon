@@ -113,6 +113,8 @@ case class Description(pack : Package,
   def dataType(env: Environment) = ScriptDataTypeEntityDescription(this)
 
   def elementDataType(env: Environment) = ScriptDataTypeEntityByDescription(this)
+
+  override def hashCode = fullName.hashCode
 }
 
 case class JoinedTable(table : Table, column : String)

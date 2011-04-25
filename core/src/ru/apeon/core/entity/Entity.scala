@@ -208,7 +208,7 @@ case class SqlEntityId(dataSource : DataSource, description : Description, id : 
 
   def const = ConstNumeric(id)
 
-  override def hashCode = ((31 + description.table.hashCode)*31 + dataSource.hashCode)*17 + id
+  override def hashCode = ((31 + description.hashCode)*31 + dataSource.hashCode)*17 + id
 
   def equalAny(id: Any) = id match {
     case i : SqlEntityId => i == this
