@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<project default="extract" basedir=".">
+	<target name="check-VAADIN">
+	    <available type="dir" file="../out/VAADIN" property="out.present"/>
+        <echo message="${out.present}" />
+	</target>
+
+	<target name="extract" depends="check-VAADIN" unless="out.present">
+		<unzip src="VAADIN.zip" dest="../out"/>
+	</target>
+</project>

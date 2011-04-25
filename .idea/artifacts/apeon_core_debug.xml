@@ -1,0 +1,23 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="apeon-core-debug">
+    <output-path>$PROJECT_DIR$/out/artifacts/apeon_core_debug</output-path>
+    <root id="root">
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="core" />
+          <element id="file-copy" path="$PROJECT_DIR$/core/log4j-debug.xml" output-file-name="log4j.xml" />
+          <element id="file-copy" path="$PROJECT_DIR$/core/akka.conf" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="scala" />
+          <element id="library" level="project" name="spring-security" />
+          <element id="library" level="project" name="quartz" />
+          <element id="library" level="project" name="slf4j" />
+          <element id="library" level="project" name="log4j" />
+          <element id="library" level="project" name="akka" />
+        </element>
+      </element>
+      <element id="javaee-facet-resources" facet="core/web/Web" />
+    </root>
+  </artifact>
+</component>

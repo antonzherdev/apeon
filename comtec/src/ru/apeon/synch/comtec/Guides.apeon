@@ -1,0 +1,5 @@
+entity Guide(dba.guides) {
+    column id integer primary key
+	
+	def toString : string = "Документ(%d)".format(id)
+}

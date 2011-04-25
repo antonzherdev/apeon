@@ -1,0 +1,17 @@
+<component name="libraryTable">
+  <library name="oce">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/1c/lib/oce/oce-core-0.5.0-iridium.jar!/" />
+      <root url="jar://$PROJECT_DIR$/1c/lib/oce/oce-camel-0.5.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/1c/lib/oce/oce-web-0.5.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/1c/lib/oce/oce-jdbc-0.5.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/1c/lib/oce/oce-jaxrs-0.5.0.jar!/" />
+      <root url="file://$PROJECT_DIR$/1c/lib/oce/lib" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/1c/lib/oce/oce-0.5.0-doc.jar!/" />
+    </JAVADOC>
+    <SOURCES />
+    <jarDirectory url="file://$PROJECT_DIR$/1c/lib/oce/lib" recursive="false" />
+  </library>
+</component>

@@ -1,0 +1,12 @@
+entity BankAccount(dba.bank) {
+    column id integer primary key
+    one organization(id_voc) Organization
+    column bankName(nm) char(98)
+    column number(rs) char(20)
+    column corrAccountNumber(ks) char(20)
+    column bik char(9)
+    column city char(30)
+    column remark(rem) char(98)
+
+    def toString = "Реквизиты банка(%d: %s: %s)".format(id, bankName, number)
+}

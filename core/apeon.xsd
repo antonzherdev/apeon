@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="apeon" type="Apeon"/>
+
+  <xs:element name="deploy" type="xs:string"/>
+
+  <xs:complexType name="страна">
+    <xs:sequence>
+      <xs:element name="название" type="xs:string"/>
+      <xs:element name="население" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

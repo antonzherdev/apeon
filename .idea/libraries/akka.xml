@@ -1,0 +1,27 @@
+<component name="libraryTable">
+  <library name="akka">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-actor-1.0.jar!/" />
+      <root url="file://$PROJECT_DIR$/lib/akka/lib" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-stm-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-typed-actor-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-http-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-remote-1.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-actor-1.0-docs.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-remote-1.0-docs.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-stm-1.0-docs.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-http-1.0-docs.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-typed-actor-1.0-docs.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-actor-1.0-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-stm-1.0-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-typed-actor-1.0-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-remote-1.0-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/akka/akka-http-1.0-sources.jar!/" />
+    </SOURCES>
+    <jarDirectory url="file://$PROJECT_DIR$/lib/akka/lib" recursive="false" />
+  </library>
+</component>

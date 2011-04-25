@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  - Application context containing authentication, channel
+  - security and web URI beans.
+  -
+  - Only used by "filter" artifact.
+  -
+  - $Id: applicationContext-acegi-security.xml 1425 2006-04-28 06:43:50Z benalex $
+  -->
+
+<b:beans xmlns="http://www.springframework.org/schema/security"
+         xmlns:b="http://www.springframework.org/schema/beans"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+                        http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.0.xsd">
+
+    <http realm="Contacts Realm" auto-config="true">
+        <intercept-url pattern="/login" filters="none"/>
+        <intercept-url pattern="/VAADIN/**" filters="none"/>
+        <intercept-url pattern="/**" access="ROLE_USER"/>        
+        <remember-me services-ref="rememberMeServices" key="zskayKeyCom"/>
+        <form-login login-page="/login"/>
+    </http>
+
+
+    <authentication-manager alias="theAuthenticationManager">
+        <authentication-provider ref="customProvider" user-service-ref="userDetailsService">
+             <password-encoder hash="md5"/>
+        </authentication-provider>
+    </authentication-manager>
+
+    <b:bean id="customProvider" class="ru.apeon.auth.ProxyAuthenticationProvider">
+    </b:bean>
+
+
+    <b:bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+        <b:property name="jndiName" value="java:comp/env/jdbc/comtec"/>
+        <b:property name="resourceRef" value="true" />
+    </b:bean>
+
+    <b:bean id="userDetailsService" class="ru.apeon.auth.ProxyUserDetailsService">
+    </b:bean>
+
+    <b:bean id="rememberMeServices" class="ru.apeon.auth.ProxyRememberMeService">
+        <b:property name="key" value="zskayKeyCom"/>
+    </b:bean>
+
+    <b:bean id="loggerListener" class="org.springframework.security.authentication.event.LoggerListener"/>
+
+</b:beans>
