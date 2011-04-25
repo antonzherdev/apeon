@@ -200,7 +200,7 @@ case class SqlEntityId(dataSource : DataSource, description : Description, id : 
   override def toString = id.toString
 
   override def equals(obj: Any) = obj match {
-    case sqlId : SqlEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description.table == description.table
+    case sqlId : SqlEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description == description
     case _ => false
   }
 
@@ -208,7 +208,7 @@ case class SqlEntityId(dataSource : DataSource, description : Description, id : 
 
   def const = ConstNumeric(id)
 
-  override def hashCode = ((31 + description.hashCode)*31 + dataSource.hashCode)*17 + id
+  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + id
 
   def equalAny(id: Any) = id match {
     case i : SqlEntityId => i == this
