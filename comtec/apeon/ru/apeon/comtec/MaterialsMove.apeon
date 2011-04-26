@@ -1,0 +1,85 @@
+package ru.apeon.comtec
+
+entity MaterialsMove<comtec>(dba.jmat) {
+    column id integer primary key
+    column date(dat) date
+    column number(nu) varchar(17)
+
+    one source(id_s) Partner
+    one destination(id_d) Partner
+
+    one consignor(id_s_cargo) Organization
+    one consignee(id_d_cargo) Organization
+
+    one guide(id_guide) Guide
+    column tp1 char(1)
+    column tp2 char(1)
+    column tp3 char(1)
+    column tp4 char(1)
+
+    column factOut(fact_out) char(1) default "1"
+
+    many materials MaterialsMoveMaterial(materialsMove)
+
+    one currency(id_curr) Currency
+    column rate(curr) decimal(14, 6)
+    column rateDate(datv) date
+
+    column ground(osn) varchar(127)        //Основание
+    column remark(rem) text       //Примечание
+    column byWhom(kogo) varchar(37)     //Через кого
+    column who(komy) varchar(37)  //Кому
+    column locked(data_lock) char(1)
+	
+	def toString : string = Format.doc("Движение материалов", id, date, number)
+}
+
+object MaterialsMove{
+	def insertToStorage : MaterialsMove = {
+		val ret = MaterialsMove.insert
+		ret.tp1 = "1"
+		ret.tp2 = "1"
+		ret.tp3 = "2"
+		ret.tp4 = "0"
+		ret.guide = 1120
+		ret.date = Date.now
+		ret
+	}
+	def insertFromStorage : MaterialsMove = {
+		val ret = MaterialsMove.insert
+		ret.tp1 = "1"
+		ret.tp2 = "2"
+		ret.tp3 = "1"
+		ret.tp4 = "0"
+		ret.guide = 1210
+		ret.date = Date.now
+		ret
+	}
+}
+
+entity MaterialsMoveMaterial<comtec>(dba.mat) {
+    column id integer primary key
+    one materialsMove(id_jmat) MaterialsMove
+    column number(nu) integer
+    one material(id_inv) Material
+
+    column quantity(kol1) decimal(17, 5)
+    column amount(summa_sale) decimal(17, 5)
+
+    column currencyAmount(summa_curr) decimal(17, 5) //Сумма в валюте в обычной накладной
+    column currencyAmountForImportExport(summa_salev) decimal(17, 5) //Сумма в валюте в валютной накладной
+    column currencyAccountAmount(summa_freev) decimal(17, 5) //Учетная сумма в валюте
+
+    column vat(percent_nds) decimal(6, 4)
+    column vatAmount(summa_nds_sale) decimal(19, 7) //Сумма НДС продажи
+    column vatAccountAmount(summa_nds) decimal(19, 7)
+
+    column accountAmount(summa) decimal(17, 5) //Учетная сумма
+
+
+    column quantity2(kol2) decimal(17, 5)
+    column mustHaveQuantity(kol3) decimal(17, 5) //Количество по документу
+    column priceListPrice(price_price) decimal(19, 7)
+	
+	def toString : string = Format.sub("Пр.движения материалов", id, number, material.name, materialsMove.toString)
+}

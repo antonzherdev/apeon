@@ -17,10 +17,10 @@ import collection.mutable.Buffer
  */
 case class Description(pack : Package,
                        name : String,
+                       defaultDataSourceName : String,
                        table : Table,
                        declaredDeclarations : Seq[DeclarationStatement],
                        discriminator : Discriminator = DiscriminatorNull(),
-                       defaultDataSourceName : Option[String] = None,
                        extendsEntityName : Option[String] = None,
                        declaredJoinedTables : Seq[JoinedTable] = Seq()) extends ClassBase
 {
@@ -62,21 +62,19 @@ case class Description(pack : Package,
     extendedFields.append(field)
   }
 
-  def model = pack.model
-
-  private var _defaultDataSource : Option[DataSource] = _
-  def defaultDataSource: Option[DataSource] = _defaultDataSource
+  private var _defaultDataSource : DataSource = _
+  def defaultDataSource: DataSource = _defaultDataSource
 
   private var _extendsEntity : Option[Description] = _
   def extendsClass : Option[Description] = _extendsEntity
 
   override def toString = fullName
 
-  def dataSource : DataSource = defaultDataSource.getOrElse(throw new RuntimeException("Default datasource has not setted"))
+  def dataSource : DataSource = defaultDataSource
 
   override def preFillRef(model : ObjectModel, imports: Imports) {
     _extendsEntity = extendsEntityName.map{name => model.entityDescription(name, Some(imports))}
-    _defaultDataSource = defaultDataSourceName.map(name => model.dataSource(name, Some(imports)))
+    _defaultDataSource = model.dataSource(defaultDataSourceName, Some(imports))
     super.preFillRef(model, imports)
   }
 
@@ -99,7 +97,7 @@ case class Description(pack : Package,
    */
   def toString(entity : Entity) : String = _toString match {
     case None => entity.defaultToString
-    case Some(d) => evaluateDef(d, entity).toString
+    case Some(d) => evaluateDef(entity.manager.model, d, entity).toString
   }
 
   private val extendedFields = Buffer[Field]()
@@ -109,7 +107,7 @@ case class Description(pack : Package,
     this
   }
 
-  def dataType(env: Environment) = ScriptDataTypeEntityDescription(this)
+  def dataType(env: Environment) = ScriptDataTypeEntityDescription(env.model, this)
 
   def elementDataType(env: Environment) = ScriptDataTypeEntityByDescription(this)
 

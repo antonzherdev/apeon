@@ -11,11 +11,11 @@ import ru.apeon.core.entity._
 class ObjectModelSpec extends Spec with ShouldMatchers with EntityDefine {
   describe("Получение сущности") {
     val model = new DefaultObjectModel
-    val pack1 = Package(model, "ru.apeon.core.test1", "1.0")
-    val pack2 = Package(model, "ru.apeon.core.test2", "1.0")
+    val pack1 = Package("ru.apeon.core.test1")
+    val pack2 = Package("ru.apeon.core.test2")
 
     def des(pack : Package, name : String) : Description = {
-      val ret = Description(pack, name, Table("", ""), Seq(Id))
+      val ret = Description(pack, name, "apeon", Table("", ""), Seq(Id))
       model.addEntityDescription(ret)
       ret
     }

@@ -7,13 +7,18 @@ import util.parsing.input.CharArrayReader.EofCh
 import util.parsing.combinator.token.Tokens
 
 object ScriptParser{
-  def parse(pack : Package, code: String) : Script = (new ScriptParser(pack.model, Some(pack))).parse(code)
-  def parse(model : ObjectModel, code: String) : Script = (new ScriptParser(model, None)).parse(code)
+  def parse(model : ObjectModel, code: String) : Script = new ScriptParser(model).parse(code)
+  def parse(model : ObjectModel, pack : Package, code: String) : Script = {
+    val parser = new ScriptParser(model)
+    parser.pack = Some(pack)
+    parser.parse(code)
+  }
 }
 
-class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) extends StdTokenParsers with ApeonTokens{
+class ScriptParser(model : ObjectModel = EntityConfiguration.model) extends StdTokenParsers with ApeonTokens{
   type Tokens = Lexer
   val lexical = new Tokens
+  var pack : Option[Package] = None
 
   def parse(code : String) = {
     val parser = phrase(script)
@@ -44,7 +49,7 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
           "if", "else", "null", "import", "object")
 
   def script : Parser[Script] = (statement*) ^^{case statements => {
-    new Script(pack.getOrElse(statements.find(_.isInstanceOf[Package])).asInstanceOf[Package], statements)
+    new Script(model, pack.get, statements)
   }}
 
 
@@ -214,9 +219,9 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
   }
 
   def entity : Parser[Description] =
-    "entity" ~> ident ~ opt("(" ~> table <~ ")") ~! (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
-      case name ~ table ~ ext ~ rows => Description(pack.get,
-        name, table.getOrElse(Table("", name)).asInstanceOf[Table],
+    "entity" ~> ident ~! ("<" ~> ident <~ ">") ~ opt("(" ~> table <~ ")") ~! (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
+      case name ~ ds ~ table ~ ext ~ rows => Description(pack.get,
+        name, ds, table.getOrElse(Table("", name)).asInstanceOf[Table],
         rows.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]],
         rows.find(_.isInstanceOf[Discriminator]).getOrElse(DiscriminatorNull()).asInstanceOf[Discriminator],
         extendsEntityName = ext,
@@ -296,10 +301,10 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
         case Def("apply", _, Seq(), _) => true
         case _ => false}.isDefined)
       {
-        Query(pack.get, name, statements.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]] )
+        Query(model, pack.get, name, statements.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]] )
       }
       else {
-        Query(pack.get, name,
+        Query(model, pack.get, name,
           Def("apply", span._2 match {
             case Seq(stm) => stm
             case _ => Parentheses(span._2)
@@ -313,8 +318,11 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
     case name ~ statements => Object(pack.get, name, statements)
   }
 
-  def packDef : Parser[NonRootPackage] = "package" ~> repsep(ident, ".") ^^ {
-    case names  => Package(model, names).asInstanceOf[NonRootPackage]
+  def packDef : Parser[Package] = "package" ~> repsep(ident, ".") ^^ {
+    case names  => {
+      pack = Some(Package(names.mkString(".")))
+      pack.get
+    }
   }
 
   def datasource = "datasource" ~> ident ^^ {case name => DataSource(pack.get, name)}

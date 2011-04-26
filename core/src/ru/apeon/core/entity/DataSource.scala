@@ -11,7 +11,7 @@ import sql.ComtecAsaSqlDialect
 
 case class DataSource(pack : Package, name : String) extends Statement with Declaration with InPackage {
   def evaluate(env: Environment) {
-    pack.model.addDataSource(this)
+    env.model.addDataSource(this)
   }
 
   def dataType(env: Environment) = ScriptDataTypeDataSource()

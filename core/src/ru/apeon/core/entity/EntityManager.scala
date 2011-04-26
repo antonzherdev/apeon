@@ -6,6 +6,7 @@ import akka.util.Logging
 import ru.apeon.core.script.{ObjectModel}
 
 trait EntityManager {
+  def model : ObjectModel
 
   /**
    * Получить сущность
@@ -50,7 +51,7 @@ trait EntityManager {
   }
 }
 
-class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) extends EntityManager with Logging {
+class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) extends EntityManager with Logging {
   protected val entities = collection.mutable.Map[EntityId, Entity]()
   protected val touchedEntities = collection.mutable.Map[Entity, Set[String]]()
   protected val insertedEntities = Buffer[Entity]()

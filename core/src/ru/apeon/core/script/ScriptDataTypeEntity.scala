@@ -26,7 +26,7 @@ abstract class ScriptDataTypeEntity extends ScriptDataType {
           case Some(Seq()) => source.id.description
           case Some(Seq(p)) => p.value.asInstanceOf[Description]
         },
-        env.dataSource(dataSource))
+        env.dataSource(dataSource).getOrElse(source.id.dataSource))
     }
     def name = "copy"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = parameters match {

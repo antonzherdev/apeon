@@ -1,0 +1,66 @@
+package ru.apeon.comtec
+
+entity Material<comtec>(dba.inv) {
+    discriminator is_group="0"
+
+    def toString : string = "ТМЦ(%d: %s[%s])".format(id, name, number)
+
+    column id integer primary key
+    column name(nm) varchar(254)
+    column number(nomen) char(19)
+    column barCode(code) char(19)
+    column vat(percent_nds) decimal(6, 4)
+
+    one unit1(id_edizm1) Unit
+    one unit2(id_edizm2) Unit
+    one country(id_country) Country
+    one size(id_size) Size //Размер
+    one currency(id_curr) Currency //Валюта пересчета
+    one group(belong_id) MaterialGroup
+
+    column estimatedVat(percent_rnds) decimal(6, 4)  //Расчетная ставка НДС
+    column quantityInPackage("package") decimal(13, 5)   //Кол-во в упак в осн ед измерения
+    column photoFileName(foto) varchar(1024) //Фото
+    column price(prc1) decimal(17, 2) //Справочная цена
+    column inventoryNumber(inv) decimal(17, 2)  //Инвентарный номер
+    column packingType(packing) char(19) //Вид упаковки
+    column volume(vol_bat) decimal(6, 3) //Объем
+    column displayedInPriceList(active_in_price) integer //Показывать в прайс-листе
+    column locked(data_lock) char(1)  //Закрыто для коррекции
+    column cancellationMethod(methods) char(1) //Метод списания
+    column isKit(is_compl) char(1)   //Комплект
+    column hasConsignments(has_cons) char(1)  //Вести партионный учет
+    column consignmentCancellationMethod(cons_methods) char(1) //Метод автосписания партий
+    column displayedConsignmentColumns(cons_view) char(1) //Колонки из партий
+    column appliedConsignmentPriceCancellation(method2cons) char(1) //Списание по цене партии
+    column durability(srok) decimal(10,4) //Срок службы
+    column isCommissionMaterial(is_commis) char(1) //Признак комиссионного товара
+}
+
+entity MaterialGroup<comtec>(dba.inv) {
+    discriminator is_group="1"
+
+    def toString : string = Format.str("Группа ТМЦ", id, name)
+
+    column id integer primary key
+    column name(nm) varchar(254)
+    one parent(belong_id) MaterialGroup
+
+    many child MaterialGroup(parent)
+    many materials Material(group)
+}
+
+
+entity Unit<comtec>(dba.edizm) {
+    column id integer primary key
+    column name(nm) char(17)
+
+    def toString : string = Format.str("Ед.изм.", id, name)
+}
+
+entity Size<comtec>(dba.size) {
+    column id integer primary key
+    column name(nm) char(17)
+    column remark(rem)  char(37)
+    def toString : string = Format.str("Размер", id, name)
+}

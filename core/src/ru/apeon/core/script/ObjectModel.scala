@@ -30,8 +30,6 @@ trait ObjectModel {
   )
   def addDataSource(dataSource : DataSource)
 
-  def defaultDataSource : DataSource
-
   def addPackage(pack : Package)
 
   def pack(name : String, imports : Option[Imports] = None) = packOption(name, imports).getOrElse(
@@ -39,10 +37,9 @@ trait ObjectModel {
   )
   def packOption(name : String, imports : Option[Imports] = None) : Option[Package]
 
-  protected val emptyPackage = new Package(this, Seq())
   protected def loadDefaultObjects() {
-    addObj(DateObject(emptyPackage))
-    addObj(LogObject(emptyPackage))
+    addObj(DateObject(Package("")))
+    addObj(LogObject(Package("")))
   }
 }
 
@@ -53,7 +50,6 @@ class DefaultObjectModel extends ObjectModel{
   private val queries = Map[String, ObjectBase]()
   private val dataSources = Map[String, DataSource]()
   private val packages = Map[String, Package]()
-  private var _defaultDataSource : DataSource = null
 
   def entityDescriptionOption(name: String, env : Option[Imports]) =
     get(entities, name, env)
@@ -71,25 +67,24 @@ class DefaultObjectModel extends ObjectModel{
   def dataSourceOption(name: String, env : Option[Imports]) = get(dataSources, name, env)
 
   def addDataSource(dataSource: DataSource) {
-    if(_defaultDataSource == null) _defaultDataSource = dataSource
     dataSources.update(dataSource.fullName, dataSource)
   }
-
-  def defaultDataSource =
-    if(_defaultDataSource == null) throw new RuntimeException("Not set default data source. ")
-    else _defaultDataSource
-
 
   def packOption(name: String, imports: Option[Imports]) = get(packages, name, imports)
 
   def addPackage(pack: Package) {
-    packages.update(pack.fullName, pack)
+    var name = ""
+    for(n <- pack.name.split('.')) {
+      name = name + n
+      packages.getOrElseUpdate(name, Package(name))
+      name = name + "."
+    }
   }
 
   private def get[T](map : Map[String, T], name : String, env : Option[Imports]) : Option[T] = {
     var ret = map.get(name)
     if(ret.isEmpty && env.isDefined) {
-      ret = map.get(env.get.pack.fullName + "." + name)
+      ret = map.get(env.get.pack.name + "." + name)
       if(ret.isEmpty) {
         val i = env.get.imports.iterator
         while(i.hasNext && ret.isEmpty) {

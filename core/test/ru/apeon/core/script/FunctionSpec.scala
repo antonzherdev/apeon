@@ -10,12 +10,11 @@ import org.scalatest.matchers.ShouldMatchers
 
 class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDefine{
   val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
+  val pack = Package( "ru.apeon.core.test")
   val ds = new DataSource(pack, "ds")
   sh.addDataSource(ds)
-  sh.addPackage(pack)
   FillRef(sh, pack, pack)
-  def run(statement : Statement*) = Script(pack, statement : _*).evaluate()
+  def run(statement : Statement*) = Script(sh, pack, statement : _*).evaluate()
 
   describe("Строковые функции") {
     it("format") {

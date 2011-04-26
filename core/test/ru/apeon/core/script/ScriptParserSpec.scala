@@ -6,12 +6,13 @@ import ru.apeon.core.entity._
 
 class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
   val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
-  def script(statement : Statement*) = new Script(pack, statement.toSeq)
-  val article = Description(pack, "Article", Table("dba", "article"), Seq(Id))
+  val pack = Package("ru.apeon.core.test")
+  def script(statement : Statement*) = new Script(sh, pack, statement.toSeq)
+  val article = Description(pack, "Article", "apeon", Table("dba", "article"), Seq(Id))
   sh.addEntityDescription(article)
 
-  val parser = new ScriptParser(sh, Some(pack))
+  val parser = new ScriptParser(sh)
+  parser.pack = Some(pack)
 
   describe("Def") {
     it("Простая функция") {

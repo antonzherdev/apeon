@@ -15,24 +15,24 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
   def ps = EntityConfiguration.dataSource
   val M = collection.mutable.Map
   val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
+  val pack = Package("ru.apeon.core.test")
   val ds = new DataSource(pack, "ds")
   sh.addDataSource(ds)
 
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger())
   val conses = ToMany(pack, "conses", "Cons", "article")
-  val article = Description(pack, "Article", Table("dba", "article"), Seq(Id, col1, col2, conses))
+  val article = Description(pack, "Article", "ds", Table("dba", "article"), Seq(Id, col1, col2, conses))
   sh.addEntityDescription(article)
 
   val articleCol = ToOne(pack, "article", "article", "Article")
   val uid = Attribute(pack, "uid", "uid", AttributeDataTypeInteger())
-  val cons = Description(pack, "Cons", Table("dba", "cons"), Seq(Id, articleCol, uid, col1))
+  val cons = Description(pack, "Cons", "ds", Table("dba", "cons"), Seq(Id, articleCol, uid, col1))
   sh.addEntityDescription(cons)
   EntityConfiguration.model = sh
   FillRef(sh, pack, pack, article, cons)
 
-  def run(em : EntityManager, statement : Statement*) = Script(pack, statement : _*).evaluate(new Env(em))
+  def run(em : EntityManager, statement : Statement*) = Script(sh, pack, statement : _*).evaluate(new Env(em))
 
   describe("Sync") {
     it("Изменение") {

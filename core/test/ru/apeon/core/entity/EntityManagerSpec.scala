@@ -12,7 +12,7 @@ import ru.apeon.core.script.{Package, DefaultObjectModel}
 
 class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
   val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
+  val pack = Package("ru.apeon.core.test")
   val ps = new DataSource(pack, "apeon") {
     override def store = EntityConfiguration.store
   }
@@ -28,11 +28,11 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger(), default = Some(DefaultInt(20)))
   val invoicesCol = ToMany(pack, "invoices", "Invoice", "article")
-  val article = Description(pack, "Article", Table("dba", "article"), Seq(Id, col1, col2, invoicesCol))
+  val article = Description(pack, "Article", "apeon", Table("dba", "article"), Seq(Id, col1, col2, invoicesCol))
   sh.addEntityDescription(article)
 
   val articleCol = ToOne(pack, "article", "id_article", "Article")
-  val invoice = Description(pack, "Invoice", Table("dba", "invoice"), Seq(Id, articleCol, col1))
+  val invoice = Description(pack, "Invoice", "apeon", Table("dba", "invoice"), Seq(Id, articleCol, col1))
   sh.addEntityDescription(invoice)
 
   FillRef(sh, pack, pack, article, invoice)

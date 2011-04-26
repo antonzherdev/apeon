@@ -49,16 +49,16 @@ trait Environment{
   }
   def em : EntityManager
   def model : ObjectModel
-  def dataSource(dataSourceName : Option[Expression], imports : Option[Imports] = None) : DataSource = dataSourceName match {
+  def dataSource(dataSourceName : Option[Expression], imports : Option[Imports] = None) : Option[DataSource] = dataSourceName match {
     case Some(e) => e.evaluate(this) match {
-      case st : DataSource => st
-      case name => model.dataSource(name.toString, imports)
+      case st : DataSource => Some(st)
+      case name => Some(model.dataSource(name.toString, imports))
     }
-    case None => currentDataSource.getOrElse(throw new ScriptException("Default datasource has not setted"))
+    case None => currentDataSource
   }
-  def withDataSource[A](dataSource : DataSource)( f : => A) : A = {
+  def withDataSource[A](dataSource : Option[DataSource])( f : => A) : A = {
     val old = this.currentDataSource
-    setCurrentDataSource(Some(dataSource))
+    setCurrentDataSource(dataSource)
     val ret = f
     setCurrentDataSource(old)
     ret
@@ -154,7 +154,6 @@ trait Environment{
           if(parameters.isDefined)
             ret = ret.get.dataType(this, None).declaration(this, "apply", parameters)
         }
-
       }
     }
     ret
