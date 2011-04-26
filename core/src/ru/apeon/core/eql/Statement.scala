@@ -174,6 +174,8 @@ case class InsertColumn(columnName : String,  expression : Expression) {
     column = env.from.column(columnName).asInstanceOf[FieldWithSource]
     expression.fillRef(env)
   }
+
+  override def toString = "%s = %s".format(columnName, expression)
 }
 
 case class Update(from : FromEntity, columns : Seq[UpdateColumn], where : Option[Expression] = None) extends Statement {

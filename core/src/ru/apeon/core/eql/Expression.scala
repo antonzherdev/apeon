@@ -166,7 +166,9 @@ object Const {
   }
 }
 
-case class ConstString(value : String) extends Expression
+case class ConstString(value : String) extends Expression {
+  override def toString = "\"%s\"".format(value)
+}
 
 case class ConstDate(value : Date) extends Expression
 
