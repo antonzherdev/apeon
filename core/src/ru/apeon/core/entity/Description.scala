@@ -72,8 +72,7 @@ case class Description(pack : Package,
 
   override def toString = fullName
 
-  def dataSource : DataSource = defaultDataSource.getOrElse(pack.dataSource)
-
+  def dataSource : DataSource = defaultDataSource.getOrElse(throw new RuntimeException("Default datasource has not setted"))
 
   override def preFillRef(model : ObjectModel, imports: Imports) {
     _extendsEntity = extendsEntityName.map{name => model.entityDescription(name, Some(imports))}

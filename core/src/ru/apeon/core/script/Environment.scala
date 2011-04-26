@@ -49,13 +49,12 @@ trait Environment{
   }
   def em : EntityManager
   def model : ObjectModel
-  def dataSource : DataSource
   def dataSource(dataSourceName : Option[Expression], imports : Option[Imports] = None) : DataSource = dataSourceName match {
     case Some(e) => e.evaluate(this) match {
       case st : DataSource => st
       case name => model.dataSource(name.toString, imports)
     }
-    case None => currentDataSource.getOrElse(dataSource)
+    case None => currentDataSource.getOrElse(throw new ScriptException("Default datasource has not setted"))
   }
   def withDataSource[A](dataSource : DataSource)( f : => A) : A = {
     val old = this.currentDataSource
@@ -178,8 +177,7 @@ trait Environment{
 }
 
 
-class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model,
-                         val dataSource : DataSource = EntityConfiguration.dataSource) extends Environment
+class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model) extends Environment
 {
   def push() {
     dataStack.push(data.save)

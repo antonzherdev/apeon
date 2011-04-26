@@ -313,21 +313,9 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
     case name ~ statements => Object(pack.get, name, statements)
   }
 
-  def packDef : Parser[Package] = "package" ~> repsep(ident, ".") ~! ("(" ~> repsep(numericLit, ".") <~ ")") ~
-          opt("{" ~> (packStatement*) <~ "}") ^^ {
-    case names ~ versions ~ statementsOption => {
-      pack.getOrElse{
-        val statements = statementsOption.getOrElse(Seq())
-        pack = Some(new Package(model, names, Some(versions.map(_.toInt)),
-          defaultDataSourceName = statements.find(_.isInstanceOf[DefaultDataSource]).map(_.asInstanceOf[DefaultDataSource].name)))
-        pack.get
-      }
-    }
+  def packDef : Parser[NonRootPackage] = "package" ~> repsep(ident, ".") ^^ {
+    case names  => Package(model, names).asInstanceOf[NonRootPackage]
   }
-
-  def packStatement : Parser[Any] = defaultDataSource
-  case class DefaultDataSource(name : String)
-  def defaultDataSource : Parser[DefaultDataSource] = "default" ~> "datasource" ~> ident ^^ {case name => DefaultDataSource(name)}
 
   def datasource = "datasource" ~> ident ^^ {case name => DataSource(pack.get, name)}
 
