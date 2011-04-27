@@ -1,0 +1,13 @@
+<component name="ArtifactManager">
+  <artifact name="apeon-schedule">
+    <output-path>$PROJECT_DIR$/out/artifacts/apeon-schedule</output-path>
+    <root id="root">
+      <element id="directory" name="classes">
+        <element id="module-output" name="schedule" />
+      </element>
+      <element id="directory" name="lib">
+        <element id="library" level="module" name="quartz" module-name="schedule" />
+      </element>
+    </root>
+  </artifact>
+</component>

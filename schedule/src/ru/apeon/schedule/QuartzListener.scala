@@ -1,4 +1,4 @@
-package ru.apeon.servlet
+package ru.apeon.schedule
 
 import javax.servlet._
 import org.quartz.impl.StdSchedulerFactory
@@ -6,10 +6,6 @@ import org.quartz._
 import javax.naming.InitialContext
 import ru.apeon.core.entity._
 import akka.util.Logging
-
-/**
- * @author Anton Zherdev
- */
 
 class QuartzListener extends ServletContextListener{
   var scheduler : Scheduler = null
