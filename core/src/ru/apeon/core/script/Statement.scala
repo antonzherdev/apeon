@@ -121,6 +121,8 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
   }
 
   def eqlExpression = eql.Const(_data)
+
+  override def toString = "%s".format(_data)
 }
 
 /**

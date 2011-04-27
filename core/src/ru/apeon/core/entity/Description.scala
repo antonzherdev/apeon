@@ -113,6 +113,11 @@ case class Description(pack : Package,
   def dataType(env: Environment) = ScriptDataTypeEntityDescription(this)
 
   def elementDataType(env: Environment) = ScriptDataTypeEntityByDescription(this)
+
+  def isInstanceOf(description : Description) : Boolean = extendsClass match {
+    case Some(e) => e == description || e.isInstanceOf(description)
+    case None => false
+  }
 }
 
 case class JoinedTable(table : Table, column : String)

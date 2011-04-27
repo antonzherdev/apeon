@@ -45,12 +45,24 @@ class Entity(val manager : EntityManager,
       this
     }
     case Some(e : Entity) => {
-      if(!(value match {
-        case v : Entity => e == v
+      val upd = value match {
+        case v : Entity =>
+          if(v.id == e.id) {
+            false
+          } else {
+            if(v.id.equalInheritance(e.id)) {
+              if(v.id.description.isInstanceOf(e.id.description)) {
+                _data.update(column, value)
+              }
+              false
+            }
+            else {
+              true
+            }
+          }
         case _ => e.id.equalAny(value)
-      })) {
-        doUpdate(column, value)
       }
+      if(upd) doUpdate(column, value)
       this
     }
     case Some(e) => {
@@ -93,11 +105,11 @@ class Entity(val manager : EntityManager,
    * Этот перевод работает, если в сущности не определена функция toString
    */
   def defaultToString = "Entity(%s, %s)".format(id, _data.toSeq.map( v =>
-      v._1 + " = " + (v._2 match {
-        case e : Entity => e.id.toString
-        case _ => v._2
-      })
-    ).mkString(", "))
+    v._1 + " = " + (v._2 match {
+      case e : Entity => e.id.toString
+      case _ => v._2
+    })
+  ).mkString(", "))
 
   override def equals(obj: Any) = obj match {
     case ent : Entity => ent.id == id && ent.manager == manager
@@ -173,6 +185,16 @@ trait EntityId {
   def const : Expression
 
   def equalAny(id : Any)  : Boolean
+
+  override def equals(obj: Any) = obj match {
+    case id : EntityId => id.dataSource == dataSource && id.description == description && equalId(id)
+    case _ => false
+  }
+
+  def equalInheritance(id : EntityId) : Boolean =
+    (id.description.isInstanceOf(description) || description.isInstanceOf(description)) && equalId(id)
+
+  def equalId(id : EntityId) : Boolean
 }
 
 case class TemporaryEntityId(dataSource : DataSource, description : Description, id : Int) extends EntityId {
@@ -188,8 +210,8 @@ case class TemporaryEntityId(dataSource : DataSource, description : Description,
 
   def const = throw new RuntimeException("Const for temporaty id.")
 
-  override def equals(obj: Any) = obj match {
-    case sqlId : SqlEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description.table == description.table
+  def equalId(id: EntityId) = id match {
+    case t : TemporaryEntityId => t.id == this.id
     case _ => false
   }
 }
@@ -213,5 +235,10 @@ case class SqlEntityId(dataSource : DataSource, description : Description, id : 
   def equalAny(id: Any) = id match {
     case i : SqlEntityId => i == this
     case _ => id == this.id
+  }
+
+  def equalId(id: EntityId) = id match {
+    case t : SqlEntityId => t.id == this.id
+    case _ => false
   }
 }
