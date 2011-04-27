@@ -9,6 +9,7 @@
         <element id="directory" name="classes">
           <element id="module-output" name="comtec" />
         </element>
+        <element id="file-copy" path="$PROJECT_DIR$/comtec/module.xml" />
       </element>
     </root>
   </artifact>

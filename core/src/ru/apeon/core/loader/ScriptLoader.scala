@@ -1,22 +1,21 @@
-package ru.apeon.core.script
+package ru.apeon.core.loader
 
-import ru.apeon.core.entity._
-import javax.naming.InitialContext
 import java.io._
 import java.nio.channels.FileChannel
 import java.nio.charset.Charset
 import akka.util.Logging
+import ru.apeon.core.script._
 
 object ScriptLoader extends Logging {
-  def load() {
-    load(EntityConfiguration.model)
-  }
-  def load(model : ObjectModel) {
-    load((new InitialContext).lookup("java:comp/env/apeonDeployPath").asInstanceOf[String].split(';').toSeq, model)
-  }
+//  def load() {
+//    load(EntityConfiguration.model)
+//  }
+//  def load(model : ObjectModel) {
+//    load((new InitialContext).lookup("java:comp/env/apeonDeployPath").asInstanceOf[String].split(';').toSeq, model)
+//  }
 
-  def load(path : Seq[String], model : ObjectModel) {
-    val files = path.map(file => allFiles(new File(file))).foldLeft(Seq[File]()){_ ++ _}
+  def load(model : ObjectModel, dirs : Seq[File]) {
+    val files = dirs.map(dir => allFiles(dir)).foldLeft(Seq[File]()){_ ++ _}
 
     val scripts = files.map{file =>
       log.info("Parsing file " + file.getAbsolutePath)
