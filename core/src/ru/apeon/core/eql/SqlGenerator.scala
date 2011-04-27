@@ -14,14 +14,20 @@ case class ToManySelect(toMany : ToMany, select : sql.Select) {
   }
 }
 
-
 object SqlGenerator {
-  def apply(q : Select) : sql.Select = gen(q)
-  def apply(q : Insert) : Seq[sql.Insert] = gen(q)
-  def apply(q : Delete) : sql.Delete = gen(q)
-  def apply(q : Update) : Seq[sql.Update] = gen(q)
-  def apply(q : Expression) : sql.Expression = genExpression(q, null)
+  val generator : SqlGenerator = new ComtecSqlGenerator
 
+  def apply(q : Select) : sql.Select = generator.gen(q)
+  def apply(q : Insert) : Seq[sql.Statement] = generator.gen(q)
+  def apply(q : Delete) : sql.Delete = generator.gen(q)
+  def apply(q : Update) : Seq[sql.Update] = generator.gen(q)
+  def apply(q : Expression) : sql.Expression = generator.genExpression(q, null)
+
+  def generateToMany(sel : Select) : Seq[ToManySelect] = generator.generateToMany(sel)
+  def generateToMany(toMany : ToMany) : ToManySelect = generator.generateToMany(toMany)
+}
+
+class SqlGenerator {
   def sqlTable(t : entity.Table) : sql.SqlTable = sql.SqlTable(t.schema, t.name)
 
   def default(q : Insert, table : Table) =
@@ -60,7 +66,7 @@ object SqlGenerator {
     sql.Insert(sqlTable(q.from.entity.table), columns)
   }
 
-  def gen(q : Insert) : Seq[sql.Insert] = q.from.entity.joinedTables match {
+  def gen(q : Insert) : Seq[sql.Statement] = q.from.entity.joinedTables match {
     case Seq() =>
       Seq(genMainInsert(q))
     case _ => {

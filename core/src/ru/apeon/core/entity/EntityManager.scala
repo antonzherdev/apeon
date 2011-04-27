@@ -217,7 +217,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
             case Some(DefaultString(s)) => s
             case None => null
           }
-          case _=> null
+          case _=> Set()
       }
       b += (field.name -> value)
     }
