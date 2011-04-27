@@ -192,7 +192,7 @@ trait EntityId {
   }
 
   def equalInheritance(id : EntityId) : Boolean =
-    (id.description.isInstanceOf(description) || description.isInstanceOf(description)) && equalId(id)
+    (id.description.isInstanceOf(description) || description.isInstanceOf(id.description)) && equalId(id)
 
   def equalId(id : EntityId) : Boolean
 }
