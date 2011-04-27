@@ -1,0 +1,7 @@
+package ru.apeon.comtec
+
+entity Guide<comtec>(dba.guides) {
+    column id integer primary key
+	
+	def toString : string = "Документ(%d)".format(id)
+}

@@ -9,9 +9,8 @@ class ScriptParserDurationBenchmark extends FunSuite with Benchmark with ShouldM
     val model = new DefaultObjectModel
     run(5) {
       ScriptParser.parse(model, """
-package ru.apeon.core.synch.comtec(0.1.0) {
-    default datasource comtec
-}
+package ru.apeon.core.synch.comtec
+
 datasource comtec
 
 object Format {

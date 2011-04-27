@@ -1,0 +1,8 @@
+package ru.apeon.comtec
+
+entity Currency<comtec>(dba.currency) {
+    column id integer primary key
+    column name(nm) char(22)
+	
+	def toString : string = Format.str("Валюта", id, name)
+}

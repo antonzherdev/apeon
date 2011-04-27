@@ -1,0 +1,13 @@
+package ru.apeon.comtec
+
+datasource comtec
+
+object Format {
+    def str(entityName : string, id : int, name : string) : string = "%s(%d: %s)".format(entityName, id, name)
+    def doc(entityName : string, id : int, date : date, number : string) : string = "%s(%d: %tF №%s)".format(entityName, id, date, number)
+    def sub(entityName : string, id : int, number : int, name : string, doc : string) : string =
+        "%s(%d: %s -> %d: %s)".format(entityName, id, doc, number, name)
+	
+	def sub(entityName : string, id : int, number : int, doc : string) : string =
+        "%s(%d: %s -> %d)".format(entityName, id, doc, number)
+}

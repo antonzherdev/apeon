@@ -37,7 +37,6 @@
     <orderEntry type="library" name="spring-security" level="project" />
     <orderEntry type="library" name="servlet" level="project" />
     <orderEntry type="library" name="scala" level="project" />
-    <orderEntry type="library" name="quartz" level="project" />
     <orderEntry type="library" name="slf4j" level="project" />
     <orderEntry type="library" name="log4j" level="project" />
     <orderEntry type="library" name="akka" level="project" />

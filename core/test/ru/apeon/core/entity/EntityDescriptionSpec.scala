@@ -12,17 +12,19 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
   describe("Наследование") {
     it("Добавление колокок"){
       val model = new DefaultObjectModel
-      val pack = Package(model, "ru.apeon.core.test", "1.0.0")
+      val pack = Package("ru.apeon.core.test")
+      val ds = DataSource(pack, "apeon")
+      model.addDataSource(ds)
       def att(name : String) = Attribute(pack,name, name, AttributeDataTypeInteger())
       def ent(name : String, columns : Field*) = {
-        val r = Description(pack, name, Table("a", "a"), columns.toSeq)
+        val r = Description(pack, name, "apeon", Table("a", "a"), columns.toSeq)
         model.addEntityDescription(r)
         r.preFillRef(model, Imports(pack))
         r.fillRef(new DefaultEnvironment(model), Imports(pack))
         r
       }
       def eent(name : String, ext : String, columns : Field*) = {
-        val r = Description(pack, name, Table("a", "a"), columns.toSeq, extendsEntityName = Some(ext))
+        val r = Description(pack, name, "apeon", Table("a", "a"), columns.toSeq, extendsEntityName = Some(ext))
         model.addEntityDescription(r)
         r.preFillRef(model, Imports(pack))
         r.fillRef(new DefaultEnvironment(model), Imports(pack))
@@ -42,8 +44,10 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
   describe("Расширение сущностей") {
     it("Добавление колонок") {
       val model = new DefaultObjectModel
-      val pack = Package(model, "ru.apeon.core.test", "1.0.0")
-      val e = Description(pack, "Test", Table("", "test"), Seq(Id))
+      val pack = Package("ru.apeon.core.test")
+      val ds = DataSource(pack, "apeon")
+      model.addDataSource(ds)
+      val e = Description(pack, "Test", "apeon", Table("", "test"), Seq(Id))
       model.addEntityDescription(e)
 
       val t = Attribute(pack, "t", "t", AttributeDataTypeInteger())
@@ -63,6 +67,7 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
 object FillRef{
   def apply(model : ObjectModel, pack : Package, statements : Statement*) {
     val e = new DefaultEnvironment(model)
+    statements.foreach(_.evaluate(e))
     statements.foreach(_.preFillRef(model, Imports(pack)))
     statements.foreach(_.fillRef(e, Imports(pack)))
   }

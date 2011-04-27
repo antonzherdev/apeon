@@ -12,15 +12,15 @@ import ru.apeon.core.script._
 
 class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
   val sh  = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
+  val pack = Package("ru.apeon.core.test")
 
   val col1 = Attribute(pack, "col1", "", AttributeDataTypeInteger())
   val colToMany = ToMany(pack, "test2", "test2", "test1")
-  val test1 = Description(pack, "test1", Table("", "test1"), Seq(Id, col1, colToMany))
+  val test1 = Description(pack, "test1", "ds", Table("", "test1"), Seq(Id, col1, colToMany))
   sh.addEntityDescription(test1)
 
   val colToOne = ToOne(pack, "test1", "id_test1", "test1")
-  val test2 = Description(pack, "test2", Table("", "test2"), Seq(Id, colToOne))
+  val test2 = Description(pack, "test2", "ds", Table("", "test2"), Seq(Id, colToOne))
   sh.addEntityDescription(test2)
 
   val ds = DataSource(pack, "ds")

@@ -11,11 +11,11 @@ import ru.apeon.core.entity._
 class RefsSpec extends Spec with ShouldMatchers with ScriptDefine {
   describe("Ссылки на локальные декларации") {
     val model = new DefaultObjectModel
-    val pack = Package(model, "ru.apeon.core.test", "1.0")
+    val pack = Package( "ru.apeon.core.test")
     val ds = new DataSource(pack, "ds")
     model.addDataSource(ds)
 
-    def run(st : Statement*) = Script(pack, st : _*).evaluate()
+    def run(st : Statement*) = Script(model, pack, st : _*).evaluate()
 
     it("val") {
       run(
@@ -43,12 +43,12 @@ class RefsSpec extends Spec with ShouldMatchers with ScriptDefine {
   describe("Ссылки внутри this") {
     it("Ссылка должна проставляться на функцию внутри объекта, а не на функцию другого объекта") {
       val model = new DefaultObjectModel
-      val pack = Package(model, "ru.apeon.core.test", "1.0")
+      val pack = Package("ru.apeon.core.test")
       val ds = new DataSource(pack, "ds")
       model.addDataSource(ds)
-      val a = Query(pack, "A", Seq(Def("f", "A"), Def("apply", Ref("f"))))
-      val b = Query(pack, "B", Seq(Def("apply", Ref("f")), Def("f", "B")))
-      Script(pack, a, b).evaluate()
+      val a = Query(model, pack, "A", Seq(Def("f", "A"), Def("apply", Ref("f"))))
+      val b = Query(model, pack, "B", Seq(Def("apply", Ref("f")), Def("f", "B")))
+      Script(model, pack, a, b).evaluate()
       model.obj("ru.apeon.core.test.A").asInstanceOf[Query].execute() should equal("A")
       model.obj("ru.apeon.core.test.B").asInstanceOf[Query].execute() should equal("B")
     }

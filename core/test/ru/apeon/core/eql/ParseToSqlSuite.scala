@@ -13,9 +13,9 @@ import script._
 
 class ParseToSqlSuite extends FunSuite with ShouldMatchers with EntityDefine{
   val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
+  val pack = Package("ru.apeon.core.test")
   val entityName = Attribute(pack, "entityName", "entityName", AttributeDataTypeVarchar(64))
-  val toSync = Description(pack, "ToSync", Table("", "x_sync"), Seq(Id, entityName))
+  val toSync = Description(pack, "ToSync", "apeon", Table("", "x_sync"), Seq(Id, entityName))
   sh.addEntityDescription(toSync)
   val ps = new DataSource(pack, "apeon") {
     override def store = EntityConfiguration.store

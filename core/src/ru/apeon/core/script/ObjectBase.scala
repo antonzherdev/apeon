@@ -34,8 +34,8 @@ trait ClassBase extends Declaration with Statement with InPackage {
    * @param obj объект
    * @return результат выполнения функции
    */
-  def evaluateDef(function : Def, obj : Any) : Any = {
-    val env = new DefaultEnvironment(pack.model, pack.dataSource)
+  def evaluateDef(model : ObjectModel, function : Def, obj : Any) : Any = {
+    val env = new DefaultEnvironment(model)
     env.withThisRef(Some(obj)) {
       Script.evaluate(env, Seq(function.statement))
     }

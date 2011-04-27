@@ -35,7 +35,7 @@ abstract class Sync extends Statement
       }
     }
 
-    var dataSource = env.dataSource(destination.dataSource)
+    var dataSource = env.dataSource(destination.dataSource).getOrElse(destination.entityDescription.dataSource)
     var d : Entity = null
     var toOne : ToOne = null
     var parent : Entity = null
