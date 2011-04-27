@@ -34,7 +34,7 @@ object ScriptLoader extends Logging {
     val builder = Seq.newBuilder[File]
     for(file <- path.listFiles) {
       if(file.isDirectory) {
-        builder ++= allFiles(path)
+        builder ++= allFiles(file)
       }
       else if(file.getName.endsWith(".apeon")) {
         builder += file

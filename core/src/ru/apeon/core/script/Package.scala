@@ -2,7 +2,10 @@ package ru.apeon.core.script
 
 case class Package(name : String) extends Statement with Declaration {
   override def toString = name
-  def nameOf(className : String) = "%s.%s".format(name, className)
+  def nameOf(className : String) = name match {
+    case "" => className
+    case _ => "%s.%s".format(name, className)
+  }
 
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this

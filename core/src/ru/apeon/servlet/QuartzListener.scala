@@ -45,7 +45,6 @@ class QuartzListener extends ServletContextListener{
 
 class QueryJob extends Job  with Logging  {
   def execute(p: JobExecutionContext) = {
-    Script.load()
     val name = p.getJobDetail.getJobDataMap.getString("queryName")
     log.info("Schedule " + name)
     try {
