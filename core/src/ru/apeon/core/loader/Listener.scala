@@ -1,7 +1,7 @@
 package ru.apeon.core.loader
 
-/**
- * @author Anton Zherdev
- */
 
-trait Listener 
+trait Listener {
+  def load()
+  def unload()
+}

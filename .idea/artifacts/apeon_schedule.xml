@@ -8,6 +8,7 @@
       <element id="directory" name="lib">
         <element id="library" level="module" name="quartz" module-name="schedule" />
       </element>
+      <element id="file-copy" path="$PROJECT_DIR$/schedule/module.xml" />
     </root>
   </artifact>
 </component>

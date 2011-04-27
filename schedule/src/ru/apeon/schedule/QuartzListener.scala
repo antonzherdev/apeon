@@ -1,16 +1,16 @@
 package ru.apeon.schedule
 
-import javax.servlet._
 import org.quartz.impl.StdSchedulerFactory
 import org.quartz._
 import javax.naming.InitialContext
 import ru.apeon.core.entity._
 import akka.util.Logging
+import ru.apeon.core.loader.Listener
 
-class QuartzListener extends ServletContextListener{
+class QuartzListener extends Listener{
   var scheduler : Scheduler = null
 
-  def contextInitialized(p1: ServletContextEvent) {
+  def load() {
     scheduler = StdSchedulerFactory.getDefaultScheduler
     scheduler.start()
 
@@ -34,7 +34,7 @@ class QuartzListener extends ServletContextListener{
     //    val trigger = TriggerUtils.makeMinutelyTrigger("Test")
   }
 
-  def contextDestroyed(p1: ServletContextEvent) {
+  def unload() {
     scheduler.shutdown()
   }
 }

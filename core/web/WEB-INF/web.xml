@@ -52,10 +52,6 @@
     <!--</listener>-->
 
     <listener>
-        <listener-class>ru.apeon.servlet.QuartzListener</listener-class>
-    </listener>
-
-    <listener>
         <listener-class>ru.apeon.core.loader.LoaderListener</listener-class>
     </listener>
 </web-app>

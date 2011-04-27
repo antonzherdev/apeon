@@ -8,7 +8,7 @@ import javax.servlet.{ServletContextEvent, ServletContextListener}
 
 class LoaderListener extends ServletContextListener {
   def contextDestroyed(p1: ServletContextEvent) {
-
+    Loader.unload()
   }
 
   def contextInitialized(p1: ServletContextEvent) {
