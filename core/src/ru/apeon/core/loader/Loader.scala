@@ -2,20 +2,26 @@ package ru.apeon.core.loader
 
 import java.io.File
 import ru.apeon.core.script.{DefaultObjectModel, ObjectModel}
-import xml.XML
 import ru.apeon.core.entity.EntityConfiguration
 import akka.util.Logging
 import java.net.{URLClassLoader, URL}
+import xml.{NodeSeq, XML}
 
 object Loader extends Logging {
   var modules : Seq[Module] = Seq()
   var listeners : Seq[Listener] = Seq()
-  var loader : URLClassLoader = _
+  var classLoader : URLClassLoader = _
+  private var _apeonXml : NodeSeq = _
+
+  def apeonXml = _apeonXml
+
   def load() {
     try{
       unload()
       log.info("Loading modules")
       val tomcatFolder = System.getProperty("catalina.home")
+      _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
+
       val apeonFolder = new File(tomcatFolder + "/apeon")
       if(!apeonFolder.exists) throw LoaderException("Folder \"%s\" doesn`t exists. Nothing to deploy.".format(apeonFolder.getAbsolutePath))
       val model = new DefaultObjectModel
@@ -32,14 +38,14 @@ object Loader extends Logging {
         }
 
         val lib = new File(module.path + "/lib")
-        if(classes.isDirectory) {
+        if(lib.isDirectory) {
           lib.listFiles.filter(_.getName.endsWith(".jar")).foreach{jar =>
             urls += jar.toURI.toURL
           }
         }
       }
 
-      loader = new URLClassLoader(urls.result(), getClass.getClassLoader)
+      classLoader = new URLClassLoader(urls.result(), getClass.getClassLoader)
 
       ScriptLoader.load(model, modules.map{module => new File(module.path + "/apeon")}.filter(_.isDirectory))
 
@@ -68,7 +74,7 @@ object Loader extends Logging {
     val listenersBuilder = Seq.newBuilder[Listener]
     for (module <- modules) {
       for (listener <- module.listeners) {
-        listenersBuilder += loader.loadClass(listener).newInstance.asInstanceOf[Listener]
+        listenersBuilder += classLoader.loadClass(listener).newInstance.asInstanceOf[Listener]
       }
     }
     listeners = listenersBuilder.result()
@@ -93,6 +99,10 @@ object Loader extends Logging {
       listeners = (xml\"listener").map(_.text)
     )
   }
+
+  def loadClass(className : String) : Class[_] = classLoader.loadClass(className)
+
+  def newInstance(className : String) : Any = loadClass(className).newInstance
 }
 
 case class LoaderException(message : String) extends RuntimeException(message)

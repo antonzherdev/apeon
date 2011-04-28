@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="apeon" type="Apeon"/>
+
+    <xs:complexType name="Apeon">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="version" type="xs:string"/>
+
+            <xs:element name="datasource" type="DataSource" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DataSource">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="url" type="xs:string" use="required"/>
+        <xs:attribute name="class" type="xs:string" use="optional"/>
+        <xs:attribute name="dialect" type="xs:string" use="optional"/>
+    </xs:complexType>
+</xs:schema>

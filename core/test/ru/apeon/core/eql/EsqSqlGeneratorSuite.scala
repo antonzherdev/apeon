@@ -33,6 +33,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     sql.Column(sql.Ref(ft1, "col1"), "col1"),
     sql.Column(sql.Ref(ft1, "col2"), "col2"))
   FillRef(sh, pack, pack, test1)
+
   describe("Simple") {
     it("Simple select") {
       eql.SqlGenerator(

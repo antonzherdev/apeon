@@ -3,8 +3,8 @@ package ru.apeon.core.entity
 import ru.apeon.core._
 
 import collection.Map
-import eql.{Update, Insert, Delete}
 import akka.util.{Logger, Logging}
+import eql.{SqlGenerator, Update, Insert, Delete}
 
 trait ReadOnlyPersistentStore {
   def name : String
@@ -35,12 +35,15 @@ trait PersistentStore extends ReadOnlyPersistentStore{
   def rollback()
 }
 
-class SqlPersistentStore(val name : String, val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource)
+class SqlPersistentStore(val name : String,
+                         val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource,
+                         val generator : SqlGenerator = new SqlGenerator)
         extends PersistentStore with Logging
 {
   val readOnlyLog = Logger("ru.apeon.core.entity.ReadOnlyPersistentStore")
   val e = new eql.Eql(){
     override def dataSource = SqlPersistentStore.this.dataSource
+    override def generator = SqlPersistentStore.this.generator
   }
 
   def select(select: eql.Select, parameters: Map[String, Any]) = e.transaction{

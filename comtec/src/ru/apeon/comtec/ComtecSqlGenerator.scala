@@ -1,7 +1,7 @@
-package ru.apeon.core.eql
+package ru.apeon.comtec
 
 import ru.apeon.core.sql
-
+import ru.apeon.core.eql._
 
 class ComtecSqlGenerator extends SqlGenerator {
   def genVocUpdate(q: Insert) : Option[sql.Update] = q.from.entity.joinedTables match {

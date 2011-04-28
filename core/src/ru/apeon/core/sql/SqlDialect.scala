@@ -45,29 +45,13 @@ key.onDelete
   def lastIdentityExpression(table : SqlTable) = "@@identity"
 }
 
+class DefaultSqlDialect extends SqlDialect
+
 class AsaSqlDialect extends SqlDialect {
   override val schema = "dba"
 
   override def createTableStatement(table: SqlTable) =
 """create table %1$s(id integer default 0 primary key);
 insert into %1$s(id) values(0);""".format(table)
-}
-
-class ComtecAsaSqlDialect extends AsaSqlDialect {
-  override def createTableStatement(table: SqlTable) =
-"""%2$s
-create TRIGGER "newid" before insert order 100 on %1$s
-referencing new as new_name
-for each row
-begin
-	declare ll_id integer;
-	set ll_id=new_name.id;
-	if ll_id is null then
-		set new_name.id=get_next_id('%3$s','id');
-	end if
-end;
-""".format(table, super.createTableStatement(table), table.name)
-
-  override def lastIdentityExpression(table : SqlTable) = "get_last_identity('" + table.name + "')"
 }
 

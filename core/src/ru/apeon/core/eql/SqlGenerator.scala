@@ -15,8 +15,7 @@ case class ToManySelect(toMany : ToMany, select : sql.Select) {
 }
 
 object SqlGenerator {
-  val generator : SqlGenerator = new ComtecSqlGenerator
-
+  val generator : SqlGenerator = new SqlGenerator
   def apply(q : Select) : sql.Select = generator.gen(q)
   def apply(q : Insert) : Seq[sql.Statement] = generator.gen(q)
   def apply(q : Delete) : sql.Delete = generator.gen(q)
