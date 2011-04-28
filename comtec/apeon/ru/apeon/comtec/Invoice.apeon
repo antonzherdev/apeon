@@ -4,7 +4,8 @@ entity Invoice<comtec>(dba.jfact) {
     column id integer primary key
     column date(dat) date
     column number(nu) char(25)
-	
+	column type(tp) char(1) //Тип счет-фактуры
+
 	def toString : string = Format.doc("Счет-фактура", id, date, number)
 
     one consignor(id_d_cargo) Organization // Грузоотправитель
@@ -33,18 +34,22 @@ entity InvoiceMaterial<comtec>(dba.fact) {
     one invoice(id_jfact) Invoice
     column number(nu) integer
     one material(id_inv) Material
+    column materialName(inv_free_type) char(255) //Произвольное наименование
+
     column accountAmount(summa) decimal(19, 7) //
     column amount(summa_sale) decimal(19, 7) //Сумма продажи
+    column totalAmount(summa_post) decimal(19, 7) //Стоимость товаров всего с учетом налогов и НП
 
-    column vat(percent_nds) decimal(6, 4) //Сумма продажи в валюте
+    column vat(percent_nds) decimal(6, 4) //Ставка НДС
     column vatAmount(summa_nds) decimal(19, 7) //Сумма НДС
 
     column currencyAccountAmount(summav) decimal(19, 7) //Сумма продажи
     column currencyAmount(summa_salev) decimal(19, 7) //Сумма продажи в валюте
+    column currencyVatAmount(summa_nds_v) decimal(19, 7) //Сумма НДС в валюте
     column quantity(kol1) decimal(17, 5) //Сумма продажи в валюте
 
     one country(id_country) Country
     column entryNumber(custom_nu) char(30) //Номер ГТД
-	
+
 	def toString : string = Format.sub("Пр.счета-фактуры", id, number, material.name, invoice.toString)
 }
