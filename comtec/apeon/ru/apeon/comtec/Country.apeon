@@ -6,5 +6,5 @@ entity Country<comtec>(dba.country) {
     column shortName(nm_short) char(45)
     column code(kod) char(3)
 	
-	def toString : string = Format.str("Страна", id, name)
+	def toString : String = Format.str("Страна", id, name)
 }

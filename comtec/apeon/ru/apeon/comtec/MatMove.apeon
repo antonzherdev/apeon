@@ -31,7 +31,7 @@ entity MatMove<comtec>(dba.jmat) {
     column who(komy) varchar(37)  //Кому
     column locked(data_lock) char(1)
 	
-	def toString : string = Format.doc("Движение материалов", id, date, number)
+	def toString : String = Format.doc("Движение материалов", id, date, number)
 }
 
 object MatMove{
@@ -81,5 +81,5 @@ entity MatMoveMat<comtec>(dba.mat) {
     column mustHaveQuantity(kol3) decimal(17, 5) //Количество по документу
     column priceListPrice(price_price) decimal(19, 7)
 	
-	def toString : string = Format.sub("Пр.движения материалов", id, number, material.name, matMove.toString)
+	def toString : String = Format.sub("Пр.движения материалов", id, number, material.name, matMove.toString)
 }

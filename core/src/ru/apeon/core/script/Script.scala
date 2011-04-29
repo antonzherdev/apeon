@@ -2,7 +2,7 @@ package ru.apeon.core.script
 
 object Script {
   def apply(model : ObjectModel, pack : Package, statements : Statement*) = {
-    new Script(model, pack, statements).preFillRef.fillRef()
+    new Script(model, pack, statements).preFillRef().fillRef()
   }
 
   def evaluate(model : ObjectModel, statements : Seq[Statement]) : Any =
@@ -22,16 +22,16 @@ object Script {
   }
 }
 
-class Script(val model : ObjectModel, val pack : Package, val statements : Seq[Statement]){
-  def fillRef(env : Environment = new DefaultEnvironment(model)) : Script = {
+class Script(val model : ObjectModel, val pack : Package, val statements : Seq[Statement], val fileName : Option[String] = None){
+  def fillRef(env : Environment = new DefaultEnvironment(model, fileName)) : Script = {
     val imports = Imports(pack, statements.filter(_.isInstanceOf[Import]).map(_.asInstanceOf[Import].name))
     statements.foreach(stm => env.fillRef(stm, imports))
     this
   }
 
-  def preFillRef = {
+  def preFillRef(env : Environment = new DefaultEnvironment(model, fileName)) : Script = {
     val imports = Imports(pack, statements.filter(_.isInstanceOf[Import]).map(_.asInstanceOf[Import].name))
-    statements.foreach(_.preFillRef(model, imports))
+    statements.foreach(stm => env.preFillRef(stm, imports))
     this
   }
 
@@ -41,7 +41,7 @@ class Script(val model : ObjectModel, val pack : Package, val statements : Seq[S
     case _ => false
   }
 
-  def evaluate(env : Environment = new DefaultEnvironment(model)): Any =
+  def evaluate(env : Environment = new DefaultEnvironment(model, fileName)): Any =
     Script.evaluate(env, statements)
 
   override def toString = statements.map(_.toString).mkString("\n")
@@ -49,7 +49,8 @@ class Script(val model : ObjectModel, val pack : Package, val statements : Seq[S
 
 object ScriptException {
   def apply(env : Environment, message : String) = {
-    new ScriptException("%s\nStack:\n%s".format(message, env.stackString))
+    new ScriptException("%s\n%sStack:\n%s".format(
+      message, env.fileName.map(file => "File: " + file + "\n").getOrElse(""), env.stackString))
   }
 }
 

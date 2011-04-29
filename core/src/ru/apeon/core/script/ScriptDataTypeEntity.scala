@@ -58,8 +58,8 @@ case class ScriptDataTypeEntityByName(entityName : String) extends ScriptDataTyp
   var description : Description = _
 
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    description = model.entityDescription(entityName, Some(imports))
+  override def preFillRef(env : Environment, imports: Imports) {
+    description = env.entityDescription(entityName, Some(imports))
   }
 }
 

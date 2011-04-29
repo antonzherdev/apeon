@@ -12,8 +12,7 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
   val sh = new DefaultObjectModel
   val pack = Package("ru.apeon.test")
   sh.addDataSource(new DataSource(pack, "apeon"))
-  pack.preFillRef(sh, Imports(pack))
-  pack.fillRef(new DefaultEnvironment, Imports(pack))
+  FillRef(sh, pack, pack)
 
   def script(statements : Statement*) = new Script(sh, pack, statements.toSeq)
 

@@ -42,7 +42,7 @@ trait Declaration{
 }
 
 trait DeclarationStatement extends Statement with Declaration {
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def preFillRef(env: Environment, imports: Imports) {}
   def fillRef(env: Environment, imports: Imports) {}
   def evaluate(env: Environment) {}
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = dataType(env)
@@ -91,11 +91,11 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
     }
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
+  def preFillRef(env : Environment, imports: Imports) {
     if(dataSource.isDefined) {
-      dataSource.get.preFillRef(model, imports)
+      env.preFillRef(dataSource.get, imports)
     }
-    parameters.foreach(_.foreach(_.expression.preFillRef(model, imports)))
+    parameters.foreach(_.foreach(par => env.preFillRef(par.expression, imports)))
   }
 
   override def toString = name +
@@ -132,8 +132,8 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
     }
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    statement.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(statement, imports)
   }
 
   case class ParDeclaration(name : String, dataType : ScriptDataType) extends  Declaration{
@@ -216,11 +216,11 @@ case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = 
     if(resultType.isDefined) resultType.get.fillRef(env, imports)
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    statement.preFillRef(model, imports)
-    if(resultType.isDefined) resultType.get.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(statement, imports)
+    if(resultType.isDefined) resultType.get.preFillRef(env, imports)
     parameters.foreach{parameter =>
-      parameter.dataType.preFillRef(model, imports)
+      parameter.dataType.preFillRef(env, imports)
     }
   }
 
@@ -269,8 +269,8 @@ abstract class VariableDeclaration extends DeclarationStatement {
     env.fillRef(init, imports)
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    init.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(init, imports)
   }
 }
 

@@ -7,7 +7,7 @@ trait Constant extends Expression {
 
   def fillRef(env: Environment, imports: Imports) {}
 
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def preFillRef(env : Environment, imports: Imports) {}
 
   override def toString = value.toString
 }
@@ -29,8 +29,8 @@ case class ConstSeq(expressions : Seq[Expression]) extends Expression{
     expressions.foreach(exp => env.fillRef(exp, imports))
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    expressions.foreach(_.preFillRef(model, imports))
+  def preFillRef(env : Environment, imports: Imports) {
+    expressions.foreach(env.preFillRef(_, imports))
   }
 }
 

@@ -7,7 +7,8 @@ import util.parsing.input.CharArrayReader.EofCh
 import util.parsing.combinator.token.Tokens
 
 object ScriptParser{
-  def parse(model : ObjectModel, code: String) : Script = new ScriptParser(model).parse(code)
+  def parse(model : ObjectModel, code: String, fileName : Option[String] = None) : Script =
+    new ScriptParser(model, fileName).parse(code)
   def parse(model : ObjectModel, pack : Package, code: String) : Script = {
     val parser = new ScriptParser(model)
     parser.pack = Some(pack)
@@ -15,7 +16,7 @@ object ScriptParser{
   }
 }
 
-class ScriptParser(model : ObjectModel = EntityConfiguration.model) extends StdTokenParsers with ApeonTokens{
+class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : Option[String] = None) extends StdTokenParsers with ApeonTokens{
   type Tokens = Lexer
   val lexical = new Tokens
   var pack : Option[Package] = None
@@ -49,7 +50,7 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model) extends StdT
           "if", "else", "null", "import", "object")
 
   def script : Parser[Script] = (statement*) ^^{case statements => {
-    new Script(model, pack.get, statements)
+    new Script(model, pack.get, statements, fileName)
   }}
 
 
@@ -169,12 +170,12 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model) extends StdT
 
 
   def dataType : Parser[ScriptDataType] = ident ^^ {
-    case "boolean" => ScriptDataTypeBoolean()
-    case "date" => ScriptDataTypeDate()
-    case "decimal" => ScriptDataTypeDecimal()
-    case "int" => ScriptDataTypeInteger()
-    case "integer" => ScriptDataTypeInteger()
-    case "string" => ScriptDataTypeString()
+    case "Boolean" => ScriptDataTypeBoolean()
+    case "Date" => ScriptDataTypeDate()
+    case "Decimal" => ScriptDataTypeDecimal()
+    case "Int" => ScriptDataTypeInteger()
+    case "Integer" => ScriptDataTypeInteger()
+    case "String" => ScriptDataTypeString()
     case entity => ScriptDataTypeEntityByName(entity)
   }
   def dataTypeSpec : Parser[ScriptDataType] = ":" ~> dataType

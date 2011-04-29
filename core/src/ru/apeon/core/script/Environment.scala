@@ -4,6 +4,8 @@ import collection.mutable.Stack
 import ru.apeon.core.entity._
 
 trait Environment{
+  def fileName : Option[String]
+
   def atomic(f : => Any) : Any = {
     push()
     val ret = f
@@ -27,6 +29,16 @@ trait Environment{
     stack.push(statement)
     try {
       statement.fillRef(this, imports)
+    }
+    finally {
+      stack.pop()
+    }
+  }
+
+  def preFillRef(statement : Statement, imports : Imports) : Any ={
+    stack.push(statement)
+    try {
+      statement.preFillRef(this, imports)
     }
     finally {
       stack.pop()
@@ -59,6 +71,13 @@ trait Environment{
   }
   def em : EntityManager
   def model : ObjectModel
+
+  def entityDescription(name : String, imports : Option[Imports] = None) = {
+    model.entityDescriptionOption(name, imports).getOrElse{
+       throw ScriptException(this, "Entity %s not found".format(name))
+    }
+  }
+
   def dataSource(dataSourceName : Option[Expression], imports : Option[Imports] = None) : Option[DataSource] = dataSourceName match {
     case Some(e) => e.evaluate(this) match {
       case st : DataSource => Some(st)
@@ -194,7 +213,7 @@ Variants:
 }
 
 
-class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model) extends Environment
+class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model, val fileName : Option[String] = None) extends Environment
 {
   def push() {
     dataStack.push(data.save)

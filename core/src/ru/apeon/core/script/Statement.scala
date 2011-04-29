@@ -13,12 +13,12 @@ trait Statement {
 
   def evaluate(env : Environment) : Any
 
-  def preFillRef(model : ObjectModel, imports : Imports)
+  def preFillRef(env : Environment, imports : Imports)
 
   /**
    * Заполнение ссылок
-   * @env окружение
-   * @imports импортировано
+   * @param env окружение
+   * @param imports импортировано
    */
   def fillRef(env : Environment, imports : Imports)
 }
@@ -39,8 +39,8 @@ abstract class StatementList extends Statement {
     ret
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    statements.foreach(_.preFillRef(model, imports))
+  def preFillRef(env : Environment, imports: Imports) {
+    statements.foreach(stm => env.preFillRef(stm, imports))
   }
 
   def fillRef(env : Environment, imports : Imports) {
@@ -90,10 +90,10 @@ case class Eql(string : String) extends Expression {
   }
 
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-     stm = eql.EqlParser(string, model, Some(imports),Some({s : String =>
-      val external = new EqlExternalScript(new ScriptParser(model).parseStatement(s))
-      external.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+     stm = eql.EqlParser(string, env.model, Some(imports),Some({s : String =>
+      val external = new EqlExternalScript(new ScriptParser(env.model).parseStatement(s))
+      external.preFillRef(env, imports)
       externals.append(external)
       external
     }))
@@ -112,8 +112,8 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
     env.fillRef(statement, imports)
   }
 
-  def preFillRef(model : ObjectModel, imports : Imports) {
-    statement.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports : Imports) {
+    env.preFillRef(statement, imports)
   }
 
   def evaluate(env: Environment) {
@@ -142,9 +142,9 @@ case class Dot(left : Expression, right : Ref) extends Expression{
     }
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    left.preFillRef(model, imports)
-    right.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(left, imports)
+    env.preFillRef(right, imports)
   }
 
   override def toString = "%s.%s".format(left, right)
@@ -182,9 +182,9 @@ abstract class SetBase extends Expression {
     env.fillRef(left, imports)
     env.fillRef(right, imports)
   }
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    left.preFillRef(model, imports)
-    right.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(left, imports)
+    env.preFillRef(right, imports)
   }
   override def toString = "%s %s %s".format(left, name, right)
 }
@@ -270,10 +270,10 @@ case class If(check : Expression, forTrue : Statement, forFalse : Option[Stateme
     if(forFalse.isDefined) env.fillRef(forFalse.get, imports)
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    check.preFillRef(model, imports)
-    forTrue.preFillRef(model, imports)
-    if(forFalse.isDefined) forFalse.get.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(check, imports)
+    env.preFillRef(forTrue, imports)
+    if(forFalse.isDefined) env.preFillRef(forFalse.get, imports)
   }
 }
 
@@ -284,5 +284,5 @@ case class Import(name : String) extends Statement {
 
   def fillRef(env : Environment, imports : Imports) {}
 
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def preFillRef(env : Environment, imports: Imports) {}
 }

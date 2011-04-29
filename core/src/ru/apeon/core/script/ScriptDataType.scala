@@ -7,7 +7,7 @@ abstract class ScriptDataType {
     declarations.find(declaration => declaration.name == name && declaration.correspond(env, parameters))
   }
 
-  def preFillRef(model : ObjectModel, imports : Imports) {}
+  def preFillRef(env : Environment, imports : Imports) {}
   def fillRef(env: Environment, imports: Imports) {}
 }
 

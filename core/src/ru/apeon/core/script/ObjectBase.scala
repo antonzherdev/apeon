@@ -11,8 +11,8 @@ trait ClassBase extends Declaration with Statement with InPackage {
   def declarations : Seq[Declaration] = _declarations
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    declaredDeclarations.foreach(_.preFillRef(model, imports))
+  override def preFillRef(env : Environment, imports: Imports) {
+    declaredDeclarations.foreach(dec => env.preFillRef(dec, imports))
   }
 
   def fillRef(env: Environment, imports: Imports) {

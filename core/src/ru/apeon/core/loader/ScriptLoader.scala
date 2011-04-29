@@ -24,10 +24,9 @@ object ScriptLoader extends Logging {
       script
     }
 
-    val env = new DefaultEnvironment(model)
-    scripts.foreach(_.evaluate(env))
-    scripts.foreach(_.preFillRef)
-    scripts.foreach(_.fillRef(env))
+    scripts.foreach(_.evaluate())
+    scripts.foreach(_.preFillRef())
+    scripts.foreach(_.fillRef())
   }
 
   def allFiles(path : File) : Seq[File] = {
@@ -57,7 +56,7 @@ object ScriptLoader extends Logging {
   }
 
   def parse(model : ObjectModel, file : File) : Script = try {
-    ScriptParser.parse(model, text(file))
+    ScriptParser.parse(model, text(file), Some(file.getAbsolutePath))
   }
   catch {
     case pe : ParserException => throw ParserException("Parse error in file %s\n%s".format(file.getAbsolutePath, pe.msg))

@@ -16,48 +16,41 @@ object Loader extends Logging {
   def apeonXml = _apeonXml
 
   def load() {
-    try{
-      unload()
-      log.info("Loading modules")
-      val tomcatFolder = System.getProperty("catalina.home")
-      _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
+    unload()
+    log.info("Loading modules")
+    val tomcatFolder = System.getProperty("catalina.home")
+    _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
 
-      val apeonFolder = new File(tomcatFolder + "/apeon")
-      if(!apeonFolder.exists) throw LoaderException("Folder \"%s\" doesn`t exists. Nothing to deploy.".format(apeonFolder.getAbsolutePath))
-      val model = new DefaultObjectModel
-      EntityConfiguration.model = model
-      modules = apeonFolder.listFiles.map{dir =>
-        loadModule(model, dir)
+    val apeonFolder = new File(tomcatFolder + "/apeon")
+    if(!apeonFolder.exists) throw LoaderException("Folder \"%s\" doesn`t exists. Nothing to deploy.".format(apeonFolder.getAbsolutePath))
+    val model = new DefaultObjectModel
+    EntityConfiguration.model = model
+    modules = apeonFolder.listFiles.map{dir =>
+      loadModule(model, dir)
+    }
+
+    val urls = Array.newBuilder[URL]
+    for(module <- modules) {
+      val classes = new File(module.path + "/classes")
+      if(classes.isDirectory) {
+        urls += classes.toURI.toURL
       }
 
-      val urls = Array.newBuilder[URL]
-      for(module <- modules) {
-        val classes = new File(module.path + "/classes")
-        if(classes.isDirectory) {
-          urls += classes.toURI.toURL
-        }
-
-        val lib = new File(module.path + "/lib")
-        if(lib.isDirectory) {
-          lib.listFiles.filter(_.getName.endsWith(".jar")).foreach{jar =>
-            urls += jar.toURI.toURL
-          }
+      val lib = new File(module.path + "/lib")
+      if(lib.isDirectory) {
+        lib.listFiles.filter(_.getName.endsWith(".jar")).foreach{jar =>
+          urls += jar.toURI.toURL
         }
       }
-
-      classLoader = new URLClassLoader(urls.result(), getClass.getClassLoader)
-
-      ScriptLoader.load(model, modules.map{module => new File(module.path + "/apeon")}.filter(_.isDirectory))
-
-      loadListeners()
-
-      log.info("Loaded modules")
     }
-    catch {
-      case e : Throwable => {
-        log.error(e, "Loader")
-      }
-    }
+
+    classLoader = new URLClassLoader(urls.result(), getClass.getClassLoader)
+
+    ScriptLoader.load(model, modules.map{module => new File(module.path + "/apeon")}.filter(_.isDirectory))
+
+    loadListeners()
+
+    log.info("Loaded modules")
   }
 
   def unload() {

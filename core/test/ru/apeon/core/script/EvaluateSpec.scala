@@ -18,7 +18,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     def dataType = ScriptDataTypeUnit()
     def fillRef(env: Environment, imports: Imports) {}
 
-    def preFillRef(model: ObjectModel, imports: Imports) {}
+    def preFillRef(env : Environment, imports: Imports) {}
   }
 
   val sh = new DefaultObjectModel

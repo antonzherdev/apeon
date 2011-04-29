@@ -3,16 +3,16 @@ package ru.apeon.comtec.calc
 import ru.apeon.comtec._
 
 object MaterialBalance {
-	/*def balance(material : Material, place : Place, date : date) : decimal = {
+	/*def balance(material : Material, place : Place, date : Date) : Decimal = {
 		val lastDate = lastInventoryDate(place, date)
 		`select quantity from MatMoveMat where matMove = %_% and material = %material%`
 	}*/
 		
 	
-	def lastInventoryDate(place : Place, date : date) = 
+	def lastInventoryDate(place : Place, date : Date) = 
 		MatMove.find(`tp1 = "0" and tp2 = "0" and tp4 = "3" and destination = %place% and date <= %date%`)
 	
-	/*def beginDayBalance(material : Material, place : Place, date : date) : decimal = 
+	/*def beginDayBalance(material : Material, place : Place, date : Date) : Decimal = 
 		MatMove.find(`tp1 = "0" and tp2 = "0" and tp4 = "3" and = %place%`).map{
 			var sum = 0
 			`select quantity from MatMoveMat where matMove = %_% and material = %material%`.select.foreach{sum = sum + _}

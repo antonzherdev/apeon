@@ -72,10 +72,10 @@ case class Description(pack : Package,
 
   def dataSource : DataSource = defaultDataSource
 
-  override def preFillRef(model : ObjectModel, imports: Imports) {
-    _extendsEntity = extendsEntityName.map{name => model.entityDescription(name, Some(imports))}
-    _defaultDataSource = model.dataSource(defaultDataSourceName, Some(imports))
-    super.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    _extendsEntity = extendsEntityName.map{name => env.model.entityDescription(name, Some(imports))}
+    _defaultDataSource = env.model.dataSource(defaultDataSourceName, Some(imports))
+    super.preFillRef(env, imports)
   }
 
 
@@ -176,8 +176,8 @@ case class ToOne(pack : Package, name : String, sources :  FieldSources,
   def scriptDataType = ScriptDataTypeEntityByDescription(entity)
 
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    _entity = model.entityDescription(entityName, Some(imports))
+  override def preFillRef(env : Environment, imports: Imports) {
+    _entity = env.entityDescription(entityName, Some(imports))
   }
 
 }
@@ -193,8 +193,8 @@ case class ToMany(pack : Package, name : String, entityName : String, toOneName 
   def scriptDataType = ScriptDataTypeSeq(ScriptDataTypeEntityByDescription(entity))
 
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    _entity = model.entityDescription(entityName, Some(imports))
+  override def preFillRef(env: Environment, imports: Imports) {
+    _entity = env.entityDescription(entityName, Some(imports))
   }
 }
 
@@ -210,11 +210,11 @@ case class ExtendEntity(entityName : String, fields : Seq[Field]) extends Statem
   def evaluate(env: Environment) {}
 
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    entityDescription = model.entityDescription(entityName, Some(imports))
+  override def preFillRef(env : Environment, imports: Imports) {
+    entityDescription = env.model.entityDescription(entityName, Some(imports))
     fields.foreach{field =>
       entityDescription.extend(field)
-      field.preFillRef(model, imports)
+      env.preFillRef(field, imports)
     }
   }
 

@@ -15,7 +15,7 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
   def dataType(env: Environment) = ScriptDataTypeDataSource()
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDataSource()
   def fillRef(env: Environment, imports: Imports) {}
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def preFillRef(env : Environment, imports: Imports) {}
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
   def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
 

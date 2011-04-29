@@ -132,10 +132,10 @@ Destination = %s""".format(source.id.dataSource.fullName, source, dataSource.ful
     }
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
+  def preFillRef(env : Environment, imports: Imports) {
     this.imports = imports
-    destination.preFillRef(model, imports)
-    statements.foreach(_.preFillRef(model, imports))
+    destination.preFillRef(env, imports)
+    statements.foreach(stm => env.preFillRef(stm, imports))
   }
 }
 
@@ -154,10 +154,10 @@ case class SyncRef(entityName : String, alias : String, dataSource : Option[Expr
     }
   }
 
-  def preFillRef(model: ObjectModel, imports : Imports) {
-    _entityDescription = model.entityDescription(entityName, Some(imports))
+  def preFillRef(env : Environment, imports : Imports) {
+    _entityDescription = env.entityDescription(entityName, Some(imports))
     if(dataSource.isDefined) {
-      dataSource.get.preFillRef(model, imports)
+      env.preFillRef(dataSource.get, imports)
     }
   }
 }
@@ -178,9 +178,9 @@ case class SyncDeclaration(source : SyncRef, destination : SyncRef, where : Stri
     super.fillRef(env, imports)
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    source.preFillRef(model, imports)
-    super.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    source.preFillRef(env, imports)
+    super.preFillRef(env, imports)
   }
 }
 
@@ -227,9 +227,9 @@ case class SyncEntity(source : Expression, sourceAlias : String,
     super.fillRef(env, imports)
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    source.preFillRef(model, imports)
-    super.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(source, imports)
+    super.preFillRef(env, imports)
   }
 }
 
@@ -250,8 +250,8 @@ case class SyncBy(source : Expression, by : Expression) extends SyncExpressionSt
     env.fillRef(source, imports)
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    source.preFillRef(model, imports)
-    by.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(source, imports)
+    env.preFillRef(by, imports)
   }
 }

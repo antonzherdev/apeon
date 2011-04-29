@@ -19,15 +19,17 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
       def ent(name : String, columns : Field*) = {
         val r = Description(pack, name, "apeon", Table("a", "a"), columns.toSeq)
         model.addEntityDescription(r)
-        r.preFillRef(model, Imports(pack))
-        r.fillRef(new DefaultEnvironment(model), Imports(pack))
+        val env = new DefaultEnvironment(model)
+        r.preFillRef(env, Imports(pack))
+        r.fillRef(env, Imports(pack))
         r
       }
       def eent(name : String, ext : String, columns : Field*) = {
         val r = Description(pack, name, "apeon", Table("a", "a"), columns.toSeq, extendsEntityName = Some(ext))
         model.addEntityDescription(r)
-        r.preFillRef(model, Imports(pack))
-        r.fillRef(new DefaultEnvironment(model), Imports(pack))
+        val env = new DefaultEnvironment(model)
+        r.preFillRef(env, Imports(pack))
+        r.fillRef(env, Imports(pack))
         r
       }
 
@@ -68,7 +70,7 @@ object FillRef{
   def apply(model : ObjectModel, pack : Package, statements : Statement*) {
     val e = new DefaultEnvironment(model)
     statements.foreach(_.evaluate(e))
-    statements.foreach(_.preFillRef(model, Imports(pack)))
+    statements.foreach(_.preFillRef(e, Imports(pack)))
     statements.foreach(_.fillRef(e, Imports(pack)))
   }
 }

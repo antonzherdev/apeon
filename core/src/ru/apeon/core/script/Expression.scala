@@ -16,9 +16,9 @@ abstract class BinaryOperator extends Expression {
     env.fillRef(right, imports)
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    left.preFillRef(model, imports)
-    right.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    env.preFillRef(left, imports)
+    env.preFillRef(right, imports)
   }
 
   def name : String
