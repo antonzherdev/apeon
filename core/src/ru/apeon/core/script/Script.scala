@@ -25,7 +25,7 @@ object Script {
 class Script(val model : ObjectModel, val pack : Package, val statements : Seq[Statement]){
   def fillRef(env : Environment = new DefaultEnvironment(model)) : Script = {
     val imports = Imports(pack, statements.filter(_.isInstanceOf[Import]).map(_.asInstanceOf[Import].name))
-    statements.foreach(_.fillRef(env, imports))
+    statements.foreach(stm => env.fillRef(stm, imports))
     this
   }
 

@@ -224,7 +224,7 @@ case class ExtendEntity(entityName : String, fields : Seq[Field]) extends Statem
 
   def fillRef(env : Environment, imports : Imports) {
     fields.foreach{field =>
-      field.fillRef(env, imports)
+      env.fillRef(field, imports)
     }
   }
 }

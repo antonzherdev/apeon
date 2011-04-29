@@ -37,6 +37,8 @@ trait Declaration{
    */
   def builtInParametersDataTypes(env : Environment, parameterNumber : Int, parameter : Par) : Seq[ScriptDataType] =
     throw ScriptException(env, "Not supported")
+
+  def declarationString : String = toString
 }
 
 trait DeclarationStatement extends Statement with Declaration {
@@ -67,12 +69,12 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
   def fillRef(env : Environment, imports : Imports) {
     if(dataSource.isDefined) {
       env.withDotType(None) {
-        dataSource.get.fillRef(env, imports)
+        env.fillRef(dataSource.get, imports)
       }
     }
     if(parameters.isDefined && (!parameters.get.isEmpty)) {
       env.withDotType(None) {
-        parameters.foreach(_.foreach(_.expression.fillRef(env, imports)))
+        parameters.foreach(_.foreach(par => env.fillRef(par.expression, imports)))
       }
     }
     _declaration = env.declaration(name, parameters, Some(imports))
@@ -95,9 +97,23 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
     }
     parameters.foreach(_.foreach(_.expression.preFillRef(model, imports)))
   }
+
+  override def toString = name +
+          dataSource.map(exp => "<%s>".format(exp)).getOrElse("") +
+          parameters.map(pars => "(%s)".format(pars.mkString(", "))).getOrElse("")
 }
 
-case class Par(expression : Expression, name : Option[String] = None)
+case class Par(expression : Expression, name : Option[String] = None) {
+  override def toString = name match {
+    case Some(name) => "%s = %s".format(name, expression)
+    case None => expression.toString
+  }
+
+  def dataTypeString(env : Environment) : String = name match {
+    case Some(name) => "%s = %s".format(name, expression.dataType(env))
+    case None => expression.dataType(env).toString
+  }
+}
 
 case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq()) extends Constant {
   def dataType(env: Environment) = ScriptDataTypeBuiltInFunction()
@@ -112,7 +128,7 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
     )
     env.atomic{
       parameters.foreach(env.addDeclaration(_))
-      statement.fillRef(env, imports)
+      env.fillRef(statement, imports)
     }
   }
 
@@ -183,7 +199,9 @@ case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = 
 
   def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters match {
     case None => this.parameters.isEmpty
-    case _ => parameters.get.corresponds(this.parameters){(p : Par, dp : DefPar) => dp.dataType == p.expression.dataType(env)}
+    case _ => parameters.get.corresponds(this.parameters){(p : Par, dp : DefPar) =>
+      dp.dataType == p.expression.dataType(env)
+    }
   }
 
 
@@ -193,7 +211,7 @@ case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = 
       this.parameters.foreach{parameter =>
         env.addDeclaration(parameter)
       }
-      statement.fillRef(env, imports)
+      env.fillRef(statement, imports)
     }
     if(resultType.isDefined) resultType.get.fillRef(env, imports)
   }
@@ -201,7 +219,14 @@ case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = 
   override def preFillRef(model: ObjectModel, imports: Imports) {
     statement.preFillRef(model, imports)
     if(resultType.isDefined) resultType.get.preFillRef(model, imports)
+    parameters.foreach{parameter =>
+      parameter.dataType.preFillRef(model, imports)
+    }
   }
+
+  override def declarationString = name + "(" + parameters.mkString(", ") + ")" + resultType.map(" : " + _).getOrElse("")
+
+  override def toString = declarationString + " = " + statement
 }
 
 case class ParVal(value : Any, name : Option[String])
@@ -215,6 +240,8 @@ case class DefPar(name : String, dataType : ScriptDataType) extends Declaration 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.value(this)
 
   def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
+
+  override def toString = "%s : %s".format(name, dataType)
 }
 
 abstract class VariableDeclaration extends DeclarationStatement {
@@ -228,9 +255,9 @@ abstract class VariableDeclaration extends DeclarationStatement {
   def dataType : Option[ScriptDataType]
 
   def dataType(env: Environment) = dataType match {
-      case Some(ret) => ret
-      case None => init.dataType(env)
-    }
+    case Some(ret) => ret
+    case None => init.dataType(env)
+  }
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.value(this)
 
   def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
@@ -239,7 +266,7 @@ abstract class VariableDeclaration extends DeclarationStatement {
 
   override def fillRef(env: Environment, imports: Imports) {
     env.addDeclaration(this)
-    init.fillRef(env, imports)
+    env.fillRef(init, imports)
   }
 
   override def preFillRef(model: ObjectModel, imports: Imports) {

@@ -56,7 +56,6 @@ object Loader extends Logging {
     catch {
       case e : Throwable => {
         log.error(e, "Loader")
-        throw e
       }
     }
   }

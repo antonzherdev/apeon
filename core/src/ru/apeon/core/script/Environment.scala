@@ -23,6 +23,16 @@ trait Environment{
     }
   }
 
+  def fillRef(statement : Statement, imports : Imports) : Any ={
+    stack.push(statement)
+    try {
+      statement.fillRef(this, imports)
+    }
+    finally {
+      stack.pop()
+    }
+  }
+
   def stackString = stack.mkString("\n")
 
   /**
@@ -118,7 +128,15 @@ trait Environment{
   def declaration(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Declaration =
     declarationOption(name, parameters, imports).getOrElse{
       if(dotType.isDefined) {
-        throw ScriptException(this, "Could not find ref \"%s\" in \"%s\"".format(name, dotType.get.toString))
+        throw ScriptException(this,
+"""Could not find ref %s%s in "%s".
+DataTypes: %s%s
+Variants:
+%s""".format(
+          name, parameters.map("(" + _.mkString(", ") + ")").getOrElse(""), dotType.get.toString,
+          name, parameters.map(pars => "(" + pars.map(par => par.dataTypeString(this)).mkString(", ") + ")").getOrElse(""),
+          dotType.get.declarations.filter(_.name == name).map(_.declarationString).mkString("\n")
+        ))
       }
       throw ScriptException(this, "Could not find ref \"%s\"".format(name))
     }

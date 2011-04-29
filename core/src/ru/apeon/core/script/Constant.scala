@@ -8,6 +8,8 @@ trait Constant extends Expression {
   def fillRef(env: Environment, imports: Imports) {}
 
   def preFillRef(model: ObjectModel, imports: Imports) {}
+
+  override def toString = value.toString
 }
 
 case class ConstInt(value : Int) extends Constant {
@@ -24,7 +26,7 @@ case class ConstSeq(expressions : Seq[Expression]) extends Expression{
   def dataType(env: Environment) = ScriptDataTypeSeq(ScriptDataTypeAny())
 
   def fillRef(env: Environment, imports: Imports) {
-    expressions.foreach(_.fillRef(env, imports))
+    expressions.foreach(exp => env.fillRef(exp, imports))
   }
 
   def preFillRef(model: ObjectModel, imports: Imports) {

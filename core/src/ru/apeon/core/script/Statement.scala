@@ -45,7 +45,7 @@ abstract class StatementList extends Statement {
 
   def fillRef(env : Environment, imports : Imports) {
     env.atomic {
-      statements.foreach(_.fillRef(env, imports))
+      statements.foreach(stm => env.fillRef(stm, imports))
     }
   }
 }
@@ -109,7 +109,7 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
   def data = _data
 
   def fillRef(env : Environment, imports : Imports) {
-    statement.fillRef(env, imports)
+    env.fillRef(statement, imports)
   }
 
   def preFillRef(model : ObjectModel, imports : Imports) {
@@ -136,9 +136,9 @@ case class Dot(left : Expression, right : Ref) extends Expression{
   }
 
   def fillRef(env : Environment, imports : Imports) {
-    left.fillRef(env, imports)
+    env.fillRef(left, imports)
     env.withDotType(Some(left.dataType(env))) {
-      right.fillRef(env, imports)
+      env.fillRef(right, imports)
     }
   }
 
@@ -146,6 +146,8 @@ case class Dot(left : Expression, right : Ref) extends Expression{
     left.preFillRef(model, imports)
     right.preFillRef(model, imports)
   }
+
+  override def toString = "%s.%s".format(left, right)
 }
 
 abstract class SetBase extends Expression {
@@ -177,8 +179,8 @@ abstract class SetBase extends Expression {
   def dataType(env: Environment) = left.dataType(env)
 
   def fillRef(env : Environment, imports : Imports) {
-    left.fillRef(env, imports)
-    right.fillRef(env, imports)
+    env.fillRef(left, imports)
+    env.fillRef(right, imports)
   }
   def preFillRef(model: ObjectModel, imports: Imports) {
     left.preFillRef(model, imports)
@@ -263,9 +265,9 @@ case class If(check : Expression, forTrue : Statement, forFalse : Option[Stateme
   }
 
   def fillRef(env : Environment, imports : Imports) {
-    check.fillRef(env, imports)
-    forTrue.fillRef(env, imports)
-    if(forFalse.isDefined) forFalse.get.fillRef(env, imports)
+    env.fillRef(check, imports)
+    env.fillRef(forTrue, imports)
+    if(forFalse.isDefined) env.fillRef(forFalse.get, imports)
   }
 
   def preFillRef(model: ObjectModel, imports: Imports) {

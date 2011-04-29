@@ -43,6 +43,11 @@ abstract class ScriptDataTypeEntity extends ScriptDataType {
       case _ => false
     }
   }
+
+  override def equals(obj: Any) = obj match {
+    case e : ScriptDataTypeEntity => e.description == this.description
+    case _ => false
+  }
 }
 
 object ScriptDataTypeEntity {

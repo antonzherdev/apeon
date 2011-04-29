@@ -54,7 +54,10 @@ entity OrganizationGroup<comtec>(dba.voc_names) {
 	def toString : string = Format.str("Группа организаций", id, name)
 }
 
-entity Storage<comtec>(dba.voc_names) extends Partner {
+entity Place<comtec>(dba.voc_names) extends Partner {
+}
+
+entity Storage<comtec>(dba.voc_names) extends Place {
     table dba.storage(id)
 
     column belong(belong_id) integer default 2

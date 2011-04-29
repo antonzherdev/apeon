@@ -12,8 +12,8 @@ abstract class BinaryOperator extends Expression {
   def dataType(env: Environment) = left.dataType(env)
 
   def fillRef(env : Environment, imports : Imports) {
-    left.fillRef(env, imports)
-    right.fillRef(env, imports)
+    env.fillRef(left, imports)
+    env.fillRef(right, imports)
   }
 
   def preFillRef(model: ObjectModel, imports: Imports) {

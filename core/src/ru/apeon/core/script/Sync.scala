@@ -128,7 +128,7 @@ Destination = %s""".format(source.id.dataSource.fullName, source, dataSource.ful
     env.atomic {
       env.addDeclaration(sourceDeclaration)
       env.addDeclaration(desDeclaration)
-      statements.foreach(_.fillRef(env, imports))
+      statements.foreach(stm => env.fillRef(stm, imports))
     }
   }
 
@@ -150,7 +150,7 @@ case class SyncRef(entityName : String, alias : String, dataSource : Option[Expr
   def entityDescription : Description = _entityDescription
   def fillRef(env : Environment, imports : Imports) {
     if(dataSource.isDefined) {
-      dataSource.get.fillRef(env, imports)
+      env.fillRef(dataSource.get, imports)
     }
   }
 
@@ -223,7 +223,7 @@ case class SyncEntity(source : Expression, sourceAlias : String,
   def sync(env: Environment) = this
 
   override def fillRef(env: Environment, imports: Imports) {
-    source.fillRef(env, imports)
+    env.fillRef(source, imports)
     super.fillRef(env, imports)
   }
 
@@ -246,8 +246,8 @@ case class SyncBy(source : Expression, by : Expression) extends SyncExpressionSt
     }
 
   def fillRef(env: Environment, imports: Imports) {
-    by.fillRef(env, imports)
-    source.fillRef(env, imports)
+    env.fillRef(by, imports)
+    env.fillRef(source, imports)
   }
 
   def preFillRef(model: ObjectModel, imports: Imports) {

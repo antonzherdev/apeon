@@ -20,7 +20,7 @@ trait ClassBase extends Declaration with Statement with InPackage {
       declaredDeclarations.foreach {
         dec =>
           env.atomic {
-            dec.fillRef(env, imports)
+            env.fillRef(dec, imports)
           }
       }
     }

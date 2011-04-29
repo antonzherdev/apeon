@@ -5,7 +5,6 @@
       <configuration>
         <option name="compilerLibraryLevel" value="Project" />
         <option name="compilerLibraryName" value="scala" />
-        <option name="deprecationWarnings" value="true" />
       </configuration>
     </facet>
   </component>
@@ -17,10 +16,10 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="core" />
-    <orderEntry type="library" name="scala" level="project" />
     <orderEntry type="library" name="akka" level="project" />
     <orderEntry type="library" name="log4j" level="project" />
     <orderEntry type="library" name="slf4j" level="project" />
+    <orderEntry type="library" name="scala" level="project" />
   </component>
 </module>
 
