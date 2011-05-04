@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity Currency<comtec>(dba.currency) {
+entity Currency<comtec> {
+    table dba.currency
+
     column id integer primary key
     column name(nm) char(22)
 	

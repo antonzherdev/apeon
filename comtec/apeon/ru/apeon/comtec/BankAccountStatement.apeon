@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity BankAccountStatement<comtec>(dba.jbanks) {
+entity BankAccountStatement<comtec> {
+    table dba.jbanks
+
     column id integer primary key
     column date(dat) date
     column number(nu) char(17)
@@ -9,12 +11,14 @@ entity BankAccountStatement<comtec>(dba.jbanks) {
     one bankAccount(id_bank) BankAccount
     column startBalance(begsaldo) decimal(17, 5) //Начальное сальдо
 
-    many moves BankAccountStatementMove(statement)
+    many moves BankAccountStatementMove.statement
 
     def toString : String = Format.doc("Банковская выписка", id, date, number)
 }
 
-entity BankAccountStatementMove<comtec>(dba.banks) {
+entity BankAccountStatementMove<comtec> {
+    table dba.banks
+
     column id integer primary key
     one statement(id_jbanks) BankAccountStatement
     column debitAmount(deb) decimal(6, 4) //Сумма прихода

@@ -283,7 +283,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     val sh = new DefaultObjectModel
     sh.addDataSource(ps)
     val pack = Package("ru.apeon.core.test")
-    val m_test_to_many = ToMany(pack, "many", "m_test2", "tst")
+    val m_test_to_many = ToManyRef(pack, "many", "m_test2", "tst")
     val m_test1 = Description(pack, "m_test1", "apeon", Table("", "test1"), List(Id, m_test_to_many))
     sh.addEntityDescription(m_test1)
     val m_test_to_one = ToOne(pack, "tst", "id_many", "m_test1")

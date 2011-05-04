@@ -47,7 +47,7 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
   lexical.reserved += (
           "def", "sync", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
           "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
-          "if", "else", "null", "import", "object")
+          "if", "else", "null", "import", "object", "join")
 
   def script : Parser[Script] = (statement*) ^^{case statements => {
     new Script(model, pack.get, statements, fileName)
@@ -220,9 +220,10 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
   }
 
   def entity : Parser[Description] =
-    "entity" ~> ident ~! ("<" ~> ident <~ ">") ~ opt("(" ~> table <~ ")") ~! (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
-      case name ~ ds ~ table ~ ext ~ rows => Description(pack.get,
-        name, ds, table.getOrElse(Table("", name)).asInstanceOf[Table],
+    "entity" ~> ident ~! ("<" ~> ident <~ ">") ~! (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
+      case name ~ ds ~ ext ~ rows => Description(pack.get,
+        name, ds,
+        rows.find(_.isInstanceOf[Table]).asInstanceOf[Option[Table]].getOrElse(Table("", name)),
         rows.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]],
         rows.find(_.isInstanceOf[Discriminator]).getOrElse(DiscriminatorNull()).asInstanceOf[Discriminator],
         extendsEntityName = ext,
@@ -234,7 +235,7 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
 
   def entityRef = ident
 
-  def entityStatement : Parser[Any] = (attribute | one | many | discriminator | joinTable | objectStatement)
+  def entityStatement : Parser[Any] = (attribute | one | manyRef | manyBuiltIn | discriminator | joinTable | objectStatement | tableStatement)
 
   def attribute : Parser[Attribute] =
     ("column" ~> ident) ~! (dbName?) ~ attributeDataType ~ primaryKey ~ (default?)  ^^ {
@@ -261,10 +262,16 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
           ( numericLit ^^ {case n => DefaultInt(n.toInt)}
                   | stringLit ^^ {case n => DefaultString(n)})
 
-  def many : Parser[ToMany] =
-    ("many" ~> ident) ~! entityRef ~ ("(" ~> ident <~ ")")  ^^ {
+  def manyRef : Parser[ToManyRef] =
+    ("many" ~> ident) ~ entityRef ~ ("." ~> ident)  ^^ {
       case name ~ entity ~ column =>
-        ToMany(pack.get, name, entity, column)
+        ToManyRef(pack.get, name, entity, column)
+    }
+
+  def manyBuiltIn : Parser[ToManyRef] =
+    ("many" ~> ident) ~ entityRef ~ ("." ~> ident)  ^^ {
+      case name ~ entity ~ column =>
+        ToManyRef(pack.get, name, entity, column)
     }
 
   def dbName : Parser[Map[String, FieldSource]] =
@@ -286,14 +293,19 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
 
   def primaryKey : Parser[Boolean] = opt("primary" ~> "key") ^^ {case v => v.isDefined}
 
-  def table : Parser[Table] = opt(ident <~ ".") ~ ident ^^ {case schema ~ table => Table(schema.getOrElse(""), table)}
+  def table : Parser[Table] = opt(ident <~ ".") ~ repsep(ident, ".") ^^ {
+    case schema ~ table => Table(schema.getOrElse(""), table.mkString("."))
+  }
+
+  def tableStatement : Parser[Table] = "table" ~> table
+
   def discriminator : Parser[Discriminator] = "discriminator" ~> ident ~! ("=" ~>
           (stringLit|
                   numericLit ^^ {case num => num.toInt})) ^^ {
     case column ~ value => DiscriminatorColumn(column, value)
   }
 
-  def joinTable: Parser[JoinedTable] = "table" ~> table ~! ("(" ~> ident <~ ")") ^^ {
+  def joinTable: Parser[JoinedTable] = "join" ~> table ~! ("(" ~> ident <~ ")") ^^ {
     case table ~ column => JoinedTable(table, column)
   }
 
@@ -340,7 +352,7 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
     case name ~ statements => ExtendEntity(name, statements)
   }
 
-  def extendEntityStatement = (attribute | one | many)
+  def extendEntityStatement = (attribute | one | manyRef | manyBuiltIn)
 
   def importStm = "import" ~> repsep(ident, ".") ^^ {case n => Import(n.mkString("."))}
 

@@ -27,7 +27,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
 
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger(), default = Some(DefaultInt(20)))
-  val invoicesCol = ToMany(pack, "invoices", "Invoice", "article")
+  val invoicesCol = ToManyRef(pack, "invoices", "Invoice", "article")
   val article = Description(pack, "Article", "apeon", Table("dba", "article"), Seq(Id, col1, col2, invoicesCol))
   sh.addEntityDescription(article)
 

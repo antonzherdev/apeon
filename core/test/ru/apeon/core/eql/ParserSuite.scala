@@ -15,7 +15,7 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
   val pack = Package("ru.apeon.core.test")
 
   val col1 = Attribute(pack, "col1", "", AttributeDataTypeInteger())
-  val colToMany = ToMany(pack, "test2", "test2", "test1")
+  val colToMany = ToManyRef(pack, "test2", "test2", "test1")
   val test1 = Description(pack, "test1", "ds", Table("", "test1"), Seq(Id, col1, colToMany))
   sh.addEntityDescription(test1)
 

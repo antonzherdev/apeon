@@ -1,6 +1,7 @@
 package ru.apeon.comtec
 
-entity Material<comtec>(dba.inv) {
+entity Material<comtec> {
+    table dba.inv
     discriminator is_group="0"
 
     def toString : String = "ТМЦ(%d: %s[%s])".format(id, name, number)
@@ -37,7 +38,8 @@ entity Material<comtec>(dba.inv) {
     column isCommissionMaterial(is_commis) char(1) //Признак комиссионного товара
 }
 
-entity MaterialGroup<comtec>(dba.inv) {
+entity MaterialGroup<comtec> {
+    table dba.inv
     discriminator is_group="1"
 
     def toString : String = Format.str("Группа ТМЦ", id, name)
@@ -46,19 +48,23 @@ entity MaterialGroup<comtec>(dba.inv) {
     column name(nm) varchar(254)
     one parent(belong_id) MaterialGroup
 
-    many child MaterialGroup(parent)
-    many materials Material(group)
+    many child MaterialGroup.parent
+    many materials Material.group
 }
 
 
-entity Unit<comtec>(dba.edizm) {
+entity Unit<comtec> {
+    table dba.edizm
+
     column id integer primary key
     column name(nm) char(17)
 
     def toString : String = Format.str("Ед.изм.", id, name)
 }
 
-entity Size<comtec>(dba.size) {
+entity Size<comtec> {
+    table dba.size
+
     column id integer primary key
     column name(nm) char(17)
     column remark(rem)  char(37)

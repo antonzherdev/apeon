@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity Country<comtec>(dba.country) {
+entity Country<comtec> {
+    table dba.country
+
     column id integer primary key
     column name(nm) char(250)
     column shortName(nm_short) char(45)

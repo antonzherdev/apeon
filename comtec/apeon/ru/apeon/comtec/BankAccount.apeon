@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity BankAccount<comtec>(dba.bank) {
+entity BankAccount<comtec> {
+    table dba.bank
+
     column id integer primary key
     one organization(id_voc) Organization
     column bankName(nm) char(98)

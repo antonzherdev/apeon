@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity Order<comtec>(dba.jdog) {
+entity Order<comtec> {
+    table dba.jdog
+
     column id integer primary key
     column number(nu) varchar(98)
     column dateOfSigning(dat) date

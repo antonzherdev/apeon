@@ -1,20 +1,22 @@
 package ru.apeon.comtec
 
-entity Partner<comtec>(dba.voc_names) {
+entity Partner<comtec> {
+   table dba.voc_names
    discriminator is_group="0"
 
    column id integer primary key
    column name(nm) varchar(254)
 
-   many addresses PartnerAddress(partner)
+   many addresses PartnerAddress.partner
 
    column locked(data_lock) char(1)
    
    def toString : String = Format.str("Партнер", id, name)
 }
 
-entity Organization<comtec>(dba.voc_names) extends Partner {
-    table dba.post(id)
+entity Organization<comtec> extends Partner {
+    table dba.voc_names
+    join dba.post(id)
 
     column inn(post.inn) char(14)
     column kpp(post.kpp) char(10)
@@ -33,37 +35,42 @@ entity Organization<comtec>(dba.voc_names) extends Partner {
 
     one country(id_country) Country
     one group(belong_id) OrganizationGroup
-    many orders Order(organization)
-	many bankAccounts BankAccount(organization)
+    many orders Order.organization
+	many bankAccounts BankAccount.organization
     one defaultBankAccount(post.def_bank_id) BankAccount
 
     one region(post.id_region_custom) Region //Регион для аналитики
     one defaultAddress(post.id_address) PartnerAddress //Адрес доставки по умолчанию
 }
 
-entity OrganizationGroup<comtec>(dba.voc_names) {
+entity OrganizationGroup<comtec> {
+    table dba.voc_names
     discriminator is_group="1"
 
     column id integer primary key
     column name(nm) varchar(254)
     one parent(belong_id) OrganizationGroup
 
-    many child OrganizationGroup(parent)
-    many materials Organization(group)
+    many child OrganizationGroup.parent
+    many materials Organization.group
 	
 	def toString : String = Format.str("Группа организаций", id, name)
 }
 
-entity Place<comtec>(dba.voc_names) extends Partner {
+entity Place<comtec> extends Partner {
+    table dba.voc_names
 }
 
-entity Storage<comtec>(dba.voc_names) extends Place {
-    table dba.storage(id)
+entity Storage<comtec> extends Place {
+    table dba.voc_names
+    join dba.storage(id)
 
     column belong(belong_id) integer default 2
 }
 
-entity PartnerAddress<comtec>(dba.voc_names_address){
+entity PartnerAddress<comtec>{
+    table dba.voc_names_address
+
     column id integer primary key
     column name(nm) varchar(203) //Альтернативное наименование организации
     column address varchar(1024) //Адрес
@@ -73,7 +80,9 @@ entity PartnerAddress<comtec>(dba.voc_names_address){
 	def toString : String = Format.str("Адрес партнера", id, name)
 }
 
-entity Region<comtec>(dba.region_custom) {
+entity Region<comtec> {
+    table dba.region_custom
+
     column id integer primary key
     column name(nm) char(47)
 	def toString : String = Format.str("Регион", id, name)

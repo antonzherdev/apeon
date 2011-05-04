@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity Guide<comtec>(dba.guides) {
+entity Guide<comtec> {
+    table dba.guides
+
     column id integer primary key
 	
 	def toString : String = "Документ(%d)".format(id)

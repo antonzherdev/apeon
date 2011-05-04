@@ -4,7 +4,8 @@ import ru.apeon._
 
 datasource c1
 
-entity Material<c1>(Catalog.Номенклатура) {
+entity Material<c1> {
+    table Catalog.Номенклатура
     discriminator ЭтоГруппа = 0
 
     column id(Ref) char(36) primary key
@@ -12,7 +13,9 @@ entity Material<c1>(Catalog.Номенклатура) {
     column number(Артикул) varchar(254)
 }
 
-entity MatMoveIn<c1>(Document.ПоступлениеТоваровУслуг) {
+entity MatMoveIn<c1> {
+    table Document.ПоступлениеТоваровУслуг
+
     column id(Ref) char(36) primary key
     column number(Номер) varchar(254)
     column date(Дата) date

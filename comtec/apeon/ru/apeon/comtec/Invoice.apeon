@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity Invoice<comtec>(dba.jfact) {
+entity Invoice<comtec> {
+    table dba.jfact
+
     column id integer primary key
     column date(dat) date
     column number(nu) char(25)
@@ -25,11 +27,13 @@ entity Invoice<comtec>(dba.jfact) {
     column documentNumber(p_nu) varchar(40) //Платежно расчетный документ(для произвольного ввода): номер
     column considerInBooks(for_book) char(1) //Учитывать в книге покупок(продаж)
 
-    many materials InvoiceMaterial(invoice)
+    many materials InvoiceMaterial.invoice
     one guide(id_guide2) Guide
 }
 
-entity InvoiceMaterial<comtec>(dba.fact) {
+entity InvoiceMaterial<comtec> {
+    table dba.fact
+
     column id integer primary key
     one invoice(id_jfact) Invoice
     column number(nu) integer

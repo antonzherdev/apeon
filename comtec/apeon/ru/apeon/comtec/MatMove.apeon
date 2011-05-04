@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity MatMove<comtec>(dba.jmat) {
+entity MatMove<comtec> {
+    table dba.jmat
+
     column id integer primary key
     column date(dat) date
     column number(nu) varchar(17)
@@ -19,7 +21,7 @@ entity MatMove<comtec>(dba.jmat) {
 
     column factOut(fact_out) char(1) default "1"
 
-    many materials MatMoveMat(matMove)
+    many materials MatMoveMat.matMove
 
     one currency(id_curr) Currency
     column rate(curr) decimal(14, 6)
@@ -57,7 +59,9 @@ object MatMove{
 	}
 }
 
-entity MatMoveMat<comtec>(dba.mat) {
+entity MatMoveMat<comtec> {
+    table dba.mat
+
     column id integer primary key
     one matMove(id_jmat) MatMove
     column number(nu) integer

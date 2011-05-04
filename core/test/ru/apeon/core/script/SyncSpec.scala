@@ -21,7 +21,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
 
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger())
-  val conses = ToMany(pack, "conses", "Cons", "article")
+  val conses = ToManyRef(pack, "conses", "Cons", "article")
   val article = Description(pack, "Article", "ds", Table("dba", "article"), Seq(Id, col1, col2, conses))
   sh.addEntityDescription(article)
 

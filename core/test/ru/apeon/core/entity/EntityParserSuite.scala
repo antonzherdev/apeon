@@ -146,7 +146,8 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
   test("Таблица") {
     ScriptParser.parse(sh, pack,
       """
-      entity Article<apeon>(dba.inv) {
+      entity Article<apeon> {
+        table dba.inv
       }
       """)should equal(script(
     Description(pack, "Article", "apeon", Table("dba", "inv"),Seq())))
@@ -166,7 +167,7 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(sh, pack,
       """
       entity Article<apeon> {
-        table dba.post(id)
+        join dba.post(id)
       }
       """)should equal(script(
     Description(pack, "Article", "apeon", Table("", "Article"),Seq(), declaredJoinedTables = Seq(JoinedTable(Table("dba", "post"), "id")))))
@@ -189,10 +190,10 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(sh, pack,
       """
 entity InvoiceForPayment<apeon>{
-    many articles InvoiceForPaymentArticle(invoiceForPayment)
+    many articles InvoiceForPaymentArticle.invoiceForPayment
 }     """)should equal(script(
     Description(pack, "InvoiceForPayment", "apeon", Table("", "InvoiceForPayment"),
-          Seq(ToMany(pack, "articles", "InvoiceForPaymentArticle", "invoiceForPayment")
+          Seq(ToManyRef(pack, "articles", "InvoiceForPaymentArticle", "invoiceForPayment")
           ))
     ))
   }
@@ -200,7 +201,8 @@ entity InvoiceForPayment<apeon>{
   test("Compex") {
     ScriptParser.parse(sh, pack,
       """
-entity Article<apeon>(dba.inv) {
+entity Article<apeon>{
+    table dba.inv
     discriminator is_group="0"
 
     column id integer primary key

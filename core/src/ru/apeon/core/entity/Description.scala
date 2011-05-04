@@ -179,23 +179,28 @@ case class ToOne(pack : Package, name : String, sources :  FieldSources,
   override def preFillRef(env : Environment, imports: Imports) {
     _entity = env.entityDescription(entityName, Some(imports))
   }
-
 }
 
-case class ToMany(pack : Package, name : String, entityName : String, toOneName : String) extends Field {
-  val isPrimaryKey = false
+abstract class ToMany extends Field {
+  def entity : Description
+  def toOne : ToOne
 
+  def scriptDataType = ScriptDataTypeSeq(ScriptDataTypeEntityByDescription(entity))
+}
+
+case class ToManyRef(pack : Package, name : String, entityName : String, toOneName : String) extends ToMany {
   private var _entity : Description = _
 
   def entity = _entity
   def toOne : ToOne = entity.field(toOneName).asInstanceOf[ToOne]
 
-  def scriptDataType = ScriptDataTypeSeq(ScriptDataTypeEntityByDescription(entity))
-
-
   override def preFillRef(env: Environment, imports: Imports) {
     _entity = env.entityDescription(entityName, Some(imports))
   }
+}
+
+case class ToManyBuiltIn(pack : Package, name : String, entity : Description, toOneName : String) extends ToMany {
+  def toOne : ToOne = entity.field(toOneName).asInstanceOf[ToOne]
 }
 
 object Id extends Attribute(null, "id", FieldSources(FieldSource("id")), AttributeDataTypeInteger(), isPrimaryKey = true)

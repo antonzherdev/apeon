@@ -1,6 +1,8 @@
 package ru.apeon.comtec
 
-entity InvoiceForPayment<comtec>(dba.jscet){
+entity InvoiceForPayment<comtec>{
+    table dba.jscet
+
     discriminator tp1="3"
 
     column id integer primary key
@@ -19,7 +21,7 @@ entity InvoiceForPayment<comtec>(dba.jscet){
     one consignee(id_d_cargo) Organization /*Грузополучатель*/
 
     one text(id_text) InvoiceText
-    many materials InvoiceForPaymentMaterial(invoiceForPayment)
+    many materials InvoiceForPaymentMaterial.invoiceForPayment
 
     one currency(id_curr) Currency
     column rate(curr) decimal(14, 6)
@@ -35,7 +37,9 @@ entity InvoiceForPayment<comtec>(dba.jscet){
     column deliveryDate(dat_supply) date //Дата поставки*/
 }
 
-entity InvoiceForPaymentMaterial<comtec>(dba.scet){
+entity InvoiceForPaymentMaterial<comtec>{
+    table dba.scet
+
     column id integer primary key
     column number(nu) integer
     one invoiceForPayment(id_jmat) InvoiceForPayment
@@ -55,7 +59,8 @@ entity InvoiceForPaymentMaterial<comtec>(dba.scet){
     def toString : String = Format.sub("Пр.счета", id, number, material.name, invoiceForPayment.toString)
 }
 
-entity InvoiceText<comtec>(dba.jscet_txt){
+entity InvoiceText<comtec>{
+    table dba.jscet_txt
     discriminator id_jour="1005"
 
     column id integer primary key
