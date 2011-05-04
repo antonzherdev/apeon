@@ -6,8 +6,9 @@
         <xs:sequence>
             <xs:element name="name" type="xs:string"/>
             <xs:element name="version" type="xs:string"/>
-
             <xs:element name="datasource" type="DataSource" minOccurs="0" maxOccurs="unbounded"/>
+
+            <xs:element name="module" type="Module" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
 
@@ -18,5 +19,9 @@
         <xs:attribute name="dialect" type="xs:string" use="optional"/>
         <xs:attribute name="userName" type="xs:string" use="optional"/>
         <xs:attribute name="password" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="Module">
+        <xs:attribute name="dir" type="xs:string" use="required"/>
     </xs:complexType>
 </xs:schema>

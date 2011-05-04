@@ -25,9 +25,16 @@ object Loader extends Logging {
     if(!apeonFolder.exists) throw LoaderException("Folder \"%s\" doesn`t exists. Nothing to deploy.".format(apeonFolder.getAbsolutePath))
     val model = new DefaultObjectModel
     EntityConfiguration.model = model
-    modules = apeonFolder.listFiles.map{dir =>
-      loadModule(model, dir)
+
+    val modulesBuilder = Seq.newBuilder[Module]
+    apeonFolder.listFiles.foreach{dir =>
+      modulesBuilder += loadModule(model, dir)
     }
+    apeonXml.\\("module").foreach{module =>
+      modulesBuilder += loadModule(model, new File(module.\("@dir").text))
+    }
+
+    modules = modulesBuilder.result()
 
     val urls = Array.newBuilder[URL]
     for(module <- modules) {

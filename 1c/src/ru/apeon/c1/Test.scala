@@ -3,7 +3,7 @@ package ru.apeon.c1
 import java.io.File
 import com.ipc.oce.{OCApp, ApplicationDriver, PropertiesReader}
 import java.sql.{DriverManager}
-import com.ipc.oce.objects.OCCatalogRef
+import com.ipc.oce.objects.{OCDocumentRef, OCCatalogRef}
 
 /**
  * @author Anton Zherdev
@@ -44,16 +44,13 @@ object Test extends Application{
 //    val rs = stat.executeQuery("SELECT Ref, Наименование FROM Catalog.Номенклатура")
     val rs = stat.executeQuery(
 """select
-	t.Ref as id,
-	t.Наименование as name,
-	t.ЭтоГруппа
+	t.Дата
 from
-	Catalog.Номенклатура as t
-where t.ЭтоГруппа = 0
+	Document.ПоступлениеТоваровУслуг as t
 """
     )
     while(rs.next()){
-      System.out.println(rs.getObject(1).asInstanceOf[OCCatalogRef].getUUID.toString + ", "+rs.getString(2) + ", " + rs.getObject(3))
+      System.out.println(rs.getString(1))
 //      System.out.println(rs.getString("COLUMN_NAME"))
     }
 //    stat.close()

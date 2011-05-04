@@ -12,10 +12,16 @@ entity Material<c1>(Catalog.Номенклатура) {
     column number(Артикул) varchar(254)
 }
 
-query Test {
-// `from Material`.select
+entity MatMoveIn<c1>(Document.ПоступлениеТоваровУслуг) {
+    column id(Ref) char(36) primary key
+    column number(Номер) varchar(254)
+    column date(Дата) date
+}
 
-`from Material<c1>`.select.foreach {material =>
+query Test {
+ `from MatMoveIn`.select
+
+/*`from Material<c1>`.select.foreach {material =>
     material sync as s to comtec.Material<comtec.comtec> as d where `s.number = d.number and s.name = d.name`
-	}
+	}*/
 }

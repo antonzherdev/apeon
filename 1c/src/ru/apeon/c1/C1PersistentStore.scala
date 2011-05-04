@@ -4,7 +4,7 @@ import ru.apeon.core.entity.{SqlPersistentStoreBase}
 import java.sql.DriverManager
 import ru.apeon.core.eql.{Select, SqlGenerator}
 import collection.Map
-import com.ipc.oce.objects.OCCatalogRef
+import com.ipc.oce.objects.{_OCCommonRef, OCCatalogRef}
 
 class C1PersistentStore(val name : String, val url : String, val userName : String, val password : String)
         extends SqlPersistentStoreBase
@@ -19,7 +19,7 @@ class C1PersistentStore(val name : String, val url : String, val userName : Stri
   override def select(select: Select, parameters: Map[String, Any]) = e.transaction{
     super.select(select, parameters).map{row =>
       row.map{
-        case (name, ref : OCCatalogRef) => (name, ref.getUUID.toString)
+        case (name, ref : _OCCommonRef) => (name, ref.getUUID.toString)
         case o => o
       }
     }
