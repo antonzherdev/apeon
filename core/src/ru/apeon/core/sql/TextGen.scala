@@ -5,51 +5,35 @@ import scala.{StringBuilder}
 trait TextGen{
   var sb : StringBuilderEx = _
 
-  def textGen()
-
-  final def doTextGen(_sb : StringBuilderEx) {
-    sb = _sb
-    textGen()
-    sb = null
-  }
-
-  override def toString = {
-    toString(Map.empty)
-  }
-
-  def toString(parameters : scala.collection.Map[String, Any]) = {
-    val sb : StringBuilderEx = new StringBuilderEx
+  def toString(o : Object, parameters : scala.collection.Map[String, Any]) : String = {
+    sb = new StringBuilderEx
     sb.parameters = parameters
-    doTextGen(sb)
-    sb.toString
+    append(o)
+    val ret = sb.toString
+    sb = null
+    ret
+  }
+
+  protected def appendFunction : PartialFunction[Any, Unit]
+
+  protected final def append(o : Any) {
+    appendFunction.lift(o).getOrElse(sb.sb.append(o))
+  }
+
+  protected final def append(o : Option[Any]) {
+    if(o.isDefined) {
+      append(o.get)
+    }
   }
 
   def param(name : String) : Option[Any] = sb.parameters.get(name)
 
-  def append(tg : TextGen) {
-    tg.doTextGen(sb)
-  }
-  def append[T <: TextGen](tg : Option[T]) {
-    tg match {
-      case Some(t) => t.doTextGen(sb)
-      case None => {}
-    }
-  }
-  def append(s : String) {
-    sb.sb.append(s)
-  }
-  def append(c : Char) {
-    sb.sb.append(c)
-  }
-  def append(x : Any) {
-    sb.sb.append(x)
-  }
   def line( f : => Unit) {
     sb.line(f)
   }
   def indent( f : => Unit) = sb.indent(f)
 
-  def append[T <: TextGen](l : Seq[T], del : String) {
+  def append(l : Seq[Any], del : String) {
     l.foldLeft(false) {
       (b, i) =>
         if (b) append(del)

@@ -25,7 +25,7 @@ abstract class Sync extends Statement
     }
   }
 
-  def apply(env: Environment, source : Entity) : Entity = {
+  def apply(env: Environment, source : Entity) : Entity = env.em.transaction{
     val desEnt = destination.entityDescription
     var w = eql.EqlParser.parseExpression(where, env.model, Some(imports))
     w = w.map{

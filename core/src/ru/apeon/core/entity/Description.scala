@@ -204,7 +204,7 @@ class EntityError(var s : String) extends Exception(s)
 
 abstract class Discriminator
 case class DiscriminatorNull() extends Discriminator
-case class DiscriminatorColumn(columnName : String, value : String) extends Discriminator
+case class DiscriminatorColumn(columnName : String, value : Any) extends Discriminator
 
 case class ExtendEntity(entityName : String, fields : Seq[Field]) extends Statement {
   def evaluate(env: Environment) {}

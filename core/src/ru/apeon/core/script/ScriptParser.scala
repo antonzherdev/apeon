@@ -144,10 +144,10 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
 
   case class SyncRight(sourceAlias : String, destination : SyncRef, where : String, statements : Seq[Statement])
   def syncWith : Parser[SyncRight] =
-    ("sync" ~> (as?)) ~ ("to" ~> ident) ~! (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
+    ("sync" ~> (as?)) ~ ("to" ~> repsep(ident, ".")) ~! (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
       case sourceAs ~ destination ~ dataSource ~ destinationAs ~ where ~ statements =>
         SyncRight(sourceAs.getOrElse{"source"},
-          SyncRef(destination, destinationAs.getOrElse{"dest"}, dataSource),
+          SyncRef(destination.mkString("."), destinationAs.getOrElse{"dest"}, dataSource),
           where,
           statements.getOrElse{Seq()})
     }
@@ -181,11 +181,11 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
   def dataTypeSpec : Parser[ScriptDataType] = ":" ~> dataType
 
   def syncDef : Parser[SyncDeclaration] =
-    ("sync"~> ident) ~ (as?) ~ ("to" ~> ident) ~ (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
+    ("sync"~> repsep(ident, ".")) ~ (as?) ~ ("to" ~> repsep(ident, ".")) ~ (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
       case source ~ sourceAs ~ destination ~ dataSource ~ destinationAs ~ where ~ statements =>
         SyncDeclaration(
-          SyncRef(source, sourceAs.getOrElse{"source"}),
-          SyncRef(destination, destinationAs.getOrElse{"dest"}, dataSource),
+          SyncRef(source.mkString("."), sourceAs.getOrElse{"source"}),
+          SyncRef(destination.mkString("."), destinationAs.getOrElse{"dest"}, dataSource),
           where,
           statements.getOrElse{Seq()}
         )
@@ -287,7 +287,9 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
   def primaryKey : Parser[Boolean] = opt("primary" ~> "key") ^^ {case v => v.isDefined}
 
   def table : Parser[Table] = opt(ident <~ ".") ~ ident ^^ {case schema ~ table => Table(schema.getOrElse(""), table)}
-  def discriminator : Parser[Discriminator] = "discriminator" ~> ident ~! ("=" ~> stringLit) ^^ {
+  def discriminator : Parser[Discriminator] = "discriminator" ~> ident ~! ("=" ~>
+          (stringLit|
+                  numericLit ^^ {case num => num.toInt})) ^^ {
     case column ~ value => DiscriminatorColumn(column, value)
   }
 

@@ -1,0 +1,21 @@
+package ru.apeon.c1
+
+import ru.apeon._
+
+datasource c1
+
+entity Material<c1>(Catalog.Номенклатура) {
+    discriminator ЭтоГруппа = 0
+
+    column id(Ref) char(36) primary key
+    column name(Наименование) varchar(254)
+    column number(Артикул) varchar(254)
+}
+
+query Test {
+// `from Material`.select
+
+`from Material<c1>`.select.foreach {material =>
+    material sync as s to comtec.Material<comtec.comtec> as d where `s.number = d.number and s.name = d.name`
+	}
+}

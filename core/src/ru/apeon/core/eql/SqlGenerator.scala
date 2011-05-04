@@ -53,7 +53,7 @@ class SqlGenerator {
     }
     q.from.entity.discriminator match {
       case DiscriminatorColumn(column, value) =>
-        columns = sql.InsertColumn(column, sql.ConstString(value)) +: columns
+        columns = sql.InsertColumn(column, sql.Expression.constant(value)) +: columns
       case DiscriminatorNull() => {}
     }
     columns =  columns ++ default(q, q.from.entity.table)
@@ -199,7 +199,7 @@ class SqlGenerator {
   }
 
   def discriminator(entity : Description, table : sql.From) : Option[sql.Expression] = entity.discriminator match {
-    case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(Some(table.name), column), sql.ConstString(value)))
+    case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(Some(table.name), column), sql.Expression.constant(value)))
     case DiscriminatorNull() => None
   }
 
@@ -344,7 +344,7 @@ class SqlGenerator {
 
     def join(to : ToOne, ft : sql.From, l : sql.Ref) : sql.From = {
       joins += sql.LeftJoin(ft, sql.And(sql.Equal(l, sql.Ref(ft, "id")), to.entity.discriminator match {
-        case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(ft, column), sql.ConstString(value)))
+        case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(ft, column), sql.Expression.constant(value)))
         case DiscriminatorNull() => None
       } ) )
       toOne += to -> ft

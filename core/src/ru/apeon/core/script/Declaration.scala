@@ -152,6 +152,8 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
     }
     statement.evaluate(env)
   }
+
+  override def toString = "%s =>\n%s".format(aliases.mkString(","), statement)
 }
 
 

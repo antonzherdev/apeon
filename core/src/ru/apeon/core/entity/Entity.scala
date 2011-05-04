@@ -216,7 +216,7 @@ case class TemporaryEntityId(dataSource : DataSource, description : Description,
   }
 }
 
-case class SqlEntityId(dataSource : DataSource, description : Description, id : Int) extends EntityId {
+case class SqlEntityId(dataSource : DataSource, description : Description, id : Any) extends EntityId {
   def isTemporary = false
 
   override def toString = id.toString
@@ -226,11 +226,11 @@ case class SqlEntityId(dataSource : DataSource, description : Description, id : 
     case _ => false
   }
 
-  def eqlFindById(alias : Option[String]) = Equal(Ref(alias, description.primaryKeys.head.name), ConstNumeric(id))
+  def eqlFindById(alias : Option[String]) = Equal(Ref(alias, description.primaryKeys.head.name), Const(id))
 
-  def const = ConstNumeric(id)
+  def const = Const(id)
 
-  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + id
+  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + id.hashCode
 
   def equalAny(id: Any) = id match {
     case i : SqlEntityId => i == this

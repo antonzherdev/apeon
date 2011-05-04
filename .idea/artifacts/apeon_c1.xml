@@ -1,0 +1,17 @@
+<component name="ArtifactManager">
+  <artifact name="apeon-c1">
+    <output-path>$PROJECT_DIR$/out/artifacts/apeon-c1</output-path>
+    <root id="root">
+      <element id="file-copy" path="$PROJECT_DIR$/1c/module.xml" />
+      <element id="directory" name="apeon">
+        <element id="dir-copy" path="$PROJECT_DIR$/1c/apeon" />
+      </element>
+      <element id="directory" name="classes">
+        <element id="module-output" name="1c" />
+      </element>
+      <element id="directory" name="lib">
+        <element id="library" level="project" name="oce" />
+      </element>
+    </root>
+  </artifact>
+</component>

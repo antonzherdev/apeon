@@ -20,7 +20,7 @@ case class ConstEql(string : String) extends Constant {
     case e : eql.Expression => ScriptDataTypeEqlExpression()
   }
 
-  def value = _eql
+  def value = if(_eql == null) string else _eql
   def expression : eql.Expression = _eql.asInstanceOf[eql.Expression]
   def statement : eql.Statement = _eql.asInstanceOf[eql.Statement]
 

@@ -5,6 +5,7 @@ import ru.apeon.core._
 import collection.Map
 import akka.util.{Logger, Logging}
 import eql.{SqlGenerator, Update, Insert, Delete}
+import java.sql.Connection
 
 trait ReadOnlyPersistentStore {
   def name : String
@@ -35,16 +36,19 @@ trait PersistentStore extends ReadOnlyPersistentStore{
   def rollback()
 }
 
-class SqlPersistentStore(val name : String,
-                         val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource,
-                         val generator : SqlGenerator = new SqlGenerator)
+abstract class SqlPersistentStoreBase
         extends PersistentStore with Logging
 {
   val readOnlyLog = Logger("ru.apeon.core.entity.ReadOnlyPersistentStore")
   val e = new eql.Eql(){
-    override def dataSource = SqlPersistentStore.this.dataSource
-    override def generator = SqlPersistentStore.this.generator
+    override def getConnection = SqlPersistentStoreBase.this.getConnection
+    override def dialect = SqlPersistentStoreBase.this.dialect
+    override def generator = SqlPersistentStoreBase.this.generator
   }
+
+  def getConnection : Connection
+  def dialect : sql.SqlDialect
+  def generator : SqlGenerator
 
   def select(select: eql.Select, parameters: Map[String, Any]) = e.transaction{
     readOnlyLog.debug("<%s> %s", name, select)
@@ -77,4 +81,12 @@ class SqlPersistentStore(val name : String,
     e.commit()
   }
 
+}
+
+class SqlPersistentStore(val name : String,
+                         val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource,
+                         val generator : SqlGenerator = new SqlGenerator) extends SqlPersistentStoreBase {
+  def getConnection = dataSource.getConnection
+
+  def dialect = dataSource.dialect
 }

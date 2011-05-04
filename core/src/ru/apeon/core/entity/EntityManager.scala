@@ -79,7 +79,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
     val ds = select.dataSource
     val store = ds.store
     store.select(select).map{row =>
-      val id = new SqlEntityId(ds, from, row(from.primaryKeys.head.name).asInstanceOf[Int])
+      val id = new SqlEntityId(ds, from, row(from.primaryKeys.head.name))
       var ret = entities.get(id)
       if(ret.isEmpty) {
         val r = row.map{case ((columnName, value)) =>
@@ -89,12 +89,11 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
                 val iid = m(o.entity.primaryKeys.head.name)
                 if(iid == null) (columnName, null)
                 else {
-                  val oid = new SqlEntityId(ds, o.entity, iid.asInstanceOf[Int])
+                  val oid = new SqlEntityId(ds, o.entity, iid)
                   (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
                 }
               }
-              case i : Int => (columnName, i)
-              case _ => throw new RuntimeException("Not map")
+              case _ => (columnName, value)
             }
             case _ => (columnName, value)
           }

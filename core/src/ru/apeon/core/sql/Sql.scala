@@ -12,14 +12,14 @@ import akka.util.{Logger}
  */
 
 trait SqlReadOnly {
-  def dataSource : DataSource = SqlConfiguration.dataSource
-  def dialect : SqlDialect = dataSource.dialect
+  def getConnection : Connection = SqlConfiguration.dataSource.getConnection
+  def dialect : SqlDialect = SqlConfiguration.dataSource.dialect
   val readOnlyLog = Logger("ru.apeon.core.sql.SqlReadOnly")
   var connection : Connection = null
 
   def beginTransaction() {
     if (connection == null) {
-      connection = dataSource.getConnection
+      connection = getConnection
     }
   }
 
@@ -39,9 +39,12 @@ trait SqlReadOnly {
   def transaction[A](tr : => A) : A = synchronized{
     if(connection == null) {
       beginTransaction()
-      val ret : A = tr
-      commit()
-      ret
+      try {
+        tr
+      }
+      finally {
+        commit()
+      }
     }
     else tr
   }
@@ -73,7 +76,7 @@ trait SqlReadOnly {
   def selectOne(sql : Select, parameters : collection.Map[String, Any]): Option[Row] = {
     checkTransaction()
     val stm : java.sql.Statement = connection.createStatement
-    val s : String = sql.toString(parameters)
+    val s : String = dialect.toString(sql, parameters)
     readOnlyLog.debug(s)
     val rs : ResultSet = stm.executeQuery(s)
     if(!rs.next) return None
@@ -120,7 +123,7 @@ trait SqlReadOnly {
   def select(sql : Select, parameters : collection.Map[String, Any]) : Rows = {
     checkTransaction()
     val stm = connection.createStatement
-    val s : String = sql.toString(pars(parameters))
+    val s : String = dialect.toString(sql, pars(parameters))
     readOnlyLog.debug(s)
     val rs : ResultSet = stm.executeQuery(s)
     new RowsSyntax(rs, sql)
@@ -154,7 +157,7 @@ trait Sql extends SqlReadOnly {
 
   def insert(sql : Insert, parameters : collection.Map[String, Any]) : Int = {
     checkTransaction()
-    val s : String = sql.toString(pars(parameters))
+    val s : String = dialect.toString(sql, pars(parameters))
     log.debug(s)
     connection.createStatement.execute(s)
     lastIdentity(sql.table)
@@ -162,7 +165,7 @@ trait Sql extends SqlReadOnly {
 
   def execute(sql : Statement, parameters : collection.Map[String, Any]) : Option[ResultSet] = {
     checkTransaction()
-    val s : String = sql.toString(pars(parameters))
+    val s : String = dialect.toString(sql, pars(parameters))
     log.debug(s)
     val stm = connection.createStatement
     val ret = if(stm.execute(s)) Some(stm.getResultSet)

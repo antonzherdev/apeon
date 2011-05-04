@@ -9,7 +9,7 @@ trait Constant extends Expression {
 
   def preFillRef(env : Environment, imports: Imports) {}
 
-  override def toString = value.toString
+  override def toString = if(value == null) "null" else value.toString
 }
 
 case class ConstInt(value : Int) extends Constant {
