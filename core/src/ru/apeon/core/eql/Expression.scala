@@ -96,7 +96,9 @@ class Ref(val from : Option[String] = None, val column : String) extends Express
         case None => env.from
       }
     }
-    fromRef.fillRef(env)
+    if(fromRef.isInstanceOf[Ref]) {
+      fromRef.fillRef(env)
+    }
     columnRef = fromRef.column(column)
     isRefSet = true
   }

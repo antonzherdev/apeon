@@ -156,8 +156,13 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
   }
 
   test("select from to many") {
-    EqlParser.parseSelect("from test1 where (select 1 from test1.test2 as z)", sh, imports).where.get should equal (
-      ESelect(ConstNumeric(1), FromToMany(Ref(ft1, colToMany), Some("z"))))
+    EqlParser.parseSelect("from test1 as t where (select 1 from t.test2 as z)", sh, imports).where.get should equal (
+      ESelect(ConstNumeric(1), FromToMany(Ref(FromEntity(test1, Some("t")), colToMany), Some("z"))))
+  }
+
+  test("select from to many full ref") {
+    EqlParser.parseSelect("from test1.test2 as t", sh, imports) should equal (
+      Select(FromEntity(test2, Some("t"))))
   }
 
   test("null") {

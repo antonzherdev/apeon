@@ -102,9 +102,9 @@ case class Description(pack : Package,
 
   private val extendedFields = Buffer[Field]()
 
-  def evaluate(env: Environment) {
+  override def evaluate(env: Environment) = {
     env.model.addEntityDescription(this)
-    this
+    super.evaluate(env)
   }
 
   def dataType(env: Environment) = ScriptDataTypeEntityDescription(env.model, this)
@@ -199,8 +199,18 @@ case class ToManyRef(pack : Package, name : String, entityName : String, toOneNa
   }
 }
 
-case class ToManyBuiltIn(pack : Package, name : String, entity : Description, toOneName : String) extends ToMany {
-  def toOne : ToOne = entity.field(toOneName).asInstanceOf[ToOne]
+case class ToManyBuiltIn(pack : Package, name : String, entity : Description) extends ToMany {
+  def toOne : ToOne = entity.field("parent").asInstanceOf[ToOne]
+
+//  override def evaluate(env: Environment) {
+//    env.evaluate(entity)
+//  }
+  override def preFillRef(env: Environment, imports: Imports) {
+    env.preFillRef(entity, imports)
+  }
+  override def fillRef(env: Environment, imports: Imports) {
+    env.fillRef(entity, imports)
+  }
 }
 
 object Id extends Attribute(null, "id", FieldSources(FieldSource("id")), AttributeDataTypeInteger(), isPrimaryKey = true)
@@ -212,8 +222,9 @@ case class DiscriminatorNull() extends Discriminator
 case class DiscriminatorColumn(columnName : String, value : Any) extends Discriminator
 
 case class ExtendEntity(entityName : String, fields : Seq[Field]) extends Statement {
-  def evaluate(env: Environment) {}
-
+  def evaluate(env: Environment) {
+    fields.foreach(f => env.evaluate(f))
+  }
 
   override def preFillRef(env : Environment, imports: Imports) {
     entityDescription = env.model.entityDescription(entityName, Some(imports))

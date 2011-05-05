@@ -25,6 +25,12 @@ trait ClassBase extends Declaration with Statement with InPackage {
       }
     }
   }
+
+  def evaluate(env: Environment) = {
+    declaredDeclarations.foreach(dec => env.evaluate(dec))
+    this
+  }
+
   def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   def elementDataType(env: Environment) : ScriptDataType
 
@@ -48,8 +54,10 @@ trait ObjectBase extends ClassBase  {
   def dataType(env: Environment) = ScriptDataTypeObject(this)
   def elementDataType(env: Environment) : ScriptDataType = dataType(env)
 
-  def evaluate(env: Environment) {
+  override def evaluate(env: Environment) = {
     env.model.addObj(this)
+    declaredDeclarations.foreach(dec => env.evaluate(dec))
+    this
   }
 }
 

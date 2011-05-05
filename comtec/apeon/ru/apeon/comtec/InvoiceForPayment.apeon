@@ -21,7 +21,6 @@ entity InvoiceForPayment<comtec>{
     one consignee(id_d_cargo) Organization /*Грузополучатель*/
 
     one text(id_text) InvoiceText
-    many materials InvoiceForPaymentMaterial.invoiceForPayment
 
     one currency(id_curr) Currency
     column rate(curr) decimal(14, 6)
@@ -35,28 +34,28 @@ entity InvoiceForPayment<comtec>{
 
     one deliveryAddress(id_address) PartnerAddress //Адрес доставки
     column deliveryDate(dat_supply) date //Дата поставки*/
-}
 
-entity InvoiceForPaymentMaterial<comtec>{
-    table dba.scet
+    many materials(id_jmat){
+        table dba.scet
 
-    column id integer primary key
-    column number(nu) integer
-    one invoiceForPayment(id_jmat) InvoiceForPayment
-    one material(id_inv) Material
+        column id integer primary key
+        column number(nu) integer
+        one invoiceForPayment() InvoiceForPayment
+        one material(id_inv) Material
 
-    column quantity(kol1) decimal(17, 5)
-    column amount(summa_sale) decimal(17, 5)
-    column currencyAmount(summa_salev) decimal(17, 5)
-    column vat(percent_nds) decimal(6, 4)
-    column vatAmount(summa_nds) decimal(19, 7)
+        column quantity(kol1) decimal(17, 5)
+        column amount(summa_sale) decimal(17, 5)
+        column currencyAmount(summa_salev) decimal(17, 5)
+        column vat(percent_nds) decimal(6, 4)
+        column vatAmount(summa_nds) decimal(19, 7)
 
-    column accountAmount(summa) decimal(19, 7) //Учетная сумма
-    column quantity2(kol2) decimal(17, 5) //Кол-во в доп ед
-    column priceListPrice(price_price) decimal(19, 7) //Цена из прайс-листа
-    column amountForPayment(summa_oplata) decimal(19, 7) //Сумма оплаты
+        column accountAmount(summa) decimal(19, 7) //Учетная сумма
+        column quantity2(kol2) decimal(17, 5) //Кол-во в доп ед
+        column priceListPrice(price_price) decimal(19, 7) //Цена из прайс-листа
+        column amountForPayment(summa_oplata) decimal(19, 7) //Сумма оплаты
 
-    def toString : String = Format.sub("Пр.счета", id, number, material.name, invoiceForPayment.toString)
+        def toString : String = Format.sub("Пр.счета", id, number, material.name, parent.toString)
+    }
 }
 
 entity InvoiceText<comtec>{

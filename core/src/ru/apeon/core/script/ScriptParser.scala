@@ -219,23 +219,40 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
     case e ~ t ~ f => If(e, t, f)
   }
 
+  private var entityName = collection.mutable.Stack[String]()
+  private var dataSourceName = ""
+
   def entity : Parser[Description] =
-    "entity" ~> ident ~! ("<" ~> ident <~ ">") ~! (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
-      case name ~ ds ~ ext ~ rows => Description(pack.get,
-        name, ds,
-        rows.find(_.isInstanceOf[Table]).asInstanceOf[Option[Table]].getOrElse(Table("", name)),
-        rows.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]],
-        rows.find(_.isInstanceOf[Discriminator]).getOrElse(DiscriminatorNull()).asInstanceOf[Discriminator],
-        extendsEntityName = ext,
-        declaredJoinedTables = rows.filter(_.isInstanceOf[JoinedTable]).asInstanceOf[Seq[JoinedTable]]
-      )
+    "entity" ~> (ident ^^ {case name => {
+      entityName.push(name)
+      name
+    }}) ~! (("<" ~> ident <~ ">") ^^ {case ds => {
+      dataSourceName = ds
+      ds
+    }}) ~ (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
+      case name ~ ds ~ ext ~ rows => {
+        description(rows, ext)
+      }
     }
+
+  def description(statements: List[Any], extendEntityName: Option[String] = None): Description = {
+    val ret = Description(pack.get,
+      entityName.reverse.mkString("."), dataSourceName,
+      statements.find(_.isInstanceOf[Table]).asInstanceOf[Option[Table]].getOrElse(Table("", entityName.reverse.mkString("_"))),
+      statements.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]],
+      statements.find(_.isInstanceOf[Discriminator]).getOrElse(DiscriminatorNull()).asInstanceOf[Discriminator],
+      extendsEntityName = extendEntityName,
+      declaredJoinedTables = statements.filter(_.isInstanceOf[JoinedTable]).asInstanceOf[Seq[JoinedTable]]
+    )
+    entityName.pop()
+    ret
+  }
 
   def _extends = "extends" ~> entityRef
 
-  def entityRef = ident
+  def entityRef = repsep(ident, ".") ^^ {case s => s.mkString(".")}
 
-  def entityStatement : Parser[Any] = (attribute | one | manyRef | manyBuiltIn | discriminator | joinTable | objectStatement | tableStatement)
+  def entityStatement : Parser[Any] = (attribute | one | manyBuiltIn | manyRef | discriminator | joinTable | objectStatement | tableStatement)
 
   def attribute : Parser[Attribute] =
     ("column" ~> ident) ~! (dbName?) ~ attributeDataType ~ primaryKey ~ (default?)  ^^ {
@@ -248,12 +265,17 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
       }
     }
 
+  def fieldSourcesToOne(name: String, dbNames: Option[Map[String, FieldSource]]): FieldSources = {
+    val names = dbNames.getOrElse(Map())
+    val fieldSources: FieldSources = FieldSources(names.getOrElse("", FieldSource(name + "_id")), names.filterNot(_._1.isEmpty))
+    fieldSources
+  }
+
   def one : Parser[ToOne] =
     ("one" ~> ident) ~! (dbName?) ~ entityRef ~ (default?)  ^^ {
       case name ~ dbName ~ entity ~ default => {
-        val names = dbName.getOrElse(Map())
         ToOne(pack.get, name,
-          FieldSources(names.getOrElse("", FieldSource(name + "_id")), names.filterNot(_._1.isEmpty)),
+          fieldSourcesToOne(name, dbName),
           entity, default = default)
       }
     }
@@ -263,15 +285,31 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
                   | stringLit ^^ {case n => DefaultString(n)})
 
   def manyRef : Parser[ToManyRef] =
-    ("many" ~> ident) ~ entityRef ~ ("." ~> ident)  ^^ {
-      case name ~ entity ~ column =>
-        ToManyRef(pack.get, name, entity, column)
+    ("many" ~> ident) ~ repsep(ident, ".")  ^^ {
+      case name ~ column =>{
+        if(column.size < 2) throw ParserException("Not set column or entity for to many %s".format(name))
+        ToManyRef(pack.get, name, column.take(column.size - 1).mkString(".") , column.last)
+      }
+
     }
 
-  def manyBuiltIn : Parser[ToManyRef] =
-    ("many" ~> ident) ~ entityRef ~ ("." ~> ident)  ^^ {
-      case name ~ entity ~ column =>
-        ToManyRef(pack.get, name, entity, column)
+  private var builtInName = ""
+  def manyBuiltIn : Parser[ToManyBuiltIn] =
+    ("many" ~> (ident ^^ {case n => {
+      builtInName = n
+      n
+    }})) ~ (dbName?) ~ ("{" ^^ {case "{" => {
+      entityName.push(builtInName)
+      "{"
+    }}) ~! ((entityStatement*) <~ "}")  ^^ {
+      case name ~ dbName ~ "{" ~ statements => {
+        ToManyBuiltIn(pack.get, name, description(
+          ToOne(pack.get, "parent",
+            fieldSourcesToOne("parent", dbName),
+            entityName.tail.reverse.mkString(".")
+          ) +: statements
+        ))
+      }
     }
 
   def dbName : Parser[Map[String, FieldSource]] =
@@ -352,7 +390,7 @@ class ScriptParser(model : ObjectModel = EntityConfiguration.model, fileName : O
     case name ~ statements => ExtendEntity(name, statements)
   }
 
-  def extendEntityStatement = (attribute | one | manyRef | manyBuiltIn)
+  def extendEntityStatement = (attribute | one | manyBuiltIn | manyRef)
 
   def importStm = "import" ~> repsep(ident, ".") ^^ {case n => Import(n.mkString("."))}
 

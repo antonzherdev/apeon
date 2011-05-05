@@ -98,7 +98,7 @@ trait Environment{
   def thisType : Option[ScriptDataType]
   protected def setThisType(tc : Option[ScriptDataType])
   def withThisType[A](tc : ScriptDataType)( f : => A) : A = {
-    val old = dotType
+    val old = thisType
     setThisType(Some(tc))
     val ret = f
     setThisType(old)

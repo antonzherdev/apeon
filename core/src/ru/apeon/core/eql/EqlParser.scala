@@ -8,6 +8,8 @@ import util.parsing.combinator.token.Tokens
 import util.parsing.combinator.lexical.StdLexical
 import util.parsing.input.CharArrayReader.EofCh
 import ru.apeon.core.script.{Imports, ObjectModel}
+import collection.mutable.Buffer
+import ru.apeon.core.eql.Ref._
 
 /**
  * @author Anton Zherdev
@@ -70,20 +72,28 @@ class EqlParser(val model : ObjectModel,
     }
   }
 
-  def from : Parser[From] = (toManyFromTable | entityFromTable)
+  def from : Parser[From] = rep1sep(ident, ".") ~ (dataSource?) ~ (alias?)  ^^ {
+    case refs ~ dataSource ~ alias =>
+      val entityName = Buffer[String]()
+      var entity : Option[Description] = None
+      for(part <- refs) {
+        if(entity.isEmpty) {
+          entityName.append(part)
+          entity = model.entityDescriptionOption(entityName.mkString("."), imports)
+        }
+        else {
+          entity = Some(entity.get.field(part).asInstanceOf[ToMany].entity)
+        }
+      }
+      entity match {
+        case Some(e) => FromEntity(e, alias, dataSource.getOrElse(DataSourceExpressionDefault()))
+        case None => FromToMany(ref(refs), alias)
+      }
 
-  def entityFromTable : Parser[FromEntity] = ident ~ (dataSource?) ~ (alias?)  ^^ {
-    case entity ~ dataSource ~ alias =>
-      FromEntity(model.entityDescription(entity, imports), alias, dataSource.getOrElse(DataSourceExpressionDefault()))
   }
 
   def dataSource : Parser[DataSourceExpression] = "<" ~> ident <~ ">" ^^ {
     case s => DataSourceExpressionDataSource(model.dataSource(s, imports))
-  }
-
-  def toManyFromTable : Parser[From] = columnRef ~ as ^^ {
-    case Ref(None, entity) ~ alias => FromEntity(model.entityDescription(entity, imports), Some(alias))
-    case ref ~ alias => FromToMany(ref, Some(alias))
   }
 
   def alias : Parser[String] = "as" ~> ident
@@ -127,17 +137,21 @@ class EqlParser(val model : ObjectModel,
     case s => ConstString(s)
   }
 
-  def columnRef : Parser[Ref] = ident ~ opt("." ~> repsep(ident,".")) ^^ {
-    case ref ~ None => {
-      Ref(None, ref)
+  def ref(refs: List[String]): Ref = {
+    refs match {
+      case Seq(ref) => Ref(None, ref)
+      case _ => {
+        val i = refs.iterator
+        var ref = Ref(i.next(), i.next())
+        while (i.hasNext)
+          ref = Ref(ref, i.next())
+        ref
+      }
     }
-    case r ~ Some(refs) => {
-      val i = refs.iterator
-      var ref = Ref(r, i.next())
-      while(i.hasNext)
-        ref = Ref(ref, i.next())
-      ref
-    }
+  }
+
+  def columnRef : Parser[Ref] = rep1sep(ident,".") ^^ {
+    case refs => ref(refs)
   }
 
 

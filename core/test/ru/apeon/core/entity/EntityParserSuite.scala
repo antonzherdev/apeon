@@ -198,6 +198,30 @@ entity InvoiceForPayment<apeon>{
     ))
   }
 
+  test("Inner to many") {
+    val esh = new DefaultObjectModel
+    val epack = Package("ru.apeon.test")
+
+    val parsed = ScriptParser.parse(sh, pack,
+      """
+      entity Article<apeon> {
+        many test(tst) {
+          column name varchar(254)
+        }
+      }
+      """)
+    val t = Description(pack, "Article.test", "apeon", Table("", "Article_test"), Seq(
+      ToOne(pack, "parent", "tst", "Article"),
+      Attribute(pack, "name", "name", AttributeDataTypeVarchar(254))
+    ))
+    val ed = Description(pack, "Article", "apeon", Table("", "Article"), Seq(
+      ToManyBuiltIn(pack, "test",t)
+    ))
+    parsed should equal(script(ed))
+    script(ed).evaluate(new DefaultEnvironment(esh))
+    esh.entityDescription("ru.apeon.test.Article.test") should equal(t)
+  }
+
   test("Compex") {
     ScriptParser.parse(sh, pack,
       """
