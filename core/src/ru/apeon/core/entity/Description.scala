@@ -3,7 +3,6 @@ package ru.apeon.core.entity
 import ru.apeon.core.script._
 import collection.mutable.Buffer
 
-
 /**
  * Сущность
  * @param id идентификатор
@@ -15,7 +14,8 @@ import collection.mutable.Buffer
  * @param extendsEntityName имя сущности, от которой отнаследована текущая сущность
  * @param declaredJoinedTables подсоединенные таблицы для мультиапдейтных сущностей
  */
-case class Description(pack : Package,
+case class Description(module : Module,
+                       pack : Package,
                        name : String,
                        defaultDataSourceName : String,
                        table : Table,
@@ -116,6 +116,30 @@ case class Description(pack : Package,
             case Some(e) => e == description || e.isInstanceOf(description)
             case None => false
           })
+
+  override def equals(obj: Any) = obj match {
+    case d : Description =>
+      this.module == d.module &&
+      this.pack == d.pack &&
+      this.name == d.name &&
+      this.defaultDataSourceName == d.defaultDataSourceName &&
+      this.table == d.table &&
+      this.declaredDeclarations.corresponds(d.declaredDeclarations){_ == _} &&
+      this.discriminator == d.discriminator &&
+      this.extendsEntityName == d.extendsEntityName &&
+      this.declaredJoinedTables.corresponds(d.declaredJoinedTables){_ == _}
+    case _ => false
+  }
+}
+
+case class DataSourceLink(dataSourceName : String) {
+  private var _dataSource : DataSource = _
+
+  def dataSource : DataSource = _dataSource
+
+  def preFillRef(env : Environment, imports: Imports) {
+    _dataSource = env.model.dataSource(dataSourceName)
+  }
 }
 
 case class JoinedTable(table : Table, column : String)
@@ -211,7 +235,7 @@ abstract class Discriminator
 case class DiscriminatorNull() extends Discriminator
 case class DiscriminatorColumn(columnName : String, value : Any) extends Discriminator
 
-case class ExtendEntity(entityName : String, fields : Seq[Field]) extends Statement {
+case class ExtendEntity(module : Module, entityName : String, fields : Seq[Field]) extends Statement {
   def evaluate(env: Environment) {}
 
 
@@ -238,14 +262,3 @@ abstract class Default
 case class DefaultString(value : String) extends Default
 case class DefaultInt(value : Int) extends Default
 
-trait EntityDefine {
-  implicit def string2EntityColumnSources(columnName : String) : FieldSources =
-    FieldSources(FieldSource(columnName))
-
-  implicit def string2EntityColumnSources(source : (String, String)) : FieldSources =
-    FieldSources(FieldSource(source._2, Some(source._1)))
-
-  implicit def string2Table(columnName : String) : Table =
-    Table("", columnName)
-
-}

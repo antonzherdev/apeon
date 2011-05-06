@@ -21,21 +21,15 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     def preFillRef(env : Environment, imports: Imports) {}
   }
 
-  val sh = new DefaultObjectModel
-  val pack = Package("ru.apeon.test")
-  val ds = new DataSource(pack, "ds")
-  sh.addDataSource(ds)
   val pack2 = Package("ru.apeon.test2")
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger())
   val plus = Def("plus", Plus(Ref("col1"), Ref("col2")))
   val toStr = Def("toStr", Dot("%d %d", Ref("format", Some(Seq(Par(Ref("col1")), Par(Ref("col2")))))))
-  val article = Description(pack, "Article", "ds", Table("dba", "article"), Seq(Id, col1, col2, plus, toStr))
-  val obj = Object(pack, "Article", Seq(Def("test", ConstInt(11))))
-  sh.addEntityDescription(article)
-  sh.addObj(obj)
-  EntityConfiguration.model = sh
-  FillRef(sh, pack, pack, article, obj)
+  val article = desc("Article").decl(Id, col1, col2, plus, toStr).b
+  val obj = Object(CoreModule, pack, "Article", Seq(Def("test", ConstInt(11))))
+  model.addObj(obj)
+  fillRef()
   val M = collection.mutable.Map
 
   val emptyEm = new EmptyEntityManager
@@ -44,7 +38,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
 
   class TestedEntityManager extends EmptyEntityManager {
-    override def model = sh
+    override def model = model
 
     override def get(id: EntityId) = id.description match {
       case a if a == article => id match {
@@ -77,11 +71,11 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
   }
 
 
-  def run(statement : Statement*) = Script(sh, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
-  def run(pack : Package, statement : Statement*) = Script(sh, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
+  def run(statement : Statement*) = Script(model, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
+  def run(pack : Package, statement : Statement*) = Script(model, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
   def run(model : ObjectModel, pack : Package, statement : Statement*) = Script(model, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
-  def run(env : Environment, statement : Statement*) = Script(sh, pack, statement : _*).evaluate(env)
-  def run(em : EntityManager, statement : Statement*) = Script(sh, pack, statement : _*).evaluate(env = new Env(em))
+  def run(env : Environment, statement : Statement*) = Script(model, pack, statement : _*).evaluate(env)
+  def run(em : EntityManager, statement : Statement*) = Script(model, pack, statement : _*).evaluate(env = new Env(em))
 
   describe("Script") {
     it("eval") {
@@ -168,11 +162,11 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
   describe("Dot") {
     it("Прямая ссылка на пакет") {
-      run(pack2, Dot(Dot(Dot(Ref("ru"), Ref("apeon")), Ref("test")), Ref("Article", ConstInt(1))))should equal(article1)
+      run(pack2, Dot(Dot(Dot(Ref("ru"), Ref("apeon")), Ref("core")), Ref("Article", ConstInt(1))))should equal(article1)
     }
 
     it("Ссылка на с импортом") {
-      run(pack2, Import("ru.apeon._"), Dot(Ref("test"), Ref("Article", ConstInt(1))))should equal(article1)
+      run(pack2, Import("ru.apeon._"), Dot(Ref("core"), Ref("Article", ConstInt(1))))should equal(article1)
     }
   }
 
@@ -329,29 +323,26 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
   }
 
   describe("Ref") {
-    var model : ObjectModel = new DefaultObjectModel
-    def pfo(obj : Object) {
-      val ds = new DataSource(pack, "ds")
-      model.addDataSource(ds)
-      model.addObj(obj)
-      EntityConfiguration.model = model
-      FillRef(model, obj.pack, obj.pack, obj)
-    }
-    def pc = Package("ru.apeon.test")
     it("This object ref") {
-      model = new DefaultObjectModel
-      val pack = pc
-      pfo(Object(pack, "Test", Seq(Def("test", ConstInt(11)), Def("test2", Ref("test")))))
-      run(model, pack, Dot(Ref("Test"), Ref("test2"))) should equal (11)
-      EntityConfiguration.model = sh
+      object O extends EntityDefine{
+        def apply() {
+          model.addObj(Object(CoreModule, pack, "Test", Seq(Def("test", ConstInt(11)), Def("test2", Ref("test")))))
+          fillRef()
+          run(model, pack, Dot(Ref("Test"), Ref("test2"))) should equal (11)
+        }
+      }
+      O()
     }
     it("This object ref in parameters after dot") {
-      model = new DefaultObjectModel
-      val pack = pc
-      pfo(Object(pack, "Test", Seq(Def("test", ConstInt(11)),
-        Def("test2", Dot("%d", Ref("format", Ref("test")))))))
-      run(model, pack, Dot(Ref("Test"), Ref("test2"))) should equal ("11")
-      EntityConfiguration.model = sh
+      object O extends EntityDefine{
+        def apply() {
+          model.addObj(Object(CoreModule, pack, "Test", Seq(Def("test", ConstInt(11)),
+            Def("test2", Dot("%d", Ref("format", Ref("test")))))))
+          fillRef()
+          run(model, pack, Dot(Ref("Test"), Ref("test2"))) should equal ("11")
+        }
+      }
+      O()
     }
     it("Entity field function ref") {
       run(
@@ -391,7 +382,7 @@ class EmptyEntityManager extends EntityManager {
   def model : ObjectModel = null
   def beginTransaction() {}
   def select(select: eql.Select) : Seq[Entity] = Seq()
-  def register(entity: Entity) = null
+  def register(entity: Entity) {}
   def lazyLoad(entity: Entity, field : Field, data : Any) : Any = null
   def insert(description: Description, dataStore: DataSource) : Entity = null
   def get(id: EntityId) : Option[Entity] = None

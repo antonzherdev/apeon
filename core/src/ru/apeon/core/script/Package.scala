@@ -20,6 +20,8 @@ case class Package(name : String) extends Statement with Declaration {
   def dataType(env: Environment) = ScriptDataTypePackage(this)
 }
 
+object EmptyPackage extends Package("")
+
 trait InPackage {
   def pack : Package
   def name : String

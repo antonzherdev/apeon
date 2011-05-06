@@ -4,6 +4,7 @@ trait ClassBase extends Declaration with Statement with InPackage {
   def declaredDeclarations : Seq[DeclarationStatement]
   def extendsClass : Option[ClassBase]
   def pack : Package
+  def module : Module
 
 
   protected def declarationsLoad : Seq[Declaration] = declaredDeclarations ++ extendsClass.map{_.declarations}.getOrElse(Seq())
@@ -56,5 +57,5 @@ trait ObjectBase extends ClassBase  {
 
 
 
-case class Object(pack : Package, name : String, declaredDeclarations : Seq[DeclarationStatement],
+case class Object(module : Module, pack : Package, name : String, declaredDeclarations : Seq[DeclarationStatement],
                   extendsClass : Option[ClassBase] = None) extends ObjectBase

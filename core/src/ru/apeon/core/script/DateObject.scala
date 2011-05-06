@@ -3,7 +3,10 @@ package ru.apeon.core.script
 import java.util.Calendar
 
 
-case class DateObject(pack : Package) extends ObjectBase {
+object DateObject extends ObjectBase {
+  def module = CoreModule
+  def pack = EmptyPackage
+
   def name = "Date"
   def extendsClass = None
   def declaredDeclarations = Seq(
