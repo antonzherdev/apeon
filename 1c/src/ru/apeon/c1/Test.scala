@@ -44,13 +44,14 @@ object Test extends Application{
 //    val rs = stat.executeQuery("SELECT Ref, Наименование FROM Catalog.Номенклатура")
     val rs = stat.executeQuery(
 """select
-	t.Дата
+	t.Ref
 from
 	Document.ПоступлениеТоваровУслуг as t
 """
     )
     while(rs.next()){
-      System.out.println(rs.getString(1))
+      System.out.println(rs.getObject(1).asInstanceOf[OCDocumentRef].getObject.getTabularSection("Материалы") )
+
 //      System.out.println(rs.getString("COLUMN_NAME"))
     }
 //    stat.close()

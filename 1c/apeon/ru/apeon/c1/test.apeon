@@ -19,6 +19,13 @@ entity MatMoveIn<c1> {
     column id(Ref) char(36) primary key
     column number(Номер) varchar(254)
     column date(Дата) date
+
+    many materials {
+        one parent(Ref) MatMoveIn primary key
+        column number(НомерСтроки) integer primary key
+        column quantity(Количество) decimal(15, 3)
+        column amount(Сумма) decimal(15, 2)
+    }
 }
 
 query Test {
