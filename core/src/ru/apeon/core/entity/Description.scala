@@ -34,10 +34,10 @@ case class Description(module : Module,
    * Список первичных ключей
    */
   lazy val _primaryKeys : Seq[Attribute] = fields.filter{
-    case a : Attribute => a.isPrimaryKey //&& a.tableName.getOrElse(table.name) == table.name
+    case a : FieldWithSource => a.isPrimaryKey //&& a.tableName.getOrElse(table.name) == table.name
     case _ => false}.asInstanceOf[Seq[Attribute]]
 
-  def primaryKeys : Seq[Attribute] = _primaryKeys
+  def primaryKeys : Seq[FieldWithSource] = _primaryKeys
 
   /**
    *  Получить колонку по имени
@@ -163,6 +163,8 @@ abstract class Field extends DeclarationStatement {
 }
 
 abstract class FieldWithSource extends Field {
+  def isPrimaryKey : Boolean
+
   /**
    * Имя таблицы для мультиапдейтных сущностей
    */
@@ -191,7 +193,7 @@ case class Attribute(pack : Package, name : String, sources :  FieldSources,
 }
 
 case class ToOne(pack : Package, name : String, sources :  FieldSources,
-                 entityName : String, default : Option[Default] = None)
+                 entityName : String, default : Option[Default] = None, isPrimaryKey : Boolean = false)
         extends FieldWithSource
 {
   private var _entity : Description = _

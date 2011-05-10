@@ -343,10 +343,11 @@ class SqlGenerator {
     }
 
     def join(to : ToOne, ft : sql.From, l : sql.Ref) : sql.From = {
-      joins += sql.LeftJoin(ft, sql.And(sql.Equal(l, sql.Ref(ft, "id")), to.entity.discriminator match {
-        case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(ft, column), sql.Expression.constant(value)))
-        case DiscriminatorNull() => None
-      } ) )
+      joins += sql.LeftJoin(ft, sql.And(sql.Equal(l, sql.Ref(ft, to.entity.primaryKeys.head.columnName(dataSource))),
+        to.entity.discriminator match {
+          case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(ft, column), sql.Expression.constant(value)))
+          case DiscriminatorNull() => None
+        } ) )
       toOne += to -> ft
       ft
     }

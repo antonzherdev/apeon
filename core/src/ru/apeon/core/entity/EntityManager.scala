@@ -79,7 +79,11 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
     val ds = select.dataSource
     val store = ds.store
     store.select(select).map{row =>
-      val id = new SqlEntityId(ds, from, row(from.primaryKeys.head.name))
+      val id = from.primaryKeys match {
+        case Seq(pk) => new OneEntityId(ds, from, row(pk.name))
+        case Seq() => throw new RuntimeException("No primary key for entity \"%s\".".format(from.fullName))
+        case pks =>  new MultiEntityId(ds, from, pks.map{pk => row(pk.name)})
+      }
       var ret = entities.get(id)
       if(ret.isEmpty) {
         val r = row.map{case ((columnName, value)) =>
@@ -89,7 +93,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
                 val iid = m(o.entity.primaryKeys.head.name)
                 if(iid == null) (columnName, null)
                 else {
-                  val oid = new SqlEntityId(ds, o.entity, iid)
+                  val oid = new OneEntityId(ds, o.entity, iid)
                   (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
                 }
               }
@@ -100,7 +104,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
         }
         ret = Some(new Entity(this, id, r))
       }
-     ret.get
+      ret.get
     }
   }
 
@@ -211,12 +215,12 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
     val b = collection.mutable.Map.newBuilder[String, Any]
     for(field <- description.fields) {
       val value : Any = field match {
-          case s : FieldWithSource => s.default match {
-            case Some(DefaultInt(i)) => i
-            case Some(DefaultString(s)) => s
-            case None => null
-          }
-          case _=> Set()
+        case s : FieldWithSource => s.default match {
+          case Some(DefaultInt(i)) => i
+          case Some(DefaultString(s)) => s
+          case None => null
+        }
+        case _=> Set()
       }
       b += (field.name -> value)
     }
@@ -233,7 +237,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
         where = Some(Equal(Ref("m", many.toOne.name), entity.id.const)))).toSet
     case one : ToOne =>
       data match {
-        case id : Int => get(new SqlEntityId(entity.id.dataSource, one.entity, id)).getOrElse(null)
+        case id : Int => get(new OneEntityId(entity.id.dataSource, one.entity, id)).getOrElse(null)
         case _ => throw new RuntimeException("Data not int")
       }
     case _ =>

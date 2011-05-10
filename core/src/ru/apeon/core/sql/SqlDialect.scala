@@ -388,7 +388,7 @@ class DefaultSqlDialect extends SqlDialect with TextGen {
             appendEscape()
             if (!aliasPref.isEmpty) {
               append(aliasPref)
-              append('.')
+              append("__")
             }
             append(c.name.get)
             appendEscape()

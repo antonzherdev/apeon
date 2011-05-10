@@ -4,10 +4,12 @@ import ru.apeon.core._
 
 import collection.Map
 import akka.util.{Logger, Logging}
-import eql.{SqlGenerator, Update, Insert, Delete}
+import eql._
 import java.sql.Connection
 
 trait ReadOnlyPersistentStore {
+  def load(){}
+  def unload(){}
   def name : String
 
   /**
@@ -40,7 +42,9 @@ abstract class SqlPersistentStoreBase
         extends PersistentStore with Logging
 {
   val readOnlyLog = Logger("ru.apeon.core.entity.ReadOnlyPersistentStore")
-  val e = new eql.Eql(){
+  protected val _eql = new Eql
+
+  class Eql extends eql.Eql {
     override def getConnection = SqlPersistentStoreBase.this.getConnection
     override def dialect = SqlPersistentStoreBase.this.dialect
     override def generator = SqlPersistentStoreBase.this.generator
@@ -50,35 +54,35 @@ abstract class SqlPersistentStoreBase
   def dialect : sql.SqlDialect
   def generator : SqlGenerator
 
-  def select(select: eql.Select, parameters: Map[String, Any]) = e.transaction{
+  def select(select: eql.Select, parameters: Map[String, Any]) = _eql.transaction{
     readOnlyLog.debug("<%s> %s", name, select)
-    e.select(select, parameters).toSeqMutableMap
+    _eql.select(select, parameters).toSeqMutableMap
   }
 
 
   def update(update: Update, parameters: Map[String, Any]) {
     log.debug("<%s> %s", name, update)
-    e.update(update, parameters)
+    _eql.update(update, parameters)
   }
 
   def insert(insert: Insert, parameters: Map[String, Any]) = {
     log.debug("<%s> %s", name, insert)
-    e.insert(insert, parameters)
+    _eql.insert(insert, parameters)
   }
 
   def delete(delete: Delete, parameters: Map[String, Any]) {
     log.debug("<%s> %s", name, delete)
-    e.delete(delete, parameters)
+    _eql.delete(delete, parameters)
   }
 
   def beginTransaction() {
-    e.beginTransaction()
+    _eql.beginTransaction()
   }
   def rollback() {
-    e.rollback()
+    _eql.rollback()
   }
   def commit() {
-    e.commit()
+    _eql.commit()
   }
 
 }

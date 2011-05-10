@@ -20,7 +20,7 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
   def applyId = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       parameters.get.head.value match {
-        case id : Int => env.em.get(new SqlEntityId(env.dataSource(dataSource).getOrElse(description.dataSource), description, id)).getOrElse(
+        case id : Int => env.em.get(new OneEntityId(env.dataSource(dataSource).getOrElse(description.dataSource), description, id)).getOrElse(
           throw ScriptException(env, "Entity not found")
         )
         case _ => throw ScriptException(env, "Not integer")

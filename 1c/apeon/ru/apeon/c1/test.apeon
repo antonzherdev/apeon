@@ -21,7 +21,9 @@ entity MatMoveIn<c1> {
     column date(Дата) date
 
     many materials {
+        table Document.ПоступлениеТоваровУслуг.Товары
         one parent(Ref) MatMoveIn primary key
+
         column number(НомерСтроки) integer primary key
         column quantity(Количество) decimal(15, 3)
         column amount(Сумма) decimal(15, 2)
@@ -29,7 +31,9 @@ entity MatMoveIn<c1> {
 }
 
 query Test {
- `from MatMoveIn`.select
+`from MatMoveIn`.select
+
+//`from MatMoveIn`.select
 
 /*`from Material<c1>`.select.foreach {material =>
     material sync as s to comtec.Material<comtec.comtec> as d where `s.number = d.number and s.name = d.name`

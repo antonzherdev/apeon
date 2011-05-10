@@ -35,7 +35,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
         new EmptyEntityManager() {
           override def get(id: EntityId) = Some(new Entity(this, id, M("id" -> 1, "col1" -> 2, "col2" -> 11)))
 
-          val id2 = new SqlEntityId(ps, article, 2)
+          val id2 = new OneEntityId(ps, article, 2)
           override def select(select: eql.Select) =
             Seq(new Entity(this, id2, M("id" -> 2, "col1" -> 2, "col2" -> 22)))
 
@@ -74,7 +74,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
           }
 
           override def insert(description: Description, dataSource: DataSource) =
-            new Entity(this, new SqlEntityId(new DataSource(pack, "ds") {
+            new Entity(this, new OneEntityId(new DataSource(pack, "ds") {
               override def store = new SqlPersistentStore("test"){
                 override def insert(insert: Insert, parameters: Map[String, Any]) = 20
               }
@@ -90,15 +90,15 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
     }
 
     it("ToMany") {
-      val id2 = new SqlEntityId(ps, article, 2)
+      val id2 = new OneEntityId(ps, article, 2)
       run(
         new EmptyEntityManager() {
-          override def get(id: EntityId) = id.asInstanceOf[SqlEntityId].id match {
+          override def get(id: EntityId) = id.asInstanceOf[OneEntityId].id match {
             case 1 => Some(new Entity(this, id, M("id" -> 1, "col1" -> 2, "col2" -> 11)))
             case 2 => Some(new Entity(this, id, M("id" -> 2, "col1" -> 2, "col2" -> 11)))
           }
 
-          def id(v : Int) = new SqlEntityId(ps, cons, v)
+          def id(v : Int) = new OneEntityId(ps, cons, v)
           def e(m : collection.mutable.Map[String, Any]) = new Entity(this, id(m("id").asInstanceOf[Int]), m)
           override def select(select: eql.Select) = {
             val f = select.from.asInstanceOf[eql.FromEntity]
@@ -119,7 +119,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
 
           override def lazyLoad(entity: Entity, field : Field, data : Any) = {
             field.name should equal("conses")
-            entity.id.asInstanceOf[SqlEntityId].id match {
+            entity.id.asInstanceOf[OneEntityId].id match {
               case 1 => Seq(
                 e(M("id" -> 1, "article" -> 1, "uid" -> 1, "col1" -> 22)),
                 e(M("id" -> 2, "article" -> 1, "uid" -> 2, "col1" -> 32)))
@@ -131,7 +131,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
           }
 
           override def insert(description: Description, dataSource: DataSource) =
-            new Entity(this, new SqlEntityId(new DataSource(pack, "db") {
+            new Entity(this, new OneEntityId(new DataSource(pack, "db") {
               override def store = new SqlPersistentStore("test"){
                 override def insert(insert: Insert, parameters: Map[String, Any]) = 5
               }

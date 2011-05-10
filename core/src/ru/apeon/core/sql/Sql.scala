@@ -16,28 +16,32 @@ trait SqlReadOnly {
   def dialect : SqlDialect = SqlConfiguration.dataSource.dialect
   val readOnlyLog = Logger("ru.apeon.core.sql.SqlReadOnly")
   var connection : Connection = null
+  private var transactionOpened = false
+
 
   def beginTransaction() {
     if (connection == null) {
       connection = getConnection
     }
+    transactionOpened = true
   }
 
   def commit() {
     connection.commit()
-    connection.close()
-    connection = null
+    transactionOpened = false
   }
 
   def rollback() {
     connection.rollback()
-    connection.close()
-    connection = null
+    transactionOpened = false
   }
 
 
   def transaction[A](tr : => A) : A = synchronized{
-    if(connection == null) {
+    if(transactionOpened) {
+      tr
+    }
+    else {
       beginTransaction()
       try {
         tr
@@ -46,7 +50,6 @@ trait SqlReadOnly {
         commit()
       }
     }
-    else tr
   }
 
   def anyToString(v : Any) : String = v match {
@@ -105,7 +108,7 @@ trait SqlReadOnly {
   }
 
   def checkTransaction() {
-    if (connection == null) throw new SqlError("Transaction have not been opened")
+    if (!transactionOpened) throw new SqlError("Transaction have not been opened")
   }
 
   def select(sql : String): Rows = select(sql, Map[String, Any]())
@@ -114,19 +117,24 @@ trait SqlReadOnly {
     checkTransaction()
     val stm = connection.createStatement
     val rs : ResultSet = stm.executeQuery(applyParameters(sql, parameters))
-    new RowsSimple(rs)
+    new Rows(rs, {rows => new RowSimple(rows.rs)})
   }
 
   def pars(parameters : collection.Map[String, Any]) = parameters + ("dialect" -> dialect)
 
   def select(sql : Select) : Rows = select(sql, immutable.Map[String, Any]())
-  def select(sql : Select, parameters : collection.Map[String, Any]) : Rows = {
+  protected def selectResultSet(sql: Select, parameters: Map[String, Any]): ResultSet = {
     checkTransaction()
     val stm = connection.createStatement
-    val s : String = dialect.toString(sql, pars(parameters))
+    val s: String = dialect.toString(sql, pars(parameters))
     readOnlyLog.debug(s)
-    val rs : ResultSet = stm.executeQuery(s)
-    new RowsSyntax(rs, sql)
+    val rs: ResultSet = stm.executeQuery(s)
+    rs
+  }
+
+  def select(sql : Select, parameters : collection.Map[String, Any]) : Rows = {
+    val rs: ResultSet = selectResultSet(sql, parameters)
+    new Rows(rs, {rows => new RowSyntax(rows.rs, sql)})
   }
 
   def isEmpty[A](values : A*) : A = {
@@ -233,26 +241,26 @@ class RowSimple(val rs : ResultSet) extends AbstractRow {
 }
 
 class RowSyntax(rs : ResultSet, val sql : Select) extends RowSimple(rs) {
-  override def toMutableMap = toMutableMap(ColumnSeq(sql.columns, ""), rs, 0)._1
+  override def toMutableMap = toMutableMap(ColumnSeq(sql.columns, ""), 0)._1
 
-  def toMutableMap(column : ColumnSeq, rs : ResultSet, i : Int) :  (mutable.Map[String, Any], Int) = {
+  def value(column : Column, j: Int): Any = {
+    rs.getObject(j + 1) match {
+      case d: java.math.BigDecimal => BigDecimal(d)
+      case d => d
+    }
+  }
+
+  def toMutableMap(column : ColumnSeq, i : Int) : (mutable.Map[String, Any], Int) = {
     var j = i
     val m = mutable.Map.empty[String, Any]
     column.columns.foreach{col => col match {
       case named : Column => {
-        val v = rs.getObject(j + 1) match {
-          case d : java.math.BigDecimal => BigDecimal(d)
-
-          //TODO: Это проблема ASA(Глюк #27). Если строка пустая, то она возращает Null. Нужно, чтобы это только для нее и выполнялось.
-          case null => if(rs.getMetaData.getColumnClassName(j + 1) == "java.lang.String") "" else null
-
-          case d => d
-        }
+        val v = value(named, j)
         m += (named.name.getOrElse{rs.getMetaData.getColumnLabel(j + 1)} -> v)
         j += 1
       }
       case seq : ColumnSeq => {
-        val r = toMutableMap(seq, rs, j)
+        val r = toMutableMap(seq, j)
         m += (seq.name.get -> r._1)
         j = r._2
       }
@@ -291,9 +299,7 @@ case class CellNull() extends Cell {
   override def equals(obj: Any) = obj == null || obj == CellNull
 }
 
-trait Rows extends Iterable[Row] {
-  def toSeqMutableMap : Seq[mutable.Map[String, Any]]
-
+class Rows(val rs : ResultSet, val createRow : (Rows) => Row) extends Iterable[Row] {
   final def map[B](f: Row => B): Seq[B] = {
     val b = new ListBuffer[B]
 
@@ -304,14 +310,8 @@ trait Rows extends Iterable[Row] {
     b.toSeq
   }
 
-  def createRow : Row
-}
-
-abstract class AbstractRows extends Rows {
-  val rs : ResultSet
-
   def iterator = new Iterator[Row] {
-    var row : Row = createRow
+    var row : Row = createRow(Rows.this)
     var has_next : Int = 0
 
     def next() = {
@@ -338,22 +338,6 @@ abstract class AbstractRows extends Rows {
   }
 
   def toSeqMutableMap : Seq[mutable.Map[String, Any]] = map{r : Row => r.toMutableMap}
-}
-
-class RowsSimple(val rs : ResultSet) extends AbstractRows {
-  def createRow = new RowSimple(rs)
-}
-
-class RowsSyntax(val rs : ResultSet, val sql : Select) extends AbstractRows {
-  def createRow = new RowSyntax(rs, sql)
-}
-
-abstract class RowsDecorator(val parent : Rows) extends Rows{
-  def iterator = parent.iterator
-
-  def toSeqMutableMap = parent.toSeqMutableMap
-
-  def createRow = parent.createRow
 }
 
 case class SqlError(s : String) extends Exception(s)

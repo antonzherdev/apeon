@@ -131,7 +131,7 @@ class Entity(val manager : EntityManager,
   def saveId(id : Any) {
     _id  = this.id match {
       case i : TemporaryEntityId => {
-        SqlEntityId(i.dataSource, i.description, id.asInstanceOf[Int])
+        OneEntityId(i.dataSource, i.description, id.asInstanceOf[Int])
       }
     }
     this.id.description.primaryKeys match {
@@ -216,13 +216,13 @@ case class TemporaryEntityId(dataSource : DataSource, description : Description,
   }
 }
 
-case class SqlEntityId(dataSource : DataSource, description : Description, id : Any) extends EntityId {
+case class OneEntityId(dataSource : DataSource, description : Description, id : Any) extends EntityId {
   def isTemporary = false
 
   override def toString = id.toString
 
   override def equals(obj: Any) = obj match {
-    case sqlId : SqlEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description == description
+    case sqlId : OneEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description == description
     case _ => false
   }
 
@@ -233,12 +233,51 @@ case class SqlEntityId(dataSource : DataSource, description : Description, id : 
   override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + id.hashCode
 
   def equalAny(id: Any) = id match {
-    case i : SqlEntityId => i == this
+    case i : OneEntityId => i == this
     case _ => id == this.id
   }
 
   def equalId(id: EntityId) = id match {
-    case t : SqlEntityId => t.id == this.id
+    case t : OneEntityId => t.id == this.id
+    case _ => false
+  }
+}
+
+case class MultiEntityId(dataSource : DataSource, description : Description, ids : Seq[Any]) extends EntityId {
+  def isTemporary = false
+
+  override def toString = ids.mkString("<", ",", ">")
+
+  override def equals(obj: Any) = obj match {
+    case sqlId : MultiEntityId => sqlId.ids.corresponds(this.ids){_ == _} && sqlId.dataSource == dataSource && sqlId.description == description
+    case _ => false
+  }
+
+  def eqlFindById(alias : Option[String]) = {
+    var ret : Option[Expression] = None
+    val i = ids.iterator
+    for(pk <- description.primaryKeys) {
+      val e = Equal(Ref(alias, pk.name), Const(i.next()))
+      ret = ret match {
+        case None => Some(e)
+        case Some(r) => Some(And(r, e))
+      }
+    }
+    ret.get
+  }
+
+  def const = throw new RuntimeException("Const is not supported for multi identity")
+
+  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + ids.hashCode
+
+  def equalAny(id: Any) = id match {
+    case i : MultiEntityId => i == this
+    case s : Seq[Any] => s.corresponds(ids) {_ == _}
+    case _ => id == this.ids
+  }
+
+  def equalId(id: EntityId) = id match {
+    case t : MultiEntityId => t.ids.corresponds(this.ids){_ == _}
     case _ => false
   }
 }

@@ -2,7 +2,8 @@ package ru.apeon.core.eql
 
 import collection._
 import ru.apeon.core._
-import sql.SqlTable
+import java.sql.ResultSet
+import sql.{SqlTable}
 
 /**
  * @author Anton Zherdev
@@ -11,8 +12,18 @@ import sql.SqlTable
 trait Eql extends sql.Sql {
   def select(statement : Select) : sql.Rows = select(statement, Map[String, Any]())
 
-  def select(statement : Select, parameters : collection.Map[String, Any]) : sql.Rows =
-    new EqlRows(this, statement, select(generator.gen(statement), parameters))
+  protected def sqlRow(select: Select, sqlSelect: sql.Select, rows: sql.Rows): sql.Row =
+    new sql.RowSyntax(rows.rs, sqlSelect)
+
+  protected def sqlRows(select: Select, sqlSelect: sql.Select, rs: ResultSet): sql.Rows =
+    new EqlRows(this, select, rs, {
+      rows => sqlRow(select, sqlSelect, rows)
+    })
+
+  def select(select : Select, parameters : collection.Map[String, Any]) : sql.Rows = {
+    val sqlSelect: sql.Select = generator.gen(select)
+    sqlRows(select, sqlSelect, selectResultSet(sqlSelect, parameters))
+  }
 
   def delete(delete : Delete, parameters : collection.Map[String, Any] = Map()) {
     execute(generator.gen(delete), parameters)
@@ -44,7 +55,7 @@ trait Eql extends sql.Sql {
   }
 }
 
-class EqlRows(val eql : Eql, val select : Select, parent : sql.Rows) extends sql.RowsDecorator(parent) {
+class EqlRows(val eql : Eql, val select : Select, rs : ResultSet, createRow : (sql.Rows) => sql.Row) extends sql.Rows(rs, createRow) {
   override def toSeqMutableMap : Seq[mutable.Map[String, Any]] = {
     val par : Seq[mutable.Map[String, Any]]  = super.toSeqMutableMap
     val selects = eql.generator.generateToMany(select)

@@ -19,16 +19,28 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
   def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
 
+  private var loaded = false
   private lazy val _persistentStore : PersistentStore = {
     val xml = Loader.apeonXml.\\("datasource").find(_.\("@name").text == fullName).getOrElse{
       throw new RuntimeException("Datasource \"%s\" nor found in apeon.xml.".format(name))}
     val impl = xml.\("@class").headOption.map{className =>
       Loader.newInstance(className.text).asInstanceOf[DataSourceImpl]}.getOrElse(new DataSourceImplLookup)
-    impl.persistentStore(this, xml)
+    val ret = impl.persistentStore(this, xml)
+    ret.load()
+    loaded = true
+    ret
   }
 
   def store : PersistentStore = _persistentStore
 
+  def load() {
+  }
+
+  def unload() {
+    if(loaded) {
+      store.unload()
+    }
+  }
 }
 
 trait DataSourceImpl {

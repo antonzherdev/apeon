@@ -272,11 +272,11 @@ class ScriptParser(model : ObjectModel, module : Module = CoreModule, fileName :
   }
 
   def one : Parser[ToOne] =
-    ("one" ~> ident) ~! (dbName?) ~ entityRef ~ (default?)  ^^ {
-      case name ~ dbName ~ entity ~ default => {
+    ("one" ~> ident) ~! (dbName?) ~ entityRef ~ primaryKey ~ (default?)  ^^ {
+      case name ~ dbName ~ entity ~ pk ~ default => {
         ToOne(pack.get, name,
           fieldSourcesToOne(name, dbName),
-          entity, default = default)
+          entity, default, pk)
       }
     }
 
@@ -304,10 +304,16 @@ class ScriptParser(model : ObjectModel, module : Module = CoreModule, fileName :
     }}) ~! ((entityStatement*) <~ "}")  ^^ {
       case name ~ dbName ~ "{" ~ statements => {
         ToManyBuiltIn(pack.get, name, description(
-          ToOne(pack.get, "parent",
+          statements.find{
+            case s : ToOne => s.name == "parent"
+            case _ => false
+          } match {
+          case None => ToOne(pack.get, "parent",
             fieldSourcesToOne("parent", dbName),
             entityName.tail.reverse.mkString(".")
           ) +: statements
+          case Some(p) => statements
+        }
         ))
       }
     }

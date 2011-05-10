@@ -1,19 +1,21 @@
 package ru.apeon.core.loader
 
 import java.io.File
-import ru.apeon.core.entity.EntityConfiguration
 import akka.util.Logging
 import java.net.{URLClassLoader, URL}
 import xml.{NodeSeq, XML}
 import ru.apeon.core.script.{Module, DefaultObjectModel, ObjectModel}
+import ru.apeon.core.entity.{EntityConfiguration}
 
 object Loader extends Logging {
   var modules : Seq[Module] = Seq()
   var listeners : Seq[Listener] = Seq()
   var classLoader : URLClassLoader = _
   private var _apeonXml : NodeSeq = _
-
+  private var _model : ObjectModel = new DefaultObjectModel
   def apeonXml = _apeonXml
+
+  def model = _model
 
   def load() {
     unload()
@@ -22,7 +24,6 @@ object Loader extends Logging {
     _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
 
     val apeonFolder = new File(tomcatFolder + "/apeon")
-    val model = new DefaultObjectModel
     EntityConfiguration.model = model
 
     val modulesBuilder = Seq.newBuilder[Module]
@@ -57,6 +58,7 @@ object Loader extends Logging {
     ScriptLoader.load(model, modules)
 
     loadListeners()
+    model.dataSources.foreach(_.load())
 
     log.info("Loaded modules")
   }
@@ -66,7 +68,9 @@ object Loader extends Logging {
     listeners.foreach{listener =>
       listener.unload()
     }
+    model.dataSources.foreach(_.unload())
     listeners = Seq()
+    _model = new DefaultObjectModel
     log.info("Unloaded modules")
   }
 

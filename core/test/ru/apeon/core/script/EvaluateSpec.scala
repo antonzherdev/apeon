@@ -33,8 +33,8 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
   val M = collection.mutable.Map
 
   val emptyEm = new EmptyEntityManager
-  val article1 = new Entity(emptyEm, new SqlEntityId(EntityConfiguration.dataSource, article, 1), M("id" -> 1, "col1" -> 10, "col2" -> 12))
-  val article2 = new Entity(emptyEm, new SqlEntityId(EntityConfiguration.dataSource, article, 2), M("id" -> 2, "col1" -> 132, "col2" -> 122))
+  val article1 = new Entity(emptyEm, new OneEntityId(EntityConfiguration.dataSource, article, 1), M("id" -> 1, "col1" -> 10, "col2" -> 12))
+  val article2 = new Entity(emptyEm, new OneEntityId(EntityConfiguration.dataSource, article, 2), M("id" -> 2, "col1" -> 132, "col2" -> 122))
 
 
   class TestedEntityManager extends EmptyEntityManager {
@@ -42,7 +42,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
     override def get(id: EntityId) = id.description match {
       case a if a == article => id match {
-        case id : SqlEntityId => id.id match {
+        case id : OneEntityId => id.id match {
           case 1 => Some(article1)
           case _ => None
         }
@@ -184,7 +184,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
         override def insert(description: Description, dataSource: DataSource) = {
           description should equal(article)
           ok = true
-          e = new Entity(this, new SqlEntityId(dataSource, description, -1))
+          e = new Entity(this, new OneEntityId(dataSource, description, -1))
           e
         }
       }

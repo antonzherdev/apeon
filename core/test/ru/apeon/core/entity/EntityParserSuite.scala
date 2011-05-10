@@ -180,6 +180,19 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ))
   }
 
+  test("To One pk") {
+    ScriptParser.parse(model, CoreModule, pack,
+      """
+      entity E<ds>{
+        one article Article primary key
+      }
+      """)should equal(script(
+    desc("E").decl(
+          ToOne(pack, "article", "article_id", "Article", None, true)
+          ).b
+    ))
+  }
+
   test("To Many") {
     ScriptParser.parse(model, CoreModule, pack,
       """
@@ -212,6 +225,26 @@ entity InvoiceForPayment<ds>{
     parsed should equal(script(ed))
     script(ed).evaluate(new DefaultEnvironment(model))
     model.entityDescription("ru.apeon.core.Article.test") should equal(t)
+  }
+
+  test("Inner to many parent") {
+    val parsed = ScriptParser.parse(model, CoreModule, pack,
+      """
+      entity Article<ds> {
+        many test {
+          one parent(tst) Article primary key
+          column number integer primary key
+        }
+      }
+      """)
+    val t = desc("Article.test").table("Article_test").decl(
+      ToOne(pack, "parent", "tst", "Article", None, true),
+      Attribute(pack, "number", "number", AttributeDataTypeInteger(), None, true)
+    ).b
+    val ed = desc("Article").table("Article").decl(
+      ToManyBuiltIn(pack, "test",t)
+    ).b
+    parsed should equal(script(ed))
   }
 
   test("Compex") {
