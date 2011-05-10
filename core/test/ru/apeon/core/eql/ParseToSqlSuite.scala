@@ -12,20 +12,15 @@ import script._
  */
 
 class ParseToSqlSuite extends FunSuite with ShouldMatchers with EntityDefine{
-  val sh = new DefaultObjectModel
-  val pack = Package("ru.apeon.core.test")
   val entityName = Attribute(pack, "entityName", "entityName", AttributeDataTypeVarchar(64))
-  val toSync = Description(pack, "ToSync", "apeon", Table("", "x_sync"), Seq(Id, entityName))
-  sh.addEntityDescription(toSync)
-  val ps = new DataSource(pack, "apeon") {
+  val toSync = desc("ToSync").table("x_sync").decl(Id, entityName).b
+  override def createDataSource  = new DataSource(pack, "ds") {
     override def store = EntityConfiguration.store
   }
-  sh.addDataSource(ps)
-  EntityConfiguration.model = sh
-  FillRef(sh, pack, pack, toSync)
+  fillRef()
 
   test("Sync") {
-    SqlGenerator(EqlParser("from ToSync as s where s.entityName = \"Invoice\"", sh, Some(Imports(pack))).asInstanceOf[Select]) should equal(
+    SqlGenerator(EqlParser("from ToSync as s where s.entityName = \"Invoice\"", model, Some(Imports(pack))).asInstanceOf[Select]) should equal(
       sql.Select(sql.From("x_sync", "t"), Seq(
         sql.Column(sql.Ref("t", "id"), "id"),
         sql.Column(sql.Ref("t", "entityName"), "entityName")),

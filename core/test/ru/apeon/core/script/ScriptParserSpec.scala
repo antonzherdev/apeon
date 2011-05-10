@@ -4,14 +4,11 @@ import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
 import ru.apeon.core.entity._
 
-class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
-  val sh = new DefaultObjectModel
-  val pack = Package("ru.apeon.core.test")
-  def script(statement : Statement*) = new Script(sh, pack, statement.toSeq)
-  val article = Description(pack, "Article", "apeon", Table("dba", "article"), Seq(Id))
-  sh.addEntityDescription(article)
+class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with EntityDefine {
+  def script(statement : Statement*) = new Script(model, pack, statement.toSeq)
+  val article = desc("Article").decl(Id).b
 
-  val parser = new ScriptParser(sh)
+  val parser = new ScriptParser(model)
   parser.pack = Some(pack)
 
   describe("Def") {
@@ -29,7 +26,7 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
       )
     }
     it("Val c типом данных") {
-      parser.parse("val i : integer = 3") should equal (
+      parser.parse("val i : Int = 3") should equal (
         script(Val("i", ConstInt(3), Some(ScriptDataTypeInteger())))
       )
     }
@@ -40,7 +37,7 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
       )
     }
     it("Var c типом данных") {
-      parser.parse("var i : int = 3") should equal (
+      parser.parse("var i : Int = 3") should equal (
         script(Var("i", ConstInt(3), Some(ScriptDataTypeInteger())))
       )
     }

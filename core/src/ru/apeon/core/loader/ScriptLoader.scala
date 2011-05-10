@@ -7,20 +7,16 @@ import akka.util.Logging
 import ru.apeon.core.script._
 
 object ScriptLoader extends Logging {
-//  def load() {
-//    load(EntityConfiguration.model)
-//  }
-//  def load(model : ObjectModel) {
-//    load((new InitialContext).lookup("java:comp/env/apeonDeployPath").asInstanceOf[String].split(';').toSeq, model)
-//  }
-
-  def load(model : ObjectModel, dirs : Seq[File]) {
-    val files = dirs.map(dir => allFiles(dir)).foldLeft(Seq[File]()){_ ++ _}
+  def load(model : ObjectModel, modules : Seq[Module]) {
+    val files = modules.map{module => (module, new File(module.path + "/apeon"))}.
+      filter(_._2.isDirectory).
+      map(module => allFiles(module._2).map(file => (module._1, file))).
+      foldLeft(Seq[(Module, File)]()){_ ++ _}
 
     val scripts = files.map{file =>
-      log.info("Parsing file " + file.getAbsolutePath)
-      val script = parse(model, file)
-      log.info("Parsed file " + file.getAbsolutePath)
+      log.info("Parsing file " + file._2.getAbsolutePath)
+      val script = parse(model, file._1, file._2)
+      log.info("Parsed file " + file._2.getAbsolutePath)
       script
     }
 
@@ -55,8 +51,8 @@ object ScriptLoader extends Logging {
     }
   }
 
-  def parse(model : ObjectModel, file : File) : Script = try {
-    ScriptParser.parse(model, text(file), Some(file.getAbsolutePath))
+  def parse(model : ObjectModel, module : Module, file : File) : Script = try {
+    ScriptParser.parse(model, module, text(file), Some(file.getAbsolutePath))
   }
   catch {
     case pe : ParserException => throw ParserException("Parse error in file %s\n%s".format(file.getAbsolutePath, pe.msg))

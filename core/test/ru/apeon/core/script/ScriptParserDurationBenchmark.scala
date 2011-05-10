@@ -8,7 +8,7 @@ class ScriptParserDurationBenchmark extends FunSuite with Benchmark with ShouldM
   test("Test1") {
     val model = new DefaultObjectModel
     run(5) {
-      ScriptParser.parse(model, """
+      ScriptParser.parse(model, CoreModule, """
 package ru.apeon.core.synch.comtec
 
 datasource comtec

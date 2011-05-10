@@ -3,7 +3,10 @@ package ru.apeon.core.script
 import akka.util.Logging
 
 
-case class LogObject(pack : Package) extends ObjectBase {
+object LogObject extends ObjectBase {
+  def module = CoreModule
+  def pack = EmptyPackage
+
   def name = "Log"
   def extendsClass = None
   def declaredDeclarations = Seq(

@@ -1,11 +1,11 @@
 package ru.apeon.core.loader
 
 import java.io.File
-import ru.apeon.core.script.{DefaultObjectModel, ObjectModel}
 import ru.apeon.core.entity.EntityConfiguration
 import akka.util.Logging
 import java.net.{URLClassLoader, URL}
 import xml.{NodeSeq, XML}
+import ru.apeon.core.script.{Module, DefaultObjectModel, ObjectModel}
 
 object Loader extends Logging {
   var modules : Seq[Module] = Seq()
@@ -22,13 +22,14 @@ object Loader extends Logging {
     _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
 
     val apeonFolder = new File(tomcatFolder + "/apeon")
-    if(!apeonFolder.exists) throw LoaderException("Folder \"%s\" doesn`t exists. Nothing to deploy.".format(apeonFolder.getAbsolutePath))
     val model = new DefaultObjectModel
     EntityConfiguration.model = model
 
     val modulesBuilder = Seq.newBuilder[Module]
-    apeonFolder.listFiles.foreach{dir =>
-      modulesBuilder += loadModule(model, dir)
+    if(apeonFolder.exists) {
+      apeonFolder.listFiles.foreach{dir =>
+        modulesBuilder += loadModule(model, dir)
+      }
     }
     apeonXml.\\("module").foreach{module =>
       modulesBuilder += loadModule(model, new File(module.\("@dir").text))
@@ -53,7 +54,7 @@ object Loader extends Logging {
 
     classLoader = new URLClassLoader(urls.result(), getClass.getClassLoader)
 
-    ScriptLoader.load(model, modules.map{module => new File(module.path + "/apeon")}.filter(_.isDirectory))
+    ScriptLoader.load(model, modules)
 
     loadListeners()
 
