@@ -9,7 +9,7 @@ import collection.mutable.Buffer
  * Оператор
  */
 trait Statement {
-  def dataType(env : Environment) : ScriptDataType
+  def dataType(env : Environment = new DefaultEnvironment) : ScriptDataType
 
   def evaluate(env : Environment) : Any
 
@@ -123,6 +123,8 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
   def eqlExpression = eql.Const(_data)
 
   override def toString = "%s".format(_data)
+
+  def dataType(env : ru.apeon.core.script.Environment) = statement.dataType()
 }
 
 /**

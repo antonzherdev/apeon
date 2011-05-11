@@ -133,8 +133,8 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
   }
 
   test("function call") {
-    EqlParser.parseSelect("from test1 where test(1, 2)", model, imports).where.get should equal (
-      SqlFunctionCall("test", Seq(ConstNumeric(1), ConstNumeric(2))))
+    EqlParser.parseSelect("from test1 where test(1, 2) : String", model, imports).where.get should equal (
+      SqlFunctionCall("test", Seq(ConstNumeric(1), ConstNumeric(2)), ScriptDataTypeString()))
   }
 
   test("sum call") {
@@ -191,7 +191,7 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
 
   test("External") {
     case class TestExternal(str : String) extends External {
-      def dataType = null
+      def dataType(env: ru.apeon.core.script.Environment) = null
       def eqlExpression = null
     }
     EqlParser.parseSelect("from test1 where %number%", model, imports, Some({s => TestExternal(s)})).where.get should equal (

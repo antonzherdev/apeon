@@ -4,6 +4,7 @@ import ru.apeon.core.entity.{SqlPersistentStoreBase}
 import java.sql.DriverManager
 import ru.apeon.core._
 import eql.{Expression, ConstObject, SqlGenerator}
+import script.Environment
 import sql.Column
 import akka.util.Logging
 import com.ipc.oce.objects._OCCommonRef
@@ -46,4 +47,6 @@ case class C1Ref(uuid : String, ref : _OCCommonRef) extends ConstObject{
   def expression = ConstRef(this)
 }
 
-case class ConstRef(ref : C1Ref) extends Expression
+case class ConstRef(ref : C1Ref) extends Expression {
+  def dataType(env: Environment) = script.ScriptDataTypeString()
+}

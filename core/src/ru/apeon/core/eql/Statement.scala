@@ -38,6 +38,7 @@ case class Select(from : From,
     env.pop()
   }
 
+  def evaluate = dataSource.store.select(this)
 }
 
 case class Column(expression : Expression, name : String)
