@@ -66,7 +66,7 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
 
   def expression : Parser[Expression] = e500
 
-  def term : Parser[Expression] = string | int | ref | eqlConst | nullConst | ifExpr | builtInFunction
+  def term : Parser[Expression] = string | numeric | ref | eqlConst | nullConst | ifExpr | builtInFunction | bracket
 
   def e200 : Parser[Expression] = term ~ opt("." ~> ref ~ opt("." ~> repsep(ref, "."))) ^^{
     case e ~ Some(r) => {
@@ -205,7 +205,7 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
     case name ~ dataSource ~ parameters ~ Some(function) => Ref(name, Some(parameters.getOrElse(Seq()) :+ Par(function)), dataSource)
     case name ~ dataSource ~ parameters ~ None => Ref(name, parameters, dataSource)
   }
-  def dataSourceRef : Parser[Expression] = "<" ~> expression <~ ">"
+  def dataSourceRef : Parser[Expression] = "<" ~> (ref | string) <~ ">"
 
   def parameters : Parser[Seq[Par]] =  "(" ~> repsep(expression, ",") <~ ")" ^^ {case parameters => parameters.map{Par(_)}}
 
@@ -331,11 +331,19 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
 
   def datasource = "datasource" ~> ident ^^ {case name => DataSource(pack.get, name)}
 
+  def bracket = "(" ~> expression <~ ")"
+
   def nullConst = "null" ^^^ {ConstNull()}
   def string = stringLit ^^ {case s => ConstString(s)}
-  def int =
-    (numericLit ^^ {case s => ConstInt(s.toInt)} |
-     "-" ~> numericLit ^^ {case s => ConstInt(- s.toInt)})
+  def numeric =
+    (numericLit ~ opt("." ~> numericLit) ^^ {
+      case s ~ None => ConstInt(s.toInt)
+      case s ~ Some(d) => ConstDecimal(BigDecimal((s + "." + d).toDouble))
+    } |
+     "-" ~> numericLit ~ opt("." ~> numericLit) ^^ {
+      case s ~ None => ConstInt(-s.toInt)
+      case s ~ Some(d) => ConstDecimal(BigDecimal(-(s + "." + d).toDouble))
+    })
 
   def extendEntity = "extend" ~> "entity" ~> ident ~ ("{" ~> (extendEntityStatement*) <~ "}") ^^ {
     case name ~ statements => ExtendEntity(name, statements)

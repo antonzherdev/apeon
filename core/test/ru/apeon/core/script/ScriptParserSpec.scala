@@ -45,6 +45,30 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
     }
   }
 
+  describe("Константы") {
+    it("Целое") {
+      parser.parse("1") should equal (
+        script(ConstInt(1))
+      )
+      parser.parse("-1") should equal (
+        script(ConstInt(-1))
+      )
+    }
+    it("Строка") {
+      parser.parse("\"Test\"") should equal (
+        script(ConstString("Test"))
+      )
+    }
+    it("Число с зяпятой") {
+      parser.parse("1.5") should equal (
+        script(ConstDecimal(BigDecimal(1.5)))
+      )
+      parser.parse("-1.7") should equal (
+        script(ConstDecimal(BigDecimal(-1.7)))
+      )
+    }
+  }
+
   describe("Арифметика") {
     it("+") {
       parser.parse("i = 10 + 5") should equal (
@@ -65,6 +89,16 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
     it("/") {
       parser.parse("10/5") should equal (
         script(Div(ConstInt(10), ConstInt(5)))
+      )
+    }
+    it("Порядок действий") {
+       parser.parse("10 + 5*6") should equal (
+        script(Plus(ConstInt(10), Mul(ConstInt(5), ConstInt(6))))
+      )
+    }
+    it("Скобки") {
+       parser.parse("(10 + 5)*6") should equal (
+        script(Mul(Plus(ConstInt(10), ConstInt(5)), ConstInt(6)))
       )
     }
   }
@@ -153,6 +187,13 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
       parser.parse("InvoiceForPayment(ss.entityId)") should equal (
         script(
           Ref("InvoiceForPayment", Dot(Ref("ss"), Ref("entityId"))))
+      )
+    }
+
+    it("dataSource") {
+      parser.parse("InvoiceForPayment<ds>(ss.entityId)") should equal (
+        script(
+          Ref("InvoiceForPayment", Dot(Ref("ss"), Ref("entityId")), Some(Ref("ds"))))
       )
     }
 
