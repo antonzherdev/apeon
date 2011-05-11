@@ -4,7 +4,8 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.Spec
 import ru.apeon.core._
 import entity._
-
+import collection.Map
+import eql.{Update, Insert, Delete, Select}
 
 class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDefine{
   val tests = collection.mutable.Map[String, Int]()
@@ -23,7 +24,25 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
   val sh = new DefaultObjectModel
   val pack = Package(sh, "ru.apeon.test", "1.0.0")
-  val ds = new DataSource(pack, "ds")
+  val ds = new DataSource(pack, "ds") {
+    override def store = new PersistentStore {
+      def name = null
+      def update(update: Update, parameters: Map[String, Any]) = null
+      def rollback() {}
+      def insert(insert: Insert, parameters: Map[String, Any]) = null
+      def delete(delete: Delete, parameters: Map[String, Any]) {}
+      def commit() {}
+      def beginTransaction() {}
+      override def select(select: Select, parameters: Map[String, Any]) = select.from.asInstanceOf[eql.FromEntity].entity match {
+        case  a if a == article => select.columns match {
+          case Seq(c) => Seq(collection.mutable.Map(c.name -> 1))
+          case Seq(c1, c2) => Seq(collection.mutable.Map(c1.name -> 1, c2.name -> 2))
+          case _ => Seq()
+        }
+        case _ => Seq()
+      }
+    }
+  }
   sh.addDataSource(ds)
   val pack2 = Package(sh, "ru.apeon.test2", "1.0.0")
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
@@ -145,11 +164,29 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       ) should equal (Seq(article1))
     }
 
+    it("Запрос одной сущности с условием") {
+      run(
+        Dot(ConstEql("from Article as a where a.id = 1"), Ref("get"))
+      ) should equal (article1)
+    }
+
     it("Запрос со встроенным скриптом") {
       run(
         Val("col1", ConstInt(10)),
         Dot(ConstEql("from Article where col1 = %col1%"), Ref("select"))
       ) should equal (Seq(article1))
+    }
+
+    it("Запрос одной колонки") {
+      run(
+        Dot(ConstEql("select 1 from Article where id = 1"), Ref("get"))
+      ) should equal (1)
+    }
+
+    it("Запрос нескольких колонки") {
+      run(
+        Dot(Dot(ConstEql("select 1 as one, 2 as two from Article where id = 1"), Ref("get")), Ref("two"))
+      ) should equal (2)
     }
     //TODO: Тесты на другие варианты запросов
   }

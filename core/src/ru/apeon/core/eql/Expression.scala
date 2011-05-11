@@ -3,6 +3,8 @@ package ru.apeon.core.eql
 import java.util.Date
 import java.lang.String
 import ru.apeon.core.entity._
+import ru.apeon.core._
+
 
 abstract class Expression {
   def fillRef(env : Environment) {
@@ -20,9 +22,12 @@ abstract class Expression {
   protected def children : Seq[Expression] = Seq()
 
   protected def build(children : Seq[Expression]) : Expression = this
+
+  def dataType(env: script.Environment = new script.DefaultEnvironment) : script.ScriptDataType
 }
 
 case class ConstNull() extends Expression {
+  def dataType(env: script.Environment) = script.ScriptDataTypeNull()
 }
 
 abstract class BinaryExpression extends Expression {
@@ -40,6 +45,7 @@ abstract class BinaryExpression extends Expression {
 }
 
 abstract class BinaryBooleanExpression extends BinaryExpression {
+  def dataType(env: script.Environment) = script.ScriptDataTypeBoolean()
 }
 
 case class Equal(left : Expression, right : Expression) extends BinaryBooleanExpression {
@@ -118,6 +124,8 @@ class Ref(val from : Option[String] = None, val column : String) extends Express
   }
 
   def dataSource = null
+
+  def dataType(env: script.Environment) = columnRef.scriptDataType
 }
 
 object Ref {
@@ -148,6 +156,8 @@ object Ref {
 
 case class ConstNumeric(value : BigDecimal) extends Expression {
   override def toString = value.toString()
+
+  def dataType(env: script.Environment) = script.ScriptDataTypeDecimal()
 }
 
 
@@ -168,29 +178,41 @@ object Const {
 
 case class ConstString(value : String) extends Expression {
   override def toString = "\"%s\"".format(value)
+
+  def dataType(env: script.Environment) = script.ScriptDataTypeString()
 }
 
-case class ConstDate(value : Date) extends Expression
+case class ConstDate(value : Date) extends Expression {
+  def dataType(env: script.Environment) = script.ScriptDataTypeDate()
+}
 
-case class Parameter(name : String) extends Expression
+case class Parameter(name : String) extends Expression {
+  def dataType(env: script.Environment) = script.ScriptDataTypeAny()
+}
 
 abstract class FunctionCall extends Expression{
   val name : String
 }
 
-case class SqlFunctionCall(name : String, parameters : Seq[Expression]) extends FunctionCall {
+case class SqlFunctionCall(name : String, parameters : Seq[Expression], returnType : script.ScriptDataType) extends FunctionCall {
   override def children = parameters
-
-  override def build(children: Seq[Expression]) = SqlFunctionCall(name, children)
+  override def build(children: Seq[Expression]) = SqlFunctionCall(name, children, returnType)
+  def dataType(env: script.Environment) = returnType
 }
 
 abstract class AggFunctionCall extends FunctionCall
+
+case class Count() extends AggFunctionCall {
+  val name = "count"
+  def dataType(env: script.Environment) = script.ScriptDataTypeInteger()
+}
 
 abstract class AggPar1FunctionCall extends AggFunctionCall {
   def parameter : Expression
 
   override def children = Seq(parameter)
 
+  def dataType(env: script.Environment) = parameter.dataType(env)
 
   override def build(children: Seq[Expression]) = build(children.head)
 
@@ -206,8 +228,22 @@ abstract class AggPar1FunctionCall extends AggFunctionCall {
 
 case class Sum(parameter : Expression) extends AggPar1FunctionCall{
   val name = "sum"
-
   def build(parameter: Expression) = Sum(parameter)
+}
+
+case class Max(parameter : Expression) extends AggPar1FunctionCall{
+  val name = "max"
+  def build(parameter: Expression) = Max(parameter)
+}
+
+case class Min(parameter : Expression) extends AggPar1FunctionCall{
+  val name = "min"
+  def build(parameter: Expression) = Min(parameter)
+}
+
+case class Avg(parameter : Expression) extends AggPar1FunctionCall{
+  val name = "avg"
+  def build(parameter: Expression) = Avg(parameter)
 }
 
 case class ESelect(select : Expression, from : From, where : Option[Expression] = None) extends Expression {
@@ -225,6 +261,8 @@ case class ESelect(select : Expression, from : From, where : Option[Expression] 
 
   override def build(children: Seq[Expression]) =
     ESelect(children.head, from, if(children.size == 2) Some(children.tail.head) else None)
+
+  def dataType(env: script.Environment) = select.dataType(env)
 }
 
 case class Not(expression : Expression) extends Expression{
@@ -235,6 +273,8 @@ case class Not(expression : Expression) extends Expression{
   override def children = Seq(expression)
 
   override def build(children: Seq[Expression]) = Not(children.head)
+
+  def dataType(env: script.Environment) = script.ScriptDataTypeBoolean()
 }
 
 case class Exists(from : From, where : Option[Expression] = None) extends Expression {
@@ -254,6 +294,8 @@ case class Exists(from : From, where : Option[Expression] = None) extends Expres
     case Seq() => Exists(from)
     case Seq(where) => Exists(from, Some(where))
   }
+
+  def dataType(env: script.Environment) = script.ScriptDataTypeBoolean()
 }
 
 abstract class External extends Expression {

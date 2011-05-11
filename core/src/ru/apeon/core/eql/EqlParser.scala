@@ -7,6 +7,7 @@ import ru.apeon.core.entity._
 import util.parsing.combinator.token.Tokens
 import util.parsing.combinator.lexical.StdLexical
 import util.parsing.input.CharArrayReader.EofCh
+import ru.apeon.core._
 import ru.apeon.core.script.{Imports, ObjectModel}
 
 /**
@@ -66,7 +67,7 @@ class EqlParser(val model : ObjectModel,
     case e ~ Some(n) => new Column(e, n)
     case e ~ None => e match {
       case r : Ref => new Column(e, r.column)
-      case _ => throw new EqlParserError("Unknown column name")
+      case _ => new Column(e, "")
     }
   }
 
@@ -98,11 +99,24 @@ class EqlParser(val model : ObjectModel,
 
   def nullTerm : Parser[Expression] = "null" ^^^ {ConstNull()}
 
-  def functionCall : Parser[FunctionCall] = ident ~ ("(" ~> repsep(exp, ",") <~ ")") ^^ {
-    case name ~ parameters => name match {
+  def functionCall : Parser[FunctionCall] = ident ~ ("(" ~> repsep(exp, ",") <~ ")") ~ opt(":" ~> rep1sep(ident, ".")) ^^ {
+    case name ~ parameters ~ dt => name match {
       case "sum" => Sum(parameters.head)
-      case _ => SqlFunctionCall(name, parameters)
+      case "max" => Max(parameters.head)
+      case "min" => Min(parameters.head)
+      case "avg" => Avg(parameters.head)
+      case _ => SqlFunctionCall(name, parameters,
+        scriptDataType(dt.getOrElse{
+          throw EqlParserError("Unknown function %s with no result data type.".format(name))
+        }.mkString(".")))
     }
+  }
+
+  def scriptDataType(name : String) : script.ScriptDataType = name match {
+    case "Int" => script.ScriptDataTypeInteger()
+    case "String" => script.ScriptDataTypeString()
+    case "Decimal" => script.ScriptDataTypeDecimal()
+    case _ => script.ScriptDataTypeEntityByDescription(model.entityDescription(name, imports))
   }
 
   def exists : Parser[Exists] = "exists" ~> "(" ~> columnRef ~ (as?) ~ (where?) <~ ")" ^^ {
@@ -202,7 +216,7 @@ class EqlParser(val model : ObjectModel,
   }
 }
 
-class EqlParserError(var s : String) extends Exception(s)
+case class EqlParserError(var s : String) extends Exception(s)
 
 class Lexer extends StdLexical with EqlTokens {
   override def token : Parser[Token] =
