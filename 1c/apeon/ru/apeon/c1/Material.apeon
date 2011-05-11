@@ -1,0 +1,10 @@
+package ru.apeon.c1
+
+entity Material<c1> {
+    table Catalog.Номенклатура
+    discriminator ЭтоГруппа = 0
+
+    column id(Ref) char(36) primary key
+    column name(Наименование) varchar(254)
+    column number(Артикул) varchar(254)
+}

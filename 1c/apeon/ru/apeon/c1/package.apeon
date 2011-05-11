@@ -1,0 +1,14 @@
+package ru.apeon.c1
+
+datasource c1
+
+query Test {
+//Material(`id = "6600a842-e9f1-11d8-8d32-505054503030"`)
+`from Material`.select
+
+//`from MatMoveIn`.select
+
+/*`from Material<c1>`.select.foreach {material =>
+    material sync as s to comtec.Material<comtec.comtec> as d where `s.number = d.number and s.name = d.name`
+	}*/
+}

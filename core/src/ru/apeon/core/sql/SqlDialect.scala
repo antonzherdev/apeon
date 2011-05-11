@@ -303,26 +303,29 @@ class DefaultSqlDialect extends SqlDialect with TextGen {
 
   var dateFormat : DateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
+  protected val escapeStringSymbol = '\''
+  protected val stringSymbol = '\''
+  protected val dateSymbol = '\''
+
   def appendConstantValue(v : Any) {
     v match {
       case s: String => {
-        append('\'')
+        append(stringSymbol)
         s.foreach {
           c: Char =>
-            c match {
-              case '\'' => {
-                append('\'')
-                append('\'')
-              }
-              case _ => append(c)
+            if(c == stringSymbol) {
+              append(escapeStringSymbol)
+              append(stringSymbol)
+            } else {
+              append(c)
             }
         }
-        append('\'')
+        append(stringSymbol)
       }
       case d: Date => {
-        append('\'')
+        append(dateSymbol)
         append(dateFormat.format(d))
-        append('\'')
+        append(dateSymbol)
       }
       case _ => append(v)
     }

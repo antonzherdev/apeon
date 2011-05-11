@@ -164,8 +164,13 @@ object Const {
     case d : Date =>  ConstDate(d)
     case e : Expression => e
     case e : Entity => e.id.const
+    case c : ConstObject => c.expression
     case _ => new ConstString(v.toString)
   }
+}
+
+trait ConstObject {
+  def expression : Expression
 }
 
 case class ConstString(value : String) extends Expression {

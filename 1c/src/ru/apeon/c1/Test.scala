@@ -1,62 +1,83 @@
 package ru.apeon.c1
 
 import java.io.File
-import com.ipc.oce.{OCApp, ApplicationDriver, PropertiesReader}
 import java.sql.{DriverManager}
-import com.ipc.oce.objects.{OCDocumentRef, OCCatalogRef}
+import com.ipc.oce.objects.{OCUUID, OCCatalogObject, OCDocumentRef, OCCatalogRef}
+import com.ipc.oce._
+import org.jinterop.dcom.core.JIVariant
+import java.util.{UUID, Properties}
 
 /**
  * @author Anton Zherdev
  */
 
-object Test extends Application{
+object Test extends Application with ConfigurationConstants{
   System.out.println("TEST")
 
-  /*  val pr = new PropertiesReader(new File("C:\\apeon\\1c\\1c.properties"))
-  val configuration = pr.getPropertiesForInstance("inst01")
+/*  val configuration = new Properties
+  configuration.setProperty("oce.driver", "V81Driver");
+  configuration.setProperty("oce.host", "192.168.100.100");
+  configuration.setProperty("oce.host.user", "ttt");
+  configuration.setProperty("oce.host.password", "z");
+  configuration.setProperty("oce.1c.dbpath", "C:\\1c\\upp1");
+  configuration.setProperty("oce.1c.user", "test");
+  configuration.setProperty("oce.1c.password", "z");
   val driver = ApplicationDriver.loadDriver(configuration.get("oce.driver").asInstanceOf[String] )
   driver.setAutoRegistration(true) // только для самого первого подключения
   val app = OCApp.getNewInstance
   app.setApplicationDriver(driver);
   try{
     app.connect(configuration);
+    //val co : OCCatalogObject = app.findDataObject("Catalog.Номенклатура", "6600a842-e9f1-11d8-8d32-505054503030")
+    val query = app.newQuery("SELECT t.Наименование FROM Catalog.Номенклатура AS t Where t.Ссылка = &r");
+    //val r1 = co.getRef
+    //val r2 = new OCCatalogRef(JIVariant.makeVariant("6600a842-e9f1-11d8-8d32-505054503030"))
 
-
-    val manager = app.getCatalogManager("Банки")
+//    query.setParameter("r", new OCVariant(r1));
+    query.setParameter("r", new OCVariant(UUID.fromString("6600a842-e9f1-11d8-8d32-505054503030").));
+    val result = query.execute
+    val selection = result.choose
+    while (selection.next()) {
+      System.out.println(selection.getString(0))
+    }
+    /*val co : OCCatalogObject = app.findDataObject("Catalog.Номенклатура", "6600a842-e9f1-11d8-8d32-505054503030")
+    System.out.println(co.getRef.getUUID)
+    System.out.println(co.getDataExchange.getRecipients.size);*/
+    /*val manager = app.getCatalogManager("Банки")
     val ref = manager.findByDescription("Г МОСКВА")
     val selection = manager.selectHierarchically(ref)
     while(selection.next.booleanValue){
       val level = selection.getLevelInSelection
       if(level == 0)
         System.out.println(selection.getCode + " " + selection.getDescription);
-    }
+    } */
 
     System.out.println("Computer name: "+app.getComputerName)
   }finally{
     app.exit()
-  }*/
-
+  }
+   */
   Class.forName("com.ipc.oce.jdbc.OCEDriver")
   val con = DriverManager.getConnection("jdbc:oce:dcom://192.168.100.100:ttt@z;oce.1c.dbpath=C:\\1c\\upp1;oce.driver=V81Driver;autoRegistration=true", "test", "z")
   try{
     //val rs = con.getMetaData.getColumns(null, null, "Номенклатура", "")
     val stat = con.createStatement()
 //    val rs = stat.executeQuery("SELECT Ref, Наименование FROM Catalog.Номенклатура")
+//    stat.
     val rs = stat.executeQuery(
 """select
-		t0.Ref as parent__id,
-		t0.Номер as parent__number,
-		t0.Дата as parent__date,
-	t.НомерСтроки as number,
-	t.Количество as quantity,
-	t.Сумма as amount
+	t.Ref as id,
+	t.Наименование as name,
+	t.Артикул as number
 from
-	Document.ПоступлениеТоваровУслуг.Товары as t
-	left join Document.ПоступлениеТоваровУслуг as t0 on t.Ref = t0.id;
+	Catalog.Номенклатура as t
+	where t.Ref = Выразить("6600a842-e9f1-11d8-8d32-505054503030" как СТРОКА)
 """
     )
     while(rs.next()){
-      System.out.println(rs.getObject(1))
+//      val r = rs.getObject(1)
+      System.out.println(rs.getString(1))
+//6600a842-e9f1-11d8-8d32-505054503030
 
 //      System.out.println(rs.getString("COLUMN_NAME"))
     }

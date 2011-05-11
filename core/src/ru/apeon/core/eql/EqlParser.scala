@@ -9,7 +9,6 @@ import util.parsing.combinator.lexical.StdLexical
 import util.parsing.input.CharArrayReader.EofCh
 import ru.apeon.core.script.{Imports, ObjectModel}
 import collection.mutable.Buffer
-import ru.apeon.core.eql.Ref._
 
 /**
  * @author Anton Zherdev
