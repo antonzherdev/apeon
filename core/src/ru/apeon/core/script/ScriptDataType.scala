@@ -1,5 +1,7 @@
 package ru.apeon.core.script
 
+import java.math.{RoundingMode, MathContext}
+
 abstract class ScriptDataType {
   def declarations : Seq[Declaration] = Seq()
 
@@ -24,7 +26,6 @@ case class ScriptDataTypePackage(pack : Package) extends ScriptDataType {
 
 abstract class ScriptDataTypeSimple(val name : String) extends ScriptDataType
 case class ScriptDataTypeBoolean() extends ScriptDataTypeSimple("boolean")
-case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("decimal")
 case class ScriptDataTypeInteger() extends ScriptDataTypeSimple("int")
 
 case class ScriptDataTypeBuiltInFunction() extends ScriptDataType
