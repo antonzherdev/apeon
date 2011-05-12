@@ -4,8 +4,7 @@ import java.util.Date
 import java.lang.String
 import ru.apeon.core.entity._
 import ru.apeon.core._
-
-
+import script.{Imports, ObjectModel}
 
 abstract class Expression {
   def fillRef(env : Environment) {
@@ -138,11 +137,12 @@ object Ref {
   def apply(name : String) : Ref = new Ref(name)
   def apply(from : From) : Ref = new Ref(from)
   def apply(d : script.Declaration) : Ref = new Ref(d)
+  def apply(name : String, parameters : Expression*) : Ref = new Ref(name, parameters.toSeq)
 
   def unapply(r : Ref) : Option[String] = Some(r.name)
 }
 
-class Ref(val name : String) extends Expression{
+class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends Expression{
   abstract class RefData {
     def from : From = throw new RuntimeException("No from")
     def declaration : script.Declaration = throw new RuntimeException("No declaration")
@@ -178,7 +178,17 @@ class Ref(val name : String) extends Expression{
       }
       case Some(dot) => {
         val e = new script.DefaultEnvironment(env.model)
-        val declaration = dot.left.dataType(e).declaration(e, name).getOrElse{
+        val declaration = dot.left.dataType(e).declaration(e, name, parameters.map{
+          par => script.Par(new script.Expression{
+            def preFillRef(model: ObjectModel, imports: Imports){}
+            def fillRef(env: script.Environment, imports: Imports){}
+            def evaluate(env: script.Environment) = null
+            def dataType(env: script.Environment) = par.dataType(env)
+          })
+        } match  {
+          case Seq() => None
+          case s => Some(s)
+        }).getOrElse{
           throw new RuntimeException("Function %s not found".format(name))
         }
         if(!declaration.isInstanceOf[SqlGeneration] && !declaration.isInstanceOf[Field]) {
@@ -188,6 +198,7 @@ class Ref(val name : String) extends Expression{
       }
     }
     _defaultFrom = env.from
+    parameters.foreach(_.fillRef(env))
   }
 
   def dataType(env: script.Environment) : script.ScriptDataType = data.dataType(env)
@@ -210,6 +221,8 @@ class Ref(val name : String) extends Expression{
     case r : Ref => r.name == this.name
     case _ => false
   }
+
+  override protected def children = parameters
 }
 
 case class ConstNumeric(value : BigDecimal) extends Expression {

@@ -204,4 +204,12 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
     val ref = EqlParser.parseSelect("from test2 where test1.col1", sh, imports).where.get.asInstanceOf[Dot]
     ref.left.asInstanceOf[Ref].declaration should equal(colToOne)
   }
+
+
+
+  test("Функция с параметрами") {
+    EqlParser.parseExpression("test.replace(\"t\", \"z\")", sh, imports) should equal (
+      Dot(Ref("test"), Ref("replace", ConstString("t"), ConstString("z")))
+    )
+  }
 }

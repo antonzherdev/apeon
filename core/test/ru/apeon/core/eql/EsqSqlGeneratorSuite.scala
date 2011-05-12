@@ -517,5 +517,14 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
         sql.Select(ft1, Seq(sql.Column(sql.Cast(sql.Ref(ft1, "col1"), "int"), "col1"))
         ))
     }
+    it("replace") {
+      eql.SqlGenerator(
+        eql.Select(eql.From(test1), where =
+          Some(eql.Dot(eql.ConstString("test"), eql.Ref("replace", eql.ConstString("t"), eql.ConstString("z"))
+          ))
+      )).where.get should be(
+        sql.Call("replace", Seq(sql.ConstString("test"), sql.ConstString("t"), sql.ConstString("z")))
+      )
+    }
   }
 }

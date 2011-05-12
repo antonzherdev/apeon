@@ -142,15 +142,19 @@ class EqlParser(val model : ObjectModel,
     case s => ConstString(s)
   }
 
-  def columnRef : Parser[Expression] = ident ~ opt("." ~> repsep(ident,".")) ^^ {
+  def ref = ident ~ opt("(" ~> repsep(exp, ",") <~ ")") ^^ {
+    case name ~ pars => new Ref(name, pars.getOrElse{Seq()})
+  }
+
+  def columnRef : Parser[Expression] = ident ~ opt("." ~> repsep(ref,".")) ^^ {
     case ref ~ None => {
       Ref(ref)
     }
     case r ~ Some(refs) => {
       val i = refs.iterator
-      var ref = Dot(Ref(r), Ref(i.next()))
+      var ref = Dot(Ref(r), i.next())
       while(i.hasNext)
-        ref = Dot(ref, Ref(i.next()))
+        ref = Dot(ref, i.next())
       ref
     }
   }

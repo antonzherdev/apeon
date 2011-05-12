@@ -306,7 +306,9 @@ class SqlGenerator {
       }
     }
     case o : ToOne => sql.Ref(getFrom(ef, left, right), o.columnName(ef.dataSource))
-    case d : SqlGeneration => d.generateSql(genExpression(left.get, ef), Seq())
+    case d : SqlGeneration => d.generateSql(genExpression(left.get, ef), right.parameters.map{
+      par => genExpression(par, ef)
+    })
     case null => throw SqlGeneratorError("Declaration is null")
     case o : Object => throw SqlGeneratorError("Unknown right class %s".format(o.getClass))
     case _ => throw SqlGeneratorError("Select to many column")
