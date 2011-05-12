@@ -111,12 +111,12 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
             f.entity should equal(cons)
             val a = f.alias
             select.where.get match {
-              case eql.And(eql.Equal(eql.Ref(Some("d"), "uid"), eql.Const(1)),
-              eql.Equal(eql.Ref(Some("d"), "article"), eql.Const(2))) =>
+              case eql.And(eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(1)),
+              eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("article")), eql.Const(2))) =>
                 Seq(e(M("id" -> 3, "article" -> 2, "uid" -> 1, "col1" -> 11)))
 
-              case eql.And(eql.Equal(eql.Ref(Some("d"), "uid"), eql.Const(2)),
-              eql.Equal(eql.Ref(Some("d"), "article"), eql.Const(2))) => Seq()
+              case eql.And(eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(2)),
+              eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("article")), eql.Const(2))) => Seq()
 
               case _ => throw new RuntimeException("Unknown where %s".format(select.where.get))
             }

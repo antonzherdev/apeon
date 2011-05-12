@@ -226,7 +226,11 @@ case class SqlEntityId(dataSource : DataSource, description : Description, id : 
     case _ => false
   }
 
-  def eqlFindById(alias : Option[String]) = Equal(Ref(alias, description.primaryKeys.head.name), ConstNumeric(id))
+  def eqlFindById(alias : Option[String]) = alias match {
+    case Some(a) => Equal(Dot(Ref(a), Ref(description.primaryKeys.head.name)), ConstNumeric(id))
+    case None => Equal(Ref(description.primaryKeys.head.name), ConstNumeric(id))
+  }
+
 
   def const = ConstNumeric(id)
 

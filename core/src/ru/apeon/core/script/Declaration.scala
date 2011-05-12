@@ -37,6 +37,8 @@ trait Declaration{
    */
   def builtInParametersDataTypes(env : Environment, parameterNumber : Int, parameter : Par) : Seq[ScriptDataType] =
     throw ScriptException(env, "Not supported")
+
+  def supportedInEql : Boolean = false
 }
 
 trait DeclarationStatement extends Statement with Declaration {

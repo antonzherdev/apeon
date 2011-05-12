@@ -12,7 +12,7 @@ case class ConstEql(string : String) extends Constant {
      case select : eql.Select => select.columns match {
       case Seq() => select.from match {
         case e : eql.FromEntity => ScriptDataTypeEqlSelectEntity(e.entity)
-        case _ => ScriptDataTypeEqlSelect(select.from.columns.map(f => (f.name, f.scriptDataType)).toMap)
+        case _ => ScriptDataTypeEqlSelect(select.from.fields.map(f => (f.name, f.scriptDataType)).toMap)
       }
       case Seq(col) => ScriptDataTypeEqlSelectOne(col.expression.dataType(env))
       case _ => ScriptDataTypeEqlSelect(select.columns.map(c => (c.name, c.expression.dataType(env))).toMap)

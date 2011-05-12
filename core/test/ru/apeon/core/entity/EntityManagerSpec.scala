@@ -10,7 +10,7 @@ import ru.apeon.core.script.{Package, DefaultObjectModel}
  * @author Anton Zherdev
  */
 
-class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
+class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
   val sh = new DefaultObjectModel
   val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
   val ps = new DataSource(pack, "apeon") {
@@ -66,7 +66,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
 
       override def select (select: Select, parameters: Map[String, Any]) = select.where match {
         case None => Seq(m1, m2)
-        case Some(Equal(Ref(None, "id"), Const(1))) => Seq(m1)
+        case Some(Equal(Ref("id"), Const(1))) => Seq(m1)
         case _ => Seq()
       }
     }
@@ -124,7 +124,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
 
       override def select (select: Select, parameters: Map[String, Any]) = select.where match {
         case None => Seq(m1, m2, m3)
-        case Some(Equal(Ref(None, "id"), Const(1))) => Seq(m1)
+        case Some(Equal(Ref("id"), Const(1))) => Seq(m1)
         case _ => Seq()
       }
     }
@@ -199,14 +199,14 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
   describe("Изменение сущностей") {
     it("Сущность должна изменяться") {
       var ok = false
-      EntityConfiguration.store = new PS{
+      EntityConfiguration.store = new PS with EqlDefine{
         override def select(s: Select, parameters: Map[String, Any]) =
           Seq(collection.mutable.Map[String, Any]("id" -> 222, "col1" -> 11, "col2" -> 0))
 
         override def update(update: Update, parameters: Map[String, Any]) {
           update should equal(
             Update(FromEntity(article, Some("t"), DataSourceExpressionDataSource(ps)), Seq(UpdateColumn("col1", Const(5565))),
-              Some(Equal(Ref("t", "id"), Const(222)))))
+              Some(Equal(Dot("t", "id"), Const(222)))))
           ok = true
         }
       }
@@ -228,7 +228,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
         override def update(update: Update, parameters: Map[String, Any]) {
           update should equal(
             Update(FromEntity(article, Some("t"), DataSourceExpressionDataSource(ds2)), Seq(UpdateColumn("col1", Const(678))),
-              Some(Equal(Ref("t", "id"), Const(1)))))
+              Some(Equal(Dot("t", "id"), Const(1)))))
           ok = true
         }
       }
@@ -261,7 +261,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
         override def delete(d: Delete, parameters: Map[String, Any]) {
           d should equal(
             Delete(From(invoice, "t"),
-              Some(Equal(Ref("t", "id"), Const(2)))))
+              Some(Equal(Dot("t", "id"), Const(2)))))
         }
       }
       val em = nem
@@ -285,7 +285,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
         override def delete(delete: Delete, parameters: Map[String, Any]) {
           delete should equal(
             Delete(FromEntity(article, Some("t"), DataSourceExpressionDataSource(ps)),
-              Some(Equal(Ref("t", "id"), Const(333)))))
+              Some(Equal(Dot("t", "id"), Const(333)))))
           ok = true
         }
       }
@@ -309,7 +309,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
         override def delete(delete: Delete, parameters: Map[String, Any]) {
           delete should equal(
             Delete(FromEntity(article, Some("t"), DataSourceExpressionDataSource(ds2)),
-              Some(Equal(Ref("t", "id"), Const(1)))))
+              Some(Equal(Dot("t", "id"), Const(1)))))
           ok = true
         }
       }

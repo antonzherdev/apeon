@@ -130,6 +130,7 @@ abstract class Field extends DeclarationStatement {
   def pack : Package
   def scriptDataType : ScriptDataType
 
+  override val supportedInEql = true
   override def toString = name
 
   def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty

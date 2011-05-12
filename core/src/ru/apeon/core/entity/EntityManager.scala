@@ -230,7 +230,7 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
     case many : ToMany =>
       if(entity.id.isTemporary) Set()
       else select( Select(FromEntity(many.entity, Some("m"), DataSourceExpressionDataSource(entity.id.dataSource)),
-        where = Some(Equal(Ref("m", many.toOne.name), entity.id.const)))).toSet
+        where = Some(Equal(Dot(Ref("m"), Ref(many.toOne)), entity.id.const)))).toSet
     case one : ToOne =>
       data match {
         case id : Int => get(new SqlEntityId(entity.id.dataSource, one.entity, id)).getOrElse(null)

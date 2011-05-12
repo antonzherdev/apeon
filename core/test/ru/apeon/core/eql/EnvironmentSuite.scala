@@ -15,7 +15,7 @@ class EnvironmentSuite extends FunSuite with ShouldMatchers{
   val test1 = Description(pack, "test1", Table("", "test1"), Seq(Id))
 
   test("Alias1") {
-    val env = new DefaultEnvironment
+    val env = new DefaultEnvironment(sh)
     env.fromOption("s") should equal(None)
     val f = From(test1, "s")
     env.push(f)
@@ -25,7 +25,7 @@ class EnvironmentSuite extends FunSuite with ShouldMatchers{
   }
 
   test("Alias2") {
-    val env = new DefaultEnvironment
+    val env = new DefaultEnvironment(sh)
     env.fromOption("a") should equal(None)
     env.fromOption("s") should equal(None)
     val fa = From(test1, "a")

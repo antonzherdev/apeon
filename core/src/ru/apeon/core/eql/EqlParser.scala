@@ -66,7 +66,8 @@ class EqlParser(val model : ObjectModel,
   def column : Parser[Column] = exp ~ opt(as) ^^ {
     case e ~ Some(n) => new Column(e, n)
     case e ~ None => e match {
-      case r : Ref => new Column(e, r.column)
+      case r : Dot => new Column(e, r.right.name)
+      case r : Ref => new Column(e, r.name)
       case _ => new Column(e, "")
     }
   }
@@ -83,7 +84,7 @@ class EqlParser(val model : ObjectModel,
   }
 
   def toManyFromTable : Parser[From] = columnRef ~ as ^^ {
-    case Ref(None, entity) ~ alias => FromEntity(model.entityDescription(entity, imports), Some(alias))
+    case Ref(entity) ~ alias => FromEntity(model.entityDescription(entity, imports), Some(alias))
     case ref ~ alias => FromToMany(ref, Some(alias))
   }
 
@@ -99,13 +100,13 @@ class EqlParser(val model : ObjectModel,
 
   def nullTerm : Parser[Expression] = "null" ^^^ {ConstNull()}
 
-  def functionCall : Parser[FunctionCall] = ident ~ ("(" ~> repsep(exp, ",") <~ ")") ~ opt(":" ~> rep1sep(ident, ".")) ^^ {
+  def functionCall : Parser[Function] = ident ~ ("(" ~> repsep(exp, ",") <~ ")") ~ opt(":" ~> rep1sep(ident, ".")) ^^ {
     case name ~ parameters ~ dt => name match {
       case "sum" => Sum(parameters.head)
       case "max" => Max(parameters.head)
       case "min" => Min(parameters.head)
       case "avg" => Avg(parameters.head)
-      case _ => SqlFunctionCall(name, parameters,
+      case _ => SqlFunction(name, parameters,
         scriptDataType(dt.getOrElse{
           throw EqlParserError("Unknown function %s with no result data type.".format(name))
         }.mkString(".")))
@@ -141,15 +142,15 @@ class EqlParser(val model : ObjectModel,
     case s => ConstString(s)
   }
 
-  def columnRef : Parser[Ref] = ident ~ opt("." ~> repsep(ident,".")) ^^ {
+  def columnRef : Parser[Expression] = ident ~ opt("." ~> repsep(ident,".")) ^^ {
     case ref ~ None => {
-      Ref(None, ref)
+      Ref(ref)
     }
     case r ~ Some(refs) => {
       val i = refs.iterator
-      var ref = Ref(r, i.next())
+      var ref = Dot(Ref(r), Ref(i.next()))
       while(i.hasNext)
-        ref = Ref(ref, i.next())
+        ref = Dot(ref, Ref(i.next()))
       ref
     }
   }
