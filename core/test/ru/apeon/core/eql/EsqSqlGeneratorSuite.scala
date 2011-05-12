@@ -15,7 +15,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     override def store = EntityConfiguration.store
   }
 
-  val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
+  val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeText())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger())
   val test1 = desc("test1").decl(Id, col1, col2).b
   val eft1 = eql.FromEntity(test1, None)
@@ -34,7 +34,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     it("Simple select") {
       eql.SqlGenerator(
         eql.Select(eft1, Seq(
-          eql.Column(eql.Ref(eft1, col1), "col1")))
+          eql.Column(eql.Dot(eft1, col1), "col1")))
       ) should be(
         sql.Select(ft1, Seq(
           sql.Column(sql.Ref(ft1, "col1"), "col1")
@@ -43,8 +43,8 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
 
     it("Columns select") {
       eql.SqlGenerator(eql.Select(eft1, Seq(
-        eql.Column(eql.Ref(eft1, col1), "col1"),
-        eql.Column(eql.Ref(eft1, col2), "col2"))
+        eql.Column(eql.Dot(eft1, col1), "col1"),
+        eql.Column(eql.Dot(eft1, col2), "col2"))
       )) should be(
         sql.Select(ft1, cols1))
     }
@@ -89,7 +89,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     fillRef()
     it("Simple") {
       eql.SqlGenerator(eql.Select(eft2, Seq(
-        eql.Column(eql.Ref(eft2, colToOne), "col3")
+        eql.Column(eql.Dot(eft2, colToOne), "col3")
       ))) should be(
         sql.Select(ft2.setJoin(
           sql.LeftJoin(ft2_join,
@@ -99,7 +99,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
 
     it("ID") {
       eql.SqlGenerator(eql.Select(eft2, Seq(
-        eql.Column(eql.Ref(eql.Ref(eft2, colToOne), "id"), "col3")
+        eql.Column(eql.Dot(eql.Dot(eft2, colToOne), "id"), "col3")
       ))) should be(
         sql.Select(ft2, Seq(
           sql.Column(sql.Ref(ft2, "id_test1"), "col3")
@@ -108,7 +108,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
 
     it("Col"){
       eql.SqlGenerator(eql.Select(eft2, Seq(
-        eql.Column(eql.Ref(eql.Ref(eft2, colToOne), "col1"), "col3")
+        eql.Column(eql.Dot(eql.Dot(eft2, colToOne), "col1"), "col3")
       ))) should be(
         sql.Select(ft2.setJoin(
           sql.LeftJoin(ft2_join,
@@ -120,7 +120,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
 
     it("Inner ref") {
       eql.SqlGenerator(eql.Select(eft3, Seq(
-        eql.Column(eql.Ref(eql.Ref(eft3, colToOne2), colToOne), "col3"))
+        eql.Column(eql.Dot(eql.Dot(eft3, colToOne2), colToOne), "col3"))
       )) should be(sql.Select(
         ft3.setJoin(sql.LeftJoin(
           ft3_join2.setJoin(sql.LeftJoin(
@@ -141,8 +141,8 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     }
     it("Inner ref-ref") {
       eql.SqlGenerator(eql.Select(eft3, Seq(
-        eql.Column(eql.Ref(eql.Ref(eql.Ref(eft3, colToOne2), colToOne), "col1"), "col1"),
-        eql.Column(eql.Ref(eql.Ref(eql.Ref(eft3, colToOne2), colToOne), "col2"), "col2")
+        eql.Column(eql.Dot(eql.Dot(eql.Dot(eft3, colToOne2), colToOne), "col1"), "col1"),
+        eql.Column(eql.Dot(eql.Dot(eql.Dot(eft3, colToOne2), colToOne), "col2"), "col2")
       ))) should be(sql.Select(
         ft3.setJoin(sql.LeftJoin(
           ft3_join2.setJoin(sql.LeftJoin(
@@ -263,7 +263,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
       val sf = sql.From("test1", "t")
       val ef = eql.From(test1)
 
-      SqlGenerator(eql.Delete(ef, Some(eql.Ref(ef, col1)))) should be (
+      SqlGenerator(eql.Delete(ef, Some(eql.Dot(ef, col1)))) should be (
         sql.Delete(sf, Some(sql.Ref(sf, "col1"))))
 
     }
@@ -287,7 +287,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
       SqlGenerator.generateToMany(
         eql.Select(m_eft1,
           Seq(
-            eql.Column(eql.Ref(m_eft1, m_test_to_many), "many")
+            eql.Column(eql.Dot(m_eft1, m_test_to_many), "many")
           ))) should be(
         Seq(eql.ToManySelect(m_test_to_many,
           sql.Select(
@@ -307,7 +307,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
         eql.Column(
           eql.ESelect(
             eql.ConstNumeric(1),
-            eql.FromToMany(eql.Ref(m_eft1, m_test_to_many), Some("m"))
+            eql.FromToMany(eql.Dot(m_eft1, m_test_to_many), Some("m"))
           ), "test1"))
       )) should be(
         sql.Select(m_sql_ft1, Seq(sql.Column(
@@ -326,7 +326,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
       eql.SqlGenerator(eql.Select(m_eft1, Seq(
         eql.Column(
           eql.Exists(
-            eql.FromToMany(eql.Ref(m_eft1, m_test_to_many), Some("m"))
+            eql.FromToMany(eql.Dot(m_eft1, m_test_to_many), Some("m"))
           ), "test1"))
       )) should be(
         sql.Select(m_sql_ft1, Seq(sql.Column(
@@ -354,10 +354,10 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
   describe("Order by") {
     it("Simple") {
       eql.SqlGenerator(eql.Select(eft1,
-        Seq(eql.Column(eql.Ref(eft1, col1), "col1")),
+        Seq(eql.Column(eql.Dot(eft1, col1), "col1")),
         orderBy = Seq(
-          eql.OrderBy(eql.Ref(eft1, col1)),
-          eql.OrderBy(eql.Ref(eft1, col2), eql.Desc())
+          eql.OrderBy(eql.Dot(eft1, col1)),
+          eql.OrderBy(eql.Dot(eft1, col2), eql.Desc())
         ))) should be(
         sql.Select(ft1, Seq(sql.Column(sql.Ref(ft1, "col1"), "col1")),
           orderBy = Seq(
@@ -408,7 +408,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     val o = desc("O").table("o").decl(Id, o1).b
     fillRef()
     it("Колонка to One") {
-      eql.SqlGenerator(eql.Select(eql.From(o), Seq(eql.Column(eql.Ref(eql.Ref("O", "o1"), "a3"),"a")))) should equal (
+      eql.SqlGenerator(eql.Select(eql.From(o), Seq(eql.Column(eql.Dot(eql.Dot("O", "o1"), "a3"),"a")))) should equal (
         sql.Select(
           sql.From("o", "t",
             sql.LeftJoin(sql.From("m", "t0",
@@ -484,10 +484,30 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     val e = desc("E").ds("ds1").decl(col).b
     fillRef()
     it("Select") {
-      eql.SqlGenerator(eql.Select(eql.From(e), where = Some(eql.Ref("E", "col")))).where.get should equal(sql.Ref("t", "def"))
+      eql.SqlGenerator(eql.Select(eql.From(e), where = Some(eql.Dot("E", "col")))).where.get should equal(sql.Ref("t", "def"))
 
       eql.SqlGenerator(eql.Select(eql.FromEntity(e, None, DataSourceExpressionDataSource(ds2)),
-        where = Some(eql.Ref("E", "col")))).where.get should equal(sql.Ref("t", "ds2"))
+        where = Some(eql.Dot("E", "col")))).where.get should equal(sql.Ref("t", "ds2"))
+    }
+  }
+
+  describe("Функции") {
+    it("toInt") {
+      eql.SqlGenerator(eql.Select(eql.From(test1), Seq(
+        eql.Column(eql.Dot("test1.col1.toInt"), "col1")
+      )
+      )) should be(
+        sql.Select(ft1, Seq(sql.Column(sql.Cast(sql.Ref(ft1, "col1"), "int"), "col1"))
+        ))
+    }
+    it("replace") {
+      eql.SqlGenerator(
+        eql.Select(eql.From(test1), where =
+          Some(eql.Dot(eql.ConstString("test"), eql.Ref("replace", eql.ConstString("t"), eql.ConstString("z"))
+          ))
+      )).where.get should be(
+        sql.Call("replace", Seq(sql.ConstString("test"), sql.ConstString("t"), sql.ConstString("z")))
+      )
     }
   }
 }

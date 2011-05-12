@@ -6,6 +6,7 @@ import collection.mutable.ListBuffer
 import collection._
 import java.lang.String
 import akka.util.{Logger}
+import java.math.MathContext
 
 /**
  * @author Anton Zherdev
@@ -245,7 +246,7 @@ class RowSyntax(rs : ResultSet, val sql : Select) extends RowSimple(rs) {
 
   def value(column : Column, j: Int): Any = {
     rs.getObject(j + 1) match {
-      case d: java.math.BigDecimal => BigDecimal(d)
+      case d: java.math.BigDecimal => BigDecimal(d, new MathContext(rs.getMetaData.getScale(j + 1)))
       case d => d
     }
   }

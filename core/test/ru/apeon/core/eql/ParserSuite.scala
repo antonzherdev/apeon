@@ -3,8 +3,7 @@ package ru.apeon.core.eql
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.FunSuite
 import ru.apeon.core.entity._
-import ru.apeon.core.script._
-
+import ru.apeon.core.script.{Imports, Package, DefaultObjectModel, ScriptDataTypeString}
 
 /**
  * @author Anton Zherdev
@@ -54,19 +53,19 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
 
   test("expresion column ref") {
     EqlParser.parseSelect("select test1.col1 as nn from test1", model, imports).columns should equal (Seq(
-      Column(Ref(From(test1), col1), "nn")
+      Column(Dot(From(test1), col1), "nn")
       ))
   }
 
   test("expresion column ref with alias") {
     EqlParser.parseSelect("select t.col1 as nn from test1 as t", model, imports).columns should equal (Seq(
-      Column(Ref(From(test1, "t"), col1), "nn")
+      Column(Dot(From(test1, "t"), col1), "nn")
       ))
   }
 
   test("Ref without name") {
     EqlParser.parseSelect("select test1.col1 from test1", model, imports).columns should equal (Seq(
-      Column(Ref(From(test1), col1), "col1")
+      Column(Dot(From(test1), col1), "col1")
       ))
   }
 
@@ -113,12 +112,12 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
   }
 
   test("id") {
-    EqlParser.parseSelect("from test1 where test1.id", model, imports).where.get should equal (Ref(From(test1), Id))
+    EqlParser.parseSelect("from test1 where test1.id", model, imports).where.get should equal (Dot(From(test1), Id))
   }
 
   test("toOne") {
     EqlParser.parseSelect("from test2 where test2.test1.col1", model, imports).where.get should equal (
-      Ref(Ref(From(test2), colToOne), col1))
+      Dot(Dot(From(test2), colToOne), col1))
   }
 
   test("Simple delete") {
@@ -128,13 +127,13 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
   test("Delete with where") {
     EqlParser("delete from test1 where test1.col1", model, imports) should equal (Delete(From(test1),
       Some(
-        Ref(From(test1), col1)
+        Dot(From(test1), col1)
         ) ))
   }
 
   test("function call") {
     EqlParser.parseSelect("from test1 where test(1, 2) : String", model, imports).where.get should equal (
-      SqlFunctionCall("test", Seq(ConstNumeric(1), ConstNumeric(2)), ScriptDataTypeString()))
+      SqlFunction("test", Seq(ConstNumeric(1), ConstNumeric(2)), ScriptDataTypeString()))
   }
 
   test("sum call") {
@@ -144,12 +143,12 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
 
   test("select expression") {
     EqlParser.parseSelect("from test1 as t where (select test1.col1 from test1 where t.col1)", model, imports).where.get should equal (
-      ESelect(Ref(ft1, col1), ft1, Some(Ref(From(test1, "t"), col1))))
+      ESelect(Dot(ft1, col1), ft1, Some(Dot(From(test1, "t"), col1))))
   }
 
   test("select from to many") {
     EqlParser.parseSelect("from test1 as t where (select 1 from t.test2 as z)", model, imports).where.get should equal (
-      ESelect(ConstNumeric(1), FromToMany(Ref(FromEntity(test1, Some("t")), colToMany), Some("z"))))
+      ESelect(ConstNumeric(1), FromToMany(Dot(FromEntity(test1, Some("t")), colToMany), Some("z"))))
   }
 
   test("select from to many full ref") {
@@ -174,9 +173,9 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
 
   test("exists") {
     EqlParser.parseSelect("from test1 where exists(test1.test2 as t where 1)", model, imports).where.get should equal (
-      Exists(FromToMany(Ref("test1", "test2"), Some("t")), Some(ConstNumeric(1))))
+      Exists(FromToMany(Dot("test1", "test2"), Some("t")), Some(ConstNumeric(1))))
     EqlParser.parseSelect("from test1 where exists(test1.test2)", model, imports).where.get should equal (
-      Exists(FromToMany(Ref("test1", "test2"), None), None))
+      Exists(FromToMany(Dot("test1", "test2"), None), None))
   }
 
   test("String constant") {
@@ -186,7 +185,7 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
 
   test("Empty ref") {
     EqlParser.parseExpression("id", model, imports) should equal (
-      Ref(None, "id"))
+      Ref("id"))
   }
 
   test("External") {
@@ -199,7 +198,13 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
   }
 
   test("Обращение к колонке to one без указания алиаса") {
-    val ref = EqlParser.parseSelect("from test2 where test1.col1", model, imports).where.get.asInstanceOf[Ref]
-    ref.fromRef should equal(Ref("test1"))
+    val ref = EqlParser.parseSelect("from test2 where test1.col1", model, imports).where.get.asInstanceOf[Dot]
+    ref.left.asInstanceOf[Ref].declaration should equal(colToOne)
+  }
+
+  test("Функция с параметрами") {
+    EqlParser.parseExpression("test.replace(\"t\", \"z\")", model, imports) should equal (
+      Dot(Ref("test"), Ref("replace", ConstString("t"), ConstString("z")))
+    )
   }
 }

@@ -14,7 +14,7 @@ class EnvironmentSuite extends FunSuite with ShouldMatchers with EntityDefine {
   fillRef()
 
   test("Alias1") {
-    val env = new DefaultEnvironment
+    val env = new DefaultEnvironment(model)
     env.fromOption("s") should equal(None)
     val f = From(test1, "s")
     env.push(f)
@@ -24,7 +24,7 @@ class EnvironmentSuite extends FunSuite with ShouldMatchers with EntityDefine {
   }
 
   test("Alias2") {
-    val env = new DefaultEnvironment
+    val env = new DefaultEnvironment(model)
     env.fromOption("a") should equal(None)
     env.fromOption("s") should equal(None)
     val fa = From(test1, "a")

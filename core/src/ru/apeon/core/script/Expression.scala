@@ -61,6 +61,8 @@ object Plus {
       case r : Any => l ++ Seq(r)
       case _ => throw ScriptException(env, "Unsupported datatype for plus with Seq")
     }
+    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for plus.".format(u.getClass))
+    case _ => throw ScriptException(env, "Unsupported datatype for plus")
   }
 }
 
@@ -80,9 +82,19 @@ object Minus {
 
   def evaluate(env: Environment, left : Any, right : Any) : Any = left match {
     case i : Int => right match {
-      case j : Int => i - j
-      case _ => throw ScriptException(env, "Unsupported datatype for minus with Int")
+        case j : Int => i - j
+        case d : BigDecimal => BigDecimal(i) - d
+        case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for minus with Int".format(u.getClass))
+        case _ => throw ScriptException(env, "Unsupported datatype for minus with Int")
+      }
+    case d : BigDecimal => right match {
+      case j : Int => d - j
+      case s : String => d - BigDecimal(s.toDouble)
+      case j : BigDecimal => d - j
+      case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for minus with Decimal".format(u.getClass))
+      case _ => throw ScriptException(env, "Unsupported datatype for minus with Decimal")
     }
+    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for minus.".format(u.getClass))
     case _ => throw ScriptException(env, "Unsupported datatype for minus")
   }
 }
@@ -103,9 +115,19 @@ object Mul {
 
   def evaluate(env: Environment, left : Any, right : Any) : Any = left match {
     case i : Int => right match {
-      case j : Int => i * j
-      case _ => throw ScriptException(env, "Unsupported datatype for mul with Int")
+        case j : Int => i*j
+        case d : BigDecimal => BigDecimal(i)*d
+        case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for mul with Int".format(u.getClass))
+        case _ => throw ScriptException(env, "Unsupported datatype for mul with Int")
+      }
+    case d : BigDecimal => right match {
+      case j : Int => d*j
+      case s : String => d*BigDecimal(s.toDouble)
+      case j : BigDecimal => d*j
+      case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for mul with Decimal".format(u.getClass))
+      case _ => throw ScriptException(env, "Unsupported datatype for mul with Decimal")
     }
+    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for mul.".format(u.getClass))
     case _ => throw ScriptException(env, "Unsupported datatype for mul")
   }
 }
@@ -127,9 +149,19 @@ object Div {
 
   def evaluate(env: Environment, left : Any, right : Any) : Any = left match {
     case i : Int => right match {
-      case j : Int => i / j
-      case _ => throw ScriptException(env, "Unsupported datatype for div with Int")
+        case j : Int => i/j
+        case d : BigDecimal => BigDecimal(i)/d
+        case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for div with Int".format(u.getClass))
+        case _ => throw ScriptException(env, "Unsupported datatype for div with Int")
+      }
+    case d : BigDecimal => right match {
+      case j : Int => d/j
+      case s : String => d/BigDecimal(s.toDouble)
+      case j : BigDecimal => d/j
+      case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for div with Decimal".format(u.getClass))
+      case _ => throw ScriptException(env, "Unsupported datatype for div with Decimal")
     }
+    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for div.".format(u.getClass))
     case _ => throw ScriptException(env, "Unsupported datatype for div")
   }
 }

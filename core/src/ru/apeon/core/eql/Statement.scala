@@ -1,6 +1,7 @@
 package ru.apeon.core.eql
 
 import java.lang.String
+import ru.apeon.core._
 import ru.apeon.core.entity._
 
 abstract class Statement {
@@ -12,7 +13,7 @@ abstract class Statement {
   }
 
   protected def fillRef() {
-    fillRef(new DefaultEnvironment)
+    fillRef(new DefaultEnvironment(EntityConfiguration.model))
   }
 
   protected def fillRef(env : Environment)
@@ -44,12 +45,11 @@ case class Select(from : From,
 case class Column(expression : Expression, name : String)
 
 trait From {
-  def isRefSet : Boolean
   def name : String
-  def column(name : String) : Field = columnOption(name).getOrElse{
+  def field(name : String) : Field = fieldOption(name).getOrElse{
     throw new RuntimeException("Column \"%s\" not found in %s.".format(name, this))}
-  def columnOption(name : String) : Option[Field]
-  def columns : Seq[Field]
+  def fieldOption(name : String) : Option[Field]
+  def fields : Seq[Field]
   def dataSource : DataSource
   def fillRef(env: Environment)
 
@@ -72,10 +72,8 @@ case class FromEntity(entity : Description,
                       alias : Option[String] = None,
                       dataSourceExpression : DataSourceExpression = DataSourceExpressionDefault()) extends From
 {
-  val isRefSet = true
-
-  def columnOption(name: String) = entity.fieldOption(name)
-  def columns = entity.fields
+  def fieldOption(name: String) = entity.fieldOption(name)
+  def fields = entity.fields
 
   override def toString = {
     "from " + entity.name +
@@ -112,7 +110,7 @@ case class DataSourceExpressionDefault() extends DataSourceExpression {
 
 
 
-case class FromToMany(ref : Ref, alias : Option[String])
+case class FromToMany(ref : Expression, alias : Option[String])
         extends From
 {
    def name = alias match {
@@ -120,17 +118,26 @@ case class FromToMany(ref : Ref, alias : Option[String])
     case None => "_"
   }
 
-  def isRefSet = ref.isRefSet
+  private var _entity : Description = _
+  def entity = _entity
+  def fields = _entity.fields
+  def fieldOption(name: String) = _entity.fieldOption(name)
 
-  def columns = columnRef.entity.fields
-
-  def columnOption(name: String) = columnRef.entity.fieldOption(name)
+  private var _toMany : ToMany = _
+  def toMany : ToMany = _toMany
 
   override def fillRef(env: Environment) {
     ref.fillRef(env)
+    _entity = ref.dataType() match {
+      case script.ScriptDataTypeSeq(e : script.ScriptDataTypeEntity) => e.description
+      case _ => throw new RuntimeException("Unsupported datatype")
+    }
+    _toMany = ref match {
+      case r : Ref => r.declaration.asInstanceOf[ToMany]
+      case d : Dot => d.right.declaration.asInstanceOf[ToMany]
+    }
   }
 
-  def columnRef = ref.columnRef.asInstanceOf[ToMany]
 
   def dataSource = null
 }
@@ -172,7 +179,7 @@ case class Insert(from : FromEntity, columns : Seq[InsertColumn]) extends Statem
 case class InsertColumn(columnName : String,  expression : Expression) {
   var column : FieldWithSource = null
   def fillRef(env: Environment) {
-    column = env.from.column(columnName).asInstanceOf[FieldWithSource]
+    column = env.from.field(columnName).asInstanceOf[FieldWithSource]
     expression.fillRef(env)
   }
 
@@ -195,7 +202,7 @@ case class Update(from : FromEntity, columns : Seq[UpdateColumn], where : Option
 case class UpdateColumn(columnName : String, expression : Expression) {
   var column : FieldWithSource = null
   def fillRef(env: Environment) {
-    column = env.from.column(columnName).asInstanceOf[FieldWithSource]
+    column = env.from.field(columnName).asInstanceOf[FieldWithSource]
     expression.fillRef(env)
   }
 }

@@ -74,13 +74,13 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     override def select(select: eql.Select) = select.from.asInstanceOf[eql.FromEntity].entity match {
       case  a if a == article => select.where match {
         case None => Seq(article1, article2)
-        case Some(eql.Equal(eql.Ref(Some("a"), "id"), eql.Const(1))) => {
+        case Some(eql.Equal(eql.Dot(eql.Ref("a"), eql.Ref("id")), eql.Const(1))) => {
           Seq(article1)
         }
-        case Some(eql.Equal(eql.Ref(None, "col1"), eql.Const(10))) => {
+        case Some(eql.Equal(eql.Ref("col1"), eql.Const(10))) => {
           Seq(article1)
         }
-        case Some(eql.Equal(eql.Ref(None, "col1"), e : EqlExternalScript)) => {
+        case Some(eql.Equal(eql.Ref("col1"), e : EqlExternalScript)) => {
           e.data should equal(10)
           Seq(article1)
         }

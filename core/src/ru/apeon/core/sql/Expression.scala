@@ -129,3 +129,5 @@ case class ESelect(select : Expression, from : From, where : Option[Expression])
 case class Identity(table : SqlTable) extends Expression
 
 case class DeclarationRef(name : String) extends Expression
+
+case class Cast(expression : Expression, as : String) extends Expression

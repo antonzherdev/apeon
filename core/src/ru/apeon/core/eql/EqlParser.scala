@@ -67,22 +67,23 @@ class EqlParser(val model : ObjectModel,
   def column : Parser[Column] = exp ~ opt(as) ^^ {
     case e ~ Some(n) => new Column(e, n)
     case e ~ None => e match {
-      case r : Ref => new Column(e, r.column)
+      case r : Dot => new Column(e, r.right.name)
+      case r : Ref => new Column(e, r.name)
       case _ => new Column(e, "")
     }
   }
 
-  def from : Parser[From] = rep1sep(ident, ".") ~ (dataSource?) ~ (alias?)  ^^ {
+  def from : Parser[From] = rep1sep(ref, ".") ~ (dataSource?) ~ (alias?)  ^^ {
     case refs ~ dataSource ~ alias =>
       val entityName = Buffer[String]()
       var entity : Option[Description] = None
       for(part <- refs) {
         if(entity.isEmpty) {
-          entityName.append(part)
+          entityName.append(part.name)
           entity = model.entityDescriptionOption(entityName.mkString("."), imports)
         }
         else {
-          entity = Some(entity.get.field(part).asInstanceOf[ToMany].entity)
+          entity = Some(entity.get.field(part.name).asInstanceOf[ToMany].entity)
         }
       }
       entity match {
@@ -108,13 +109,13 @@ class EqlParser(val model : ObjectModel,
 
   def nullTerm : Parser[Expression] = "null" ^^^ {ConstNull()}
 
-  def functionCall : Parser[FunctionCall] = ident ~ ("(" ~> repsep(exp, ",") <~ ")") ~ opt(":" ~> rep1sep(ident, ".")) ^^ {
+  def functionCall : Parser[Function] = ident ~ ("(" ~> repsep(exp, ",") <~ ")") ~ opt(":" ~> rep1sep(ident, ".")) ^^ {
     case name ~ parameters ~ dt => name match {
       case "sum" => Sum(parameters.head)
       case "max" => Max(parameters.head)
       case "min" => Min(parameters.head)
       case "avg" => Avg(parameters.head)
-      case _ => SqlFunctionCall(name, parameters,
+      case _ => SqlFunction(name, parameters,
         scriptDataType(dt.getOrElse{
           throw EqlParserError("Unknown function %s with no result data type.".format(name))
         }.mkString(".")))
@@ -150,20 +151,22 @@ class EqlParser(val model : ObjectModel,
     case s => ConstString(s)
   }
 
-  def ref(refs: List[String]): Ref = {
-    refs match {
-      case Seq(ref) => Ref(None, ref)
-      case _ => {
-        val i = refs.iterator
-        var ref = Ref(i.next(), i.next())
-        while (i.hasNext)
-          ref = Ref(ref, i.next())
-        ref
-      }
+  def ref(refs: List[Ref]): Expression = refs match {
+    case Seq(ref) => ref
+    case _ => {
+      val i = refs.iterator
+      var ref = Dot(i.next(), i.next())
+      while (i.hasNext)
+        ref = Dot(ref, i.next())
+      ref
     }
   }
 
-  def columnRef : Parser[Ref] = rep1sep(ident,".") ^^ {
+  def ref = ident ~ opt("(" ~> repsep(exp, ",") <~ ")") ^^ {
+    case name ~ pars => new Ref(name, pars.getOrElse{Seq()})
+  }
+
+  def columnRef : Parser[Expression] = rep1sep(ref,".") ^^ {
     case refs => ref(refs)
   }
 

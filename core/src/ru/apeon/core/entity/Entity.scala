@@ -226,7 +226,10 @@ case class OneEntityId(dataSource : DataSource, description : Description, id : 
     case _ => false
   }
 
-  def eqlFindById(alias : Option[String]) = Equal(Ref(alias, description.primaryKeys.head.name), Const(id))
+  def eqlFindById(alias : Option[String]) = alias match {
+    case Some(a) => Equal(Dot(Ref(a), Ref(description.primaryKeys.head.name)), Const(id))
+    case None => Equal(Ref(description.primaryKeys.head.name), Const(id))
+  }
 
   def const = Const(id)
 
@@ -257,7 +260,7 @@ case class MultiEntityId(dataSource : DataSource, description : Description, ids
     var ret : Option[Expression] = None
     val i = ids.iterator
     for(pk <- description.primaryKeys) {
-      val e = Equal(Ref(alias, pk.name), Const(i.next()))
+      val e = Equal(alias.map{a => Dot(a, pk.name)}.getOrElse(Ref(pk.name)), Const(i.next()))
       ret = ret match {
         case None => Some(e)
         case Some(r) => Some(And(r, e))

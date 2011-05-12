@@ -14,22 +14,20 @@ abstract class Sync extends Statement
   def apply(env: Environment, entities : Traversable[Entity]) : Traversable[Entity] =
     entities.map{apply(env, _)}
 
-  private def replaceRef(source : Entity, ref : eql.Ref) : Option[Any] = ref.fromRef match {
-    case parent : eql.Ref => replaceRef(source, parent) match {
-      case Some(e : Entity) => Some(e(ref.name))
+  private def replaceRef(source : Entity, dot : eql.Dot) : Option[Any] = dot.left match {
+    case parent : eql.Dot => replaceRef(source, parent) match {
+      case Some(e : Entity) => Some(e(dot.right.name))
       case _ => None
     }
-    case _ => ref.from match {
-      case Some(a) if a == sourceAlias => Some(source(ref.column))
-      case _ => None
-    }
+    case r : eql.Ref => if(r.name == sourceAlias) Some(source(dot.right.name)) else None
+    case _ => None
   }
 
   def apply(env: Environment, source : Entity) : Entity = env.em.transaction{
     val desEnt = destination.entityDescription
     var w = eql.EqlParser.parseExpression(where, env.model, Some(imports))
     w = w.map{
-      case ref : eql.Ref => replaceRef(source, ref) match {
+      case ref : eql.Dot => replaceRef(source, ref) match {
         case Some(a) => eql.Const(a)
         case None => ref
       }
@@ -52,7 +50,7 @@ abstract class Sync extends Statement
           else {
             toOne = many.toOne
             w = eql.And(w,
-              eql.Equal(eql.Ref(destination.alias, many.toOne.name), parent.id.const))
+              eql.Equal(eql.Dot(eql.Ref(destination.alias), eql.Ref(many.toOne.name)), parent.id.const))
           }
         }
         case _ => {}

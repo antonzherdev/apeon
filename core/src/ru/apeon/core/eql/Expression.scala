@@ -4,7 +4,7 @@ import java.util.Date
 import java.lang.String
 import ru.apeon.core.entity._
 import ru.apeon.core._
-
+import script.{Imports}
 
 abstract class Expression {
   def fillRef(env : Environment) {
@@ -85,75 +85,144 @@ case class Or(left : Expression, right : Expression) extends BinaryBooleanExpres
   def build(left: Expression, right: Expression) = Or(left, right)
 }
 
-class Ref(val from : Option[String] = None, val column : String) extends Expression with From {
-  var fromRef : From = null
-  var columnRef : Field = null
-  var isRefSet : Boolean = false
+object Dot{
+  def apply(left : Expression, right : Ref) : Dot = new Dot(left, right)
+  def apply(left : Expression, right : String) : Dot = new Dot(left, Ref(right))
+  def apply(left : Expression, right : script.Declaration) : Dot = new Dot(left, Ref(right))
 
-  override def toString = from match {
-    case Some(a) => "%s.%s".format(a, column)
-    case None => column
+  def apply(left : String, right : Ref) : Dot = new Dot(Ref(left), right)
+  def apply(left : String, right : String) : Dot = new Dot(Ref(left), Ref(right))
+  def apply(left : String, right : script.Declaration) : Dot = new Dot(Ref(left), Ref(right))
+
+  def apply(left : From, right : Ref) : Dot = new Dot(Ref(left), right)
+  def apply(left : From, right : String) : Dot = new Dot(Ref(left), Ref(right))
+  def apply(left : From, right : script.Declaration) : Dot = new Dot(Ref(left), Ref(right))
+
+  def apply(parts : String) : Dot = {
+    var p = parts.split('.').toSeq
+    val first = p.head
+    p = p.tail
+    var ret = Dot(first, p.head)
+    p = p.tail
+    for(s <- p) {
+      ret = Dot(ret, s)
+    }
+    ret
   }
 
+  def unapply(dot : Dot) : Option[(Expression, Ref)] = Some((dot.left, dot.right))
+}
+
+class Dot(val left : Expression, val right : Ref) extends Expression {
+  override def toString = "%s.%s".format(left, right)
+
   override def fillRef(env: Environment) {
-    if(fromRef == null) {
-      fromRef = from match {
-        case Some(a) => env.fromOption(a).getOrElse(Ref(a))
-        case None => env.from
-      }
+    left.fillRef(env)
+    env.withDot(this) {
+      right.fillRef(env)
     }
-    if(fromRef.isInstanceOf[Ref]) {
-      fromRef.fillRef(env)
-    }
-    columnRef = fromRef.column(column)
-    isRefSet = true
   }
 
   override def equals(obj: Any) = obj match {
-    case ref : Ref => ref.from == from && ref.column == column
+    case ref : Dot => ref.left == left && ref.right == right
+    case _ => false
   }
 
-  def name = column
+  def dataType(env: script.Environment) = right.dataType(env)
 
-  def columns = columnRef match {
-    case o : ToOne => o.entity.fields
-    case m : ToMany => m.entity.fields
-  }
-
-  def columnOption(name: String) = columnRef match {
-    case o : ToOne => o.entity.fieldOption(name)
-    case m : ToMany => m.entity.fieldOption(name)
-  }
-
-  def dataSource = null
-
-  def dataType(env: script.Environment) = columnRef.scriptDataType
+  override protected def children = Seq(left, right)
 }
 
 object Ref {
-  def apply(from : Option[String], column : String) : Ref = new Ref(from, column)
-  def apply(column : String): Ref = new Ref(None, column)
-  def apply(from : String, column : String) : Ref = new Ref(Some(from), column)
+  def apply(name : String) : Ref = new Ref(name)
+  def apply(from : From) : Ref = new Ref(from)
+  def apply(d : script.Declaration) : Ref = new Ref(d)
+  def apply(name : String, parameters : Expression*) : Ref = new Ref(name, parameters.toSeq)
 
-  def apply(from : From, column : Field) : Ref = {
-    val r = new Ref(Some(from.name), column.name)
-    r.fromRef = from
-    r.columnRef = column
-    r.isRefSet = true
-    r
+  def unapply(r : Ref) : Option[String] = Some(r.name)
+}
+
+class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends Expression{
+  abstract class RefData {
+    def from : From = throw new RuntimeException("No from")
+    def declaration : script.Declaration = throw new RuntimeException("No declaration")
+    def dataType(env: script.Environment) : script.ScriptDataType
+  }
+  case class NoData() extends RefData{
+    def dataType(env: script.Environment) =  throw new RuntimeException("No data")
+  }
+  case class FromData(override val from : From) extends RefData {
+    def dataType(env: script.Environment) = ScriptDataTypeFrom(from)
+  }
+  case class DeclarationData(override val declaration : script.Declaration) extends RefData {
+    def dataType(env: script.Environment) = declaration.dataType(env, None)
+  }
+  protected[eql] var data : RefData = NoData()
+  private var _defaultFrom : From = _
+
+  def this(from : From) {
+    this(from.name)
+    data = FromData(from)
   }
 
-  def apply(from : From, columnName : String) : Ref = {
-    if(from.isRefSet)
-      Ref(from, from.column(columnName))
-    else {
-      val r = Ref(from.name, columnName)
-      r.fromRef = from
-      r
+  def this(dec : script.Declaration) {
+    this(dec.name)
+    data = DeclarationData(dec)
+  }
+
+  override def fillRef(env: Environment) {
+    data = env.dot match {
+      case None => env.fromOption(name) match {
+        case None => DeclarationData(env.from.field(name))
+        case Some(from) => FromData(from)
+      }
+      case Some(dot) => {
+        val e = new script.DefaultEnvironment(env.model)
+        val declaration = dot.left.dataType(e).declaration(e, name, parameters.map{
+          par => script.Par(new script.Expression{
+            def preFillRef(model: script.Environment, imports: Imports){}
+            def fillRef(env: script.Environment, imports: Imports){}
+            def evaluate(env: script.Environment) = null
+            def dataType(env: script.Environment) = par.dataType(env)
+          })
+        } match  {
+          case Seq() => None
+          case s => Some(s)
+        }).getOrElse{
+          throw new RuntimeException("Function %s not found".format(name))
+        }
+        if(!declaration.isInstanceOf[SqlGeneration] && !declaration.isInstanceOf[Field]) {
+          throw new RuntimeException("Function %s is not supported in eql".format(name))
+        }
+        DeclarationData(declaration)
+      }
     }
+    _defaultFrom = env.from
+    parameters.foreach(_.fillRef(env))
   }
 
-  def unapply(ref : Ref) : Option[(Option[String], String)] = Some(ref.from, ref.column)
+  def dataType(env: script.Environment) : script.ScriptDataType = data.dataType(env)
+
+  def declaration = data.declaration
+  def from = data.from
+
+  def defaultFrom = _defaultFrom
+
+  case class ScriptDataTypeFrom(from : From) extends script.ScriptDataType {
+    override def declarations = from.fields
+  }
+
+  def isFrom = data.isInstanceOf[FromData]
+  def isDeclaration = data.isInstanceOf[DeclarationData]
+  def isToMany = isDeclaration && declaration.isInstanceOf[ToMany]
+  def isToOne = isDeclaration && declaration.isInstanceOf[ToOne]
+
+  override def equals(obj: Any) = obj match {
+    case r : Ref => r.name == this.name
+    case _ => false
+  }
+
+  override protected def children = parameters
 }
 
 case class ConstNumeric(value : BigDecimal) extends Expression {
@@ -197,65 +266,10 @@ case class Parameter(name : String) extends Expression {
   def dataType(env: script.Environment) = script.ScriptDataTypeAny()
 }
 
-abstract class FunctionCall extends Expression{
-  val name : String
-}
-
-case class SqlFunctionCall(name : String, parameters : Seq[Expression], returnType : script.ScriptDataType) extends FunctionCall {
-  override def children = parameters
-  override def build(children: Seq[Expression]) = SqlFunctionCall(name, children, returnType)
-  def dataType(env: script.Environment) = returnType
-}
-
-abstract class AggFunctionCall extends FunctionCall
-
-case class Count() extends AggFunctionCall {
-  val name = "count"
-  def dataType(env: script.Environment) = script.ScriptDataTypeInteger()
-}
-
-abstract class AggPar1FunctionCall extends AggFunctionCall {
-  def parameter : Expression
-
-  override def children = Seq(parameter)
-
-  def dataType(env: script.Environment) = parameter.dataType(env)
-
-  override def build(children: Seq[Expression]) = build(children.head)
-
-  def build(parameter : Expression) : Expression
-
-  override def equals(obj: Any) = obj match {
-    case e : AggPar1FunctionCall =>
-      (e.name == this.name) &&
-              (e.parameter == parameter)
-    case _ => false
-  }
-}
-
-case class Sum(parameter : Expression) extends AggPar1FunctionCall{
-  val name = "sum"
-  def build(parameter: Expression) = Sum(parameter)
-}
-
-case class Max(parameter : Expression) extends AggPar1FunctionCall{
-  val name = "max"
-  def build(parameter: Expression) = Max(parameter)
-}
-
-case class Min(parameter : Expression) extends AggPar1FunctionCall{
-  val name = "min"
-  def build(parameter: Expression) = Min(parameter)
-}
-
-case class Avg(parameter : Expression) extends AggPar1FunctionCall{
-  val name = "avg"
-  def build(parameter: Expression) = Avg(parameter)
-}
-
 case class ESelect(select : Expression, from : From, where : Option[Expression] = None) extends Expression {
   override def fillRef(env: Environment) {
     env.push(from)
+    from.fillRef(env)
     select.fillRef(env)
     where.foreach(_.fillRef(env))
     env.pop()

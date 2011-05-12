@@ -142,9 +142,9 @@ class SqlGenerator {
 
 
   def gen(q : Select) : sql.Select = q.columns match {
-    case Seq() => gen(q, q.from.columns.filter{!_.isInstanceOf[ToMany]}.map{
+    case Seq() => gen(q, q.from.fields.filter{!_.isInstanceOf[ToMany]}.map{
       case col : Field =>
-        Column(Ref(q.from, col), col.name)
+        Column(Dot(Ref(q.from), Ref(col)), col.name)
     })
     case _ => gen(q, q.columns)
 
@@ -222,14 +222,18 @@ class SqlGenerator {
       ef.append(e, ef.table, discriminator(e.entity, ef.table))
     }
     case e : FromToMany => {
-      val t = genFromTable(ef.parent.get, e.ref.fromRef, e.columnRef.toOne.tableName(ef.dataSource))
-      ef.table = genTable(ef, e.columnRef.entity)
+      val t = e.ref match {
+        case d : Dot => genFromTable(ef.parent.get, d.left, e.toMany.toOne.tableName(ef.dataSource))
+        case r : Ref => ef.parent.get.get(r.defaultFrom, e.toMany.toOne.tableName(ef.dataSource) )
+      }
+
+      ef.table = genTable(ef, e.entity)
       ef.append(e, ef.table,
         Some(sql.And(
-          discriminator(e.columnRef.entity, ef.table),
+          discriminator(e.entity, ef.table),
           sql.Equal(
-            sql.Ref(t, "id"),
-            sql.Ref(ef.table, e.columnRef.toOne.columnName(ef.dataSource))
+            sql.Ref(t, e.toMany.entity.primaryKeys.head.columnName(ef.dataSource)),
+            sql.Ref(ef.table, e.toMany.toOne.columnName(ef.dataSource))
           )
         )))
     }
@@ -238,13 +242,16 @@ class SqlGenerator {
 
   def genColumns(columns : Seq[Column], ef: EqlSqlFrom) : Seq[sql.SelectColumn] =
     columns.filterNot(_.expression match {
-      case ref : Ref => ref.columnRef.isInstanceOf[ToMany]
+      case ref : Dot => ref.right.isToMany
+      case ref : Ref => ref.isToMany
       case _ => false
     }).map{column => column.expression match {
-      case ref : Ref => ref.columnRef match {
-        case toOne : ToOne => genToOne(column, toOne, ef)
-        case _ => sql.Column(genExpression(ref, ef), Some(column.name))
-      }
+      case ref : Dot =>
+        if(ref.right.isToOne) genToOne(column, getFrom(ef, Some(ref.left), ref.right), ref.right.declaration.asInstanceOf[ToOne], ef)
+        else sql.Column(genExpression(ref, ef), Some(column.name))
+      case ref : Ref =>
+        if(ref.isToOne) genToOne(column, getFrom(ef, None, ref), ref.declaration.asInstanceOf[ToOne], ef)
+        else sql.Column(genExpression(ref, ef), Some(column.name))
       case _ => sql.Column(genExpression(column.expression, ef), Some(column.name))
     }}
 
@@ -252,8 +259,8 @@ class SqlGenerator {
     ef.join(toOne, genTable(ef, toOne.entity), sql.Ref(joinTo, toOne.columnName(ef.dataSource)))
   }
 
-  def genToOne(col : eql.Column, toOne : ToOne, ef: EqlSqlFrom) : sql.SelectColumn = {
-    val ft = joinToOne(toOne, ef, genFromTable(ef, col.expression.asInstanceOf[Ref].fromRef, toOne.tableName(ef.dataSource)))
+  def genToOne(col : eql.Column, from : sql.From, toOne : ToOne, ef: EqlSqlFrom) : sql.SelectColumn = {
+    val ft = joinToOne(toOne, ef, from)
 
     sql.ColumnSeq(toOne.entity.fields.filter{!_.isInstanceOf[ToMany]}.map { col : Field => col match {
       case p : Attribute => sql.Column(sql.Ref(ef.find(ft, p.tableName(ef.dataSource)), p.columnName(ef.dataSource)), Some(p.name))
@@ -263,17 +270,47 @@ class SqlGenerator {
   }
 
 
-  def genFromTable(ef : EqlSqlFrom, ft : eql.From, tableName : Option[String]) : sql.From = ft match {
-    case ref : Ref => ref.columnRef match {
-      case toOne : ToOne => ef.find(joinToOne(toOne, ef, genFromTable(ef, ref.fromRef, toOne.tableName(ef.dataSource))), tableName)
+  def genFromTable(ef : EqlSqlFrom, ft : eql.Expression, tableName : Option[String]) : sql.From = ft match {
+    case ref : Dot => ref.right.declaration match {
+      case toOne : ToOne => ef.find(joinToOne(toOne, ef, genFromTable(ef, ref.left, toOne.tableName(ef.dataSource))), tableName)
       case _ => throw SqlGeneratorError("Not to one")
     }
-    case _ => ef.get(ft, tableName)
+    case ref : Ref => ef.get(ref.from, tableName)
+    case _ => throw SqlGeneratorError("Unknown expression")
   }
 
   def genExpression(exp : Option[Expression] , ef: EqlSqlFrom) : Option[sql.Expression] = exp match {
     case Some(e) => Some(genExpression(e, ef))
     case None => None
+  }
+
+  def getFrom(ef: EqlSqlFrom, left: Option[Expression], right: Ref): sql.From = {
+    val tableName = right.declaration.asInstanceOf[FieldWithSource].tableName(ef.dataSource)
+    val table: sql.From = left.map {
+      l => genFromTable(ef, l, tableName)
+    }.getOrElse(ef.get(right.defaultFrom, tableName))
+    table
+  }
+
+  def genRef(ef: EqlSqlFrom, left : Option[Expression], right : Ref) : sql.Expression = right.declaration match {
+    case p : Attribute => {
+      if(p.isPrimaryKey) {
+        left match {
+          case Some(dot : Dot) => genRef(ef, Some(dot.left), dot.right)
+          case _ =>  sql.Ref(getFrom(ef, left, right), p.columnName(ef.dataSource))
+        }
+      }
+      else {
+        sql.Ref(getFrom(ef, left, right), p.columnName(ef.dataSource))
+      }
+    }
+    case o : ToOne => sql.Ref(getFrom(ef, left, right), o.columnName(ef.dataSource))
+    case d : SqlGeneration => d.generateSql(genExpression(left.get, ef), right.parameters.map{
+      par => genExpression(par, ef)
+    })
+    case null => throw SqlGeneratorError("Declaration is null")
+    case o : Object => throw SqlGeneratorError("Unknown right class %s".format(o.getClass))
+    case _ => throw SqlGeneratorError("Select to many column")
   }
 
   def genExpression(exp : Expression , ef: EqlSqlFrom) : sql.Expression =  exp match {
@@ -286,33 +323,15 @@ class SqlGenerator {
     case e : Like => sql.Like(genExpression(e.left, ef), genExpression(e.right, ef))
     case e : And => sql.And(genExpression(e.left, ef), genExpression(e.right, ef))
     case e : Or => sql.Or(genExpression(e.left, ef), genExpression(e.right, ef))
-    case r : Ref => r.columnRef match {
-      case p : Attribute => {
-        if(p.isPrimaryKey) {
-          r.fromRef match {
-            case toOne : Ref => genExpression(Ref(toOne.fromRef, toOne.columnRef), ef)
-            case _ =>  sql.Ref(genFromTable(ef, r.fromRef, p.tableName(ef.dataSource)), p.columnName(ef.dataSource))
-          }
-        }
-        else {
-          p.dataType match {
-            case AttributeDataTypeUID() =>
-              sql.Call("uuidToStr", Seq(sql.Ref(genFromTable(ef, r.fromRef, p.tableName(ef.dataSource)), p.columnName(ef.dataSource))))
-            case _ => sql.Ref(genFromTable(ef, r.fromRef, p.tableName(ef.dataSource)), p.columnName(ef.dataSource))
-          }
-        }
-      }
-      case o : ToOne => sql.Ref(genFromTable(ef, r.fromRef, o.tableName(ef.dataSource)), o.columnName(ef.dataSource))
-      case null => throw SqlGeneratorError("Column ref is not fill")
-      case _ => throw SqlGeneratorError("Select to many column")
-    }
+    case r : Dot => genRef(ef, Some(r.left), r.right)
+    case r : Ref => genRef(ef, None, r)
     case n : ConstNumeric => sql.ConstNumeric(n.value)
     case n : ConstString => sql.ConstString(n.value)
     case n : ConstDate => sql.ConstDate(n.value)
     case e : Parameter => sql.Parameter(e.name)
-    case f : SqlFunctionCall => sql.Call(f.name, f.parameters.map{p => genExpression(p, ef)})
+    case f : SqlFunction => sql.Call(f.name, f.parameters.map{p => genExpression(p, ef)})
     case s : ESelect => getSelectExpression(s, ef)
-    case s : AggPar1FunctionCall => sql.Call(s.name, Seq(genExpression(s.parameter, ef)))
+    case s : AggPar1Function => sql.Call(s.name, Seq(genExpression(s.parameter, ef)))
     case n : ConstNull => sql.ConstNull()
     case not : Not => sql.Not(genExpression(not.expression, ef))
     case exists : Exists => getExistsExpression(exists, ef)
@@ -381,11 +400,14 @@ class SqlGenerator {
 
   }
 
-  def generateToMany(sel : Select) : Seq[ToManySelect] = sel.columns.filter{c : Column =>
-    c.expression.isInstanceOf[Ref] &&
-            c.expression.asInstanceOf[Ref].columnRef.isInstanceOf[ToMany]
-  }.map{c =>
-    generateToMany(c.expression.asInstanceOf[Ref].columnRef.asInstanceOf[ToMany])
+  def generateToMany(sel : Select) : Seq[ToManySelect] = sel.columns.filter{c : Column => c.expression match {
+    case d : Dot => d.right.isToMany
+    case r : Ref => r.isToMany
+    case _=> false
+  }}.map{c => c.expression match {
+    case d : Dot => generateToMany(d.right.declaration.asInstanceOf[ToMany])
+    case r : Ref => generateToMany(r.declaration.asInstanceOf[ToMany])
+  }
   }
 
   def generateToMany(toMany : ToMany) : ToManySelect = {
@@ -394,16 +416,20 @@ class SqlGenerator {
       Select(
         columns = toMany.entity.fields.map{ column : Field =>
           if(column == toMany.toOne)
-            Column(Ref(Ref(ft, toMany.toOne), Id), column.name)
+            Column(Dot(Dot(Ref(ft), Ref(toMany.toOne)), Ref(Id)), column.name)
           else
-            Column(Ref(ft, column), column.name)
+            Column(Dot(Ref(ft), Ref(column)), column.name)
         },
         from = ft,
         where = Some(
-          Equal(Ref(ft, toMany.toOne), Parameter("id") )
+          Equal(Dot(Ref(ft), Ref(toMany.toOne)), Parameter("id") )
         ))
     ))
   }
 }
 
 case class SqlGeneratorError(s : String) extends Exception(s)
+
+trait SqlGeneration{
+  def generateSql(ref : sql.Expression, parameters : Seq[sql.Expression]) : sql.Expression
+}

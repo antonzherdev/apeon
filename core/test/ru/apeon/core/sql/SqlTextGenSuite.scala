@@ -174,7 +174,7 @@ class SqlTextGenSuite extends FunSuite with ShouldMatchers {
   test("ColumnSeq") {
     Select(From("test"), Seq(ColumnSeq(Seq(Column(ConstNumeric(4), "a"), Column(ConstNumeric(5), "b")), "i"))).
             toString should be(
-      "select\n\t\t4 as \"i.a\",\n\t\t5 as \"i.b\"\nfrom\n\t\"test\";")
+      "select\n\t\t4 as \"i__a\",\n\t\t5 as \"i__b\"\nfrom\n\t\"test\";")
   }
 
   test("Not") {
@@ -186,6 +186,12 @@ class SqlTextGenSuite extends FunSuite with ShouldMatchers {
   test("exists") {
     Exists(From("test"), Some(ConstNumeric(5))).toString should be(
       "exists(select * from\n\t\t\"test\"\n\twhere\n\t\t5\n)"
+    )
+  }
+
+  test("Cast") {
+    Cast(ConstString("4"), "int").toString should be(
+      "cast('4' as int)"
     )
   }
 }
