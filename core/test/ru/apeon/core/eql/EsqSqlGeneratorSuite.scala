@@ -18,7 +18,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
   }
   sh.addDataSource(ps)
 
-  val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
+  val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeText())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger())
   val test1 = Description(pack, "test1", Table("", "test1"), Seq(Id, col1, col2))
   sh.addEntityDescription(test1)
@@ -505,6 +505,17 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
 
       eql.SqlGenerator(eql.Select(eql.FromEntity(e, None, DataSourceExpressionDataSource(ds2)),
         where = Some(eql.Dot("E", "col")))).where.get should equal(sql.Ref("t", "ds2"))
+    }
+  }
+
+  describe("Функции") {
+    it("toInt") {
+      eql.SqlGenerator(eql.Select(eql.From(test1), Seq(
+        eql.Column(eql.Dot("test1.col1.toInt"), "col1")
+      )
+      )) should be(
+        sql.Select(ft1, Seq(sql.Column(sql.Cast(sql.Ref(ft1, "col1"), "int"), "col1"))
+        ))
     }
   }
 }

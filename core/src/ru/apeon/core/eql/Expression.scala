@@ -99,6 +99,18 @@ object Dot{
   def apply(left : From, right : String) : Dot = new Dot(Ref(left), Ref(right))
   def apply(left : From, right : script.Declaration) : Dot = new Dot(Ref(left), Ref(right))
 
+  def apply(parts : String) : Dot = {
+    var p = parts.split('.').toSeq
+    val first = p.head
+    p = p.tail
+    var ret = Dot(first, p.head)
+    p = p.tail
+    for(s <- p) {
+      ret = Dot(ret, s)
+    }
+    ret
+  }
+
   def unapply(dot : Dot) : Option[(Expression, Ref)] = Some((dot.left, dot.right))
 }
 
@@ -166,9 +178,13 @@ class Ref(val name : String) extends Expression{
       }
       case Some(dot) => {
         val e = new script.DefaultEnvironment(env.model)
-        val decl = dot.left.dataType(e).declaration(e, name).getOrElse{throw new RuntimeException("Function %s not found".format(name))}
-        if(!decl.supportedInEql) throw new RuntimeException("Function %s is not supported in eql".format(name))
-        DeclarationData(decl)
+        val declaration = dot.left.dataType(e).declaration(e, name).getOrElse{
+          throw new RuntimeException("Function %s not found".format(name))
+        }
+        if(!declaration.isInstanceOf[SqlGeneration] && !declaration.isInstanceOf[Field]) {
+          throw new RuntimeException("Function %s is not supported in eql".format(name))
+        }
+        DeclarationData(declaration)
       }
     }
     _defaultFrom = env.from

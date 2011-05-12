@@ -199,7 +199,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
   describe("Изменение сущностей") {
     it("Сущность должна изменяться") {
       var ok = false
-      EntityConfiguration.store = new PS with EqlDefine{
+      EntityConfiguration.store = new PS {
         override def select(s: Select, parameters: Map[String, Any]) =
           Seq(collection.mutable.Map[String, Any]("id" -> 222, "col1" -> 11, "col2" -> 0))
 

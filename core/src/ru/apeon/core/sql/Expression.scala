@@ -300,3 +300,13 @@ case class DeclarationRef(name : String) extends Expression {
     append(name)
   }
 }
+
+case class Cast(expression : Expression, as : String) extends Expression {
+  def textGen() {
+    append("cast(")
+    append(expression)
+    append(" as ")
+    append(as)
+    append(")")
+  }
+}

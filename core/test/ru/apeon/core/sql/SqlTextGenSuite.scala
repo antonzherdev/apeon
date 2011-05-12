@@ -188,4 +188,10 @@ class SqlTextGenSuite extends FunSuite with ShouldMatchers {
       "exists(select * from\n\t\t\"test\"\n\twhere\n\t\t5\n)"
     )
   }
+
+  test("Cast") {
+    Cast(ConstString("4"), "int").toString should be(
+      "cast('4' as int)"
+    )
+  }
 }

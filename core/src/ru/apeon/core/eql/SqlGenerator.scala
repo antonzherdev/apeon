@@ -306,6 +306,7 @@ class SqlGenerator {
       }
     }
     case o : ToOne => sql.Ref(getFrom(ef, left, right), o.columnName(ef.dataSource))
+    case d : SqlGeneration => d.generateSql(genExpression(left.get, ef), Seq())
     case null => throw SqlGeneratorError("Declaration is null")
     case o : Object => throw SqlGeneratorError("Unknown right class %s".format(o.getClass))
     case _ => throw SqlGeneratorError("Select to many column")
@@ -426,3 +427,7 @@ class SqlGenerator {
 }
 
 case class SqlGeneratorError(s : String) extends Exception(s)
+
+trait SqlGeneration{
+  def generateSql(ref : sql.Expression, parameters : Seq[sql.Expression]) : sql.Expression
+}
