@@ -2,7 +2,7 @@ package ru.apeon.core.script
 
 import ru.apeon.core._
 import entity._
-
+import eql.DataSourceExpressionDataSource
 
 
 case class ScriptDataTypeEntityDescription(description : Description) extends ScriptDataType {
@@ -37,7 +37,8 @@ case class ScriptDataTypeEntityDescription(description : Description) extends Sc
   def applyEql = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       val where = parameters.get.head.value.asInstanceOf[eql.Expression]
-      val select = eql.Select(eql.From(description), where = Some(where))
+      val select = eql.Select(eql.FromEntity(description, None,
+        DataSourceExpressionDataSource(env.dataSource(dataSource))), where = Some(where))
       env.em.select(select) match {
         case Seq(e) => e
         case Seq() => throw ScriptException(env, "Entity not found by %s".format(select))
