@@ -3,6 +3,7 @@ package ru.apeon.core.script
 import ru.apeon.core.entity._
 import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
+import java.util.Calendar
 
 /**
  * @author Anton Zherdev
@@ -43,6 +44,24 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       round(1.587, 2) should equal (1.59)
 
       run(Dot(ConstDecimal(BigDecimal(1.5)), Ref("round"))) should equal (2)
+    }
+  }
+
+  describe("Датные функции") {
+    it("daysTo") {
+      val cal = Calendar.getInstance
+      cal.set(2010, 01, 01)
+      val start = cal.getTime
+      cal.set(2010, 01, 04)
+      val end = cal.getTime
+
+      cal.set(2010, 01, 02)
+      val m1 = cal.getTime
+      cal.set(2010, 01, 03)
+      val m2 = cal.getTime
+
+      run(Dot(ConstDate(start), Ref("daysTo", Some(Seq(Par(ConstDate(end)))))))should equal (
+        Seq(start, m1, m2, end))
     }
   }
 }
