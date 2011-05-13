@@ -1,6 +1,7 @@
 package ru.apeon.core.script
 
 import java.util.{Calendar, Date}
+import java.text.SimpleDateFormat
 
 case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
   override def declarations = Seq(
@@ -26,4 +27,8 @@ case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
       case _ => false
     }
   }
+
+  val valueOfFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+  override def valueOf(str: String) = valueOfFormat.parse(str)
 }

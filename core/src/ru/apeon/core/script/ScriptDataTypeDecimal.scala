@@ -24,4 +24,5 @@ case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("decimal") {
       env.ref.asInstanceOf[BigDecimal].round(new MathContext(1)).toInt
   }
 
+  override def valueOf(str: String) = BigDecimal(str)
 }

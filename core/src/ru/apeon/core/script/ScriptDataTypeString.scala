@@ -48,4 +48,6 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
       sql.Call("replace", Seq(ref, parameters(0), parameters(1)))
   }
+
+  override def valueOf(str: String) = str
 }
