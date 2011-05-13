@@ -11,11 +11,15 @@ abstract class ScriptDataType {
 
   def preFillRef(env : Environment, imports : Imports) {}
   def fillRef(env: Environment, imports: Imports) {}
+
+  def valueOf(str : String) : Any = throw new ScriptException("Unsupported conversation from string to \"%s\".".format(getClass))
 }
 
 case class ScriptDataTypeDataSource() extends ScriptDataType
 
-case class ScriptDataTypeAny() extends ScriptDataType
+case class ScriptDataTypeAny() extends ScriptDataType {
+  override def valueOf(str: String) = str
+}
 case class ScriptDataTypeUnit() extends ScriptDataType
 case class ScriptDataTypeNull() extends ScriptDataType
 case class ScriptDataTypeSync() extends ScriptDataType
@@ -26,6 +30,8 @@ case class ScriptDataTypePackage(pack : Package) extends ScriptDataType {
 
 abstract class ScriptDataTypeSimple(val name : String) extends ScriptDataType
 case class ScriptDataTypeBoolean() extends ScriptDataTypeSimple("boolean")
-case class ScriptDataTypeInteger() extends ScriptDataTypeSimple("int")
+case class ScriptDataTypeInteger() extends ScriptDataTypeSimple("int") {
+  override def valueOf(str: String) = str.toInt
+}
 
 case class ScriptDataTypeBuiltInFunction() extends ScriptDataType

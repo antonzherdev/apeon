@@ -7,7 +7,15 @@ class QueryServlet  extends BaseHttpServlet {
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse) {
     tr {
       redeploy(req)
-      ans(req, resp)
+
+      val b = Map.newBuilder[String, String]
+      val i = req.getParameterMap.entrySet.iterator
+      while(i.hasNext) {
+        val e = i.next
+        b += ((e.getKey.toString, e.getValue.asInstanceOf[Array[String]].mkString(", ")))
+      }
+      val pars = b.result().filter(_._1 != "redeploy")
+      ans(req, resp, pars)
     }
   }
 
@@ -18,7 +26,7 @@ class QueryServlet  extends BaseHttpServlet {
     }
   }
 
-  def ans(req: HttpServletRequest, resp: HttpServletResponse, pars : Map[String, Any] = Map()) {
+  def ans(req: HttpServletRequest, resp: HttpServletResponse, pars : Map[String, String] = Map()) {
     resp.setCharacterEncoding("utf8")
     resp.setContentType("text/plain")
     val query = EntityConfiguration.model.obj(queryName(req)).asInstanceOf[Query]

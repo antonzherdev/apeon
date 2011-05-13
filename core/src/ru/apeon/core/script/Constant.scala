@@ -1,5 +1,7 @@
 package ru.apeon.core.script
 
+import java.util.Date
+
 trait Constant extends Expression {
   def value : Any
 
@@ -24,6 +26,11 @@ case class ConstString(value : String) extends Constant {
   def dataType(env: Environment) = ScriptDataTypeString()
 }
 
+case class ConstDate(value : Date) extends Constant {
+  def dataType(env: Environment) = ScriptDataTypeDate()
+}
+
+
 case class ConstSeq(expressions : Seq[Expression]) extends Expression{
   def evaluate(env: Environment) = expressions.map(_.evaluate(env))
 
@@ -42,4 +49,14 @@ case class ConstNull() extends Constant {
   def dataType(env: Environment) = ScriptDataTypeNull()
 
   def value = null
+}
+
+object Const {
+  def apply(a : Any) = a match{
+    case i : Int => ConstInt(i)
+    case d : BigDecimal => ConstDecimal(d)
+    case s : String => ConstString(s)
+    case d : Date => ConstDate(d)
+    case _ => throw new ScriptException("Unsupported type.")
+  }
 }
