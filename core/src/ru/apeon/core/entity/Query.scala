@@ -17,12 +17,20 @@ case class Query(pack : Package, name : String, declaredDeclarations : Seq[Decla
       case _ => false
     }.get.asInstanceOf[Def]
     val e = new DefaultEnvironment(pack.model, pack.dataSource)
-    apply.value(e, apply.parameters.map {
-      par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
-    } match {
-      case Seq() => None
-      case s => Some(s)
-    })
+    e.start()
+    try {
+      e.atomic{
+        apply.value(e, apply.parameters.map {
+          par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
+        } match {
+          case Seq() => None
+          case s => Some(s)
+        })
+      }
+    }
+    finally {
+      e.end()
+    }
   }
 }
 

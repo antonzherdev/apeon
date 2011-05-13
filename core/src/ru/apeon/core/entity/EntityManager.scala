@@ -100,7 +100,7 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
         }
         ret = Some(new Entity(this, id, r))
       }
-     ret.get
+      ret.get
     }
   }
 
@@ -143,18 +143,21 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
         val id = e.id.store.insert(Insert(FromEntity(e.id.description, None, DataSourceExpressionDataSource(e.id.dataSource)),
           e.data.map{kv =>
             (e.id.description.field(kv._1), kv._2)
-          }.filter(_._2 != null).filter{_._1 match {
-            case a : Attribute => !a.isPrimaryKey
-            case o : ToOne => {
-              val data = e(o).asInstanceOf[Entity]
-              if(data.id.isTemporary) {
-                afterUpdate(e, o.name, data)
-                false
+          }.filter(_._2 != null).filter{kv =>
+            kv._1 match {
+              case a : Attribute => !a.isPrimaryKey
+              case o : ToOne => {
+                if(kv._2.isInstanceOf[Entity]) {
+                  val data = kv._2.asInstanceOf[Entity]
+                  if(data.id.isTemporary) {
+                    afterUpdate(e, o.name, data)
+                    false
+                  }
+                  else true
+                } else true
               }
-              else true
-            }
-            case _ => false
-          }}.map{kv =>
+              case _ => false
+            }}.map{kv =>
             InsertColumn(kv._1.name, Const(kv._2))
           }.toSeq
         ))
@@ -211,12 +214,12 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
     val b = collection.mutable.Map.newBuilder[String, Any]
     for(field <- description.fields) {
       val value : Any = field match {
-          case s : FieldWithSource => s.default match {
-            case Some(DefaultInt(i)) => i
-            case Some(DefaultString(s)) => s
-            case None => null
-          }
-          case _=> Set()
+        case s : FieldWithSource => s.default match {
+          case Some(DefaultInt(i)) => i
+          case Some(DefaultString(s)) => s
+          case None => null
+        }
+        case _=> Set()
       }
       b += (field.name -> value)
     }

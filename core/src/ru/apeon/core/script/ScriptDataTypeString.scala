@@ -41,7 +41,7 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
     def name = "toDec"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDecimal()
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(p)) => p.expression.dataType(env) == ScriptDataTypeInteger()
+      case Some(Seq(p)) => true
       case None => true
       case _ => false
     }

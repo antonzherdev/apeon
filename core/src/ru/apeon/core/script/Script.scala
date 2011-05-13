@@ -15,13 +15,17 @@ object Script {
   def evaluate(env : Environment, statements : Seq[Statement]) : Any = {
     var ret : Any = null
     env.start()
-    env.atomic{
-      statements.foreach{statement =>
-        ret = statement.evaluate(env)
+    try{
+      env.atomic{
+        statements.foreach{statement =>
+          ret = statement.evaluate(env)
+        }
+        ret
       }
-      ret
     }
-    env.end()
+    finally {
+      env.end()
+    }
     ret
   }
 }
