@@ -24,6 +24,10 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     it("toInt") {
       run(Dot("20", Ref("toInt"))) should equal (20)
     }
+    it("toDec") {
+      run(Dot("20.567", Ref("toDec"))) should equal (BigDecimal(20.567))
+      run(Dot("20.567", Ref("toDec", Some(Seq(Par(1)))))) should equal (BigDecimal(20.5))
+    }
     it("replace") {
       run(Dot("abcba", Ref("replace", Some(Seq(Par("b"), Par("d"))) ))) should equal ("adcda")
     }

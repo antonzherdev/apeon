@@ -2,7 +2,7 @@ package ru.apeon.core.script
 
 import java.math.{MathContext}
 
-case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("decimal") {
+case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("dec") {
   override def declarations = Seq(roundPar, round)
 
   def roundPar = new Declaration {

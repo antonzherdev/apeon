@@ -2,14 +2,14 @@ package ru.apeon.core.script
 
 import ru.apeon.core._
 import eql.SqlGeneration
-
+import java.math.{RoundingMode, MathContext}
 
 /**
  * @author Anton Zherdev
  */
 
 case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
-  override def declarations = Seq(format, toInt, replace)
+  override def declarations = Seq(format, toInt, toDec, replace)
 
   def format = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
@@ -29,6 +29,27 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
 
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) = sql.Cast(ref, "int")
+  }
+
+  def toDec = new Declaration with SqlGeneration{
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      BigDecimal(env.dotRef.get.asInstanceOf[String], parameters match {
+        case Some(Seq(p)) => new MathContext(p.value.asInstanceOf[Int] + 2, RoundingMode.FLOOR)
+        case _ => BigDecimal.defaultMathContext
+      } )
+    }
+    def name = "toDec"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDecimal()
+    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(p)) => p.expression.dataType(env) == ScriptDataTypeInteger()
+      case None => true
+      case _ => false
+    }
+
+    def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) = parameters match {
+      case Seq(p) => sql.Cast(ref, "dec(30, %s)".format(p))
+      case Seq() => sql.Cast(ref, "dec")
+    }
   }
 
   def replace = new Declaration with SqlGeneration{
