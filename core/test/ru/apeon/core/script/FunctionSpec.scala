@@ -64,4 +64,14 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
         Seq(start, m1, m2, end))
     }
   }
+
+  describe("Коллекции") {
+    it("isEmpty") {
+      run(Dot(ConstSeq(Seq()), Ref("isEmpty"))) should equal(true)
+      run(Dot(ConstSeq(Seq(ConstInt(1))), Ref("isEmpty"))) should equal(false)
+    }
+    it("size") {
+      run(Dot(ConstSeq(Seq(ConstInt(1), ConstInt(2))), Ref("size"))) should equal(2)
+    }
+  }
 }
