@@ -30,7 +30,7 @@ entity Organization(dba.voc_names) extends Partner {
 
 
     one country(id_country) Country
-    one group(belong_id) OrganizationGroup
+    one group(belong_id) OrganizationGroup default 3
     many orders Order(organization)
 	many bankAccounts BankAccount(organization)
     one defaultBankAccount(post.def_bank_id) BankAccount
