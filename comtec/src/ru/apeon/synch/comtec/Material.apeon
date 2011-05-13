@@ -1,7 +1,7 @@
 entity Material(dba.inv) {
     discriminator is_group="0"
 
-    def toString : string = "ТМЦ(%d: %s[%s])".format(id, name, number)
+    def toString : String = "ТМЦ(%d: %s[%s])".format(id, name, number)
 
     column id integer primary key
     column name(nm) varchar(254)
@@ -38,7 +38,7 @@ entity Material(dba.inv) {
 entity MaterialGroup(dba.inv) {
     discriminator is_group="1"
 
-    def toString : string = Format.str("Группа ТМЦ", id, name)
+    def toString : String = Format.str("Группа ТМЦ", id, name)
 
     column id integer primary key
     column name(nm) varchar(254)
@@ -53,12 +53,12 @@ entity Unit(dba.edizm) {
     column id integer primary key
     column name(nm) char(17)
 
-    def toString : string = Format.str("Ед.изм.", id, name)
+    def toString : String = Format.str("Ед.изм.", id, name)
 }
 
 entity Size(dba.size) {
     column id integer primary key
     column name(nm) char(17)
     column remark(rem)  char(37)
-    def toString : string = Format.str("Размер", id, name)
+    def toString : String = Format.str("Размер", id, name)
 }

@@ -4,7 +4,7 @@ entity Invoice(dba.jfact) {
     column number(nu) char(25)
 	column type(tp) char(1) //Тип счет-фактуры
 
-	def toString : string = Format.doc("Счет-фактура", id, date, number)
+	def toString : String = Format.doc("Счет-фактура", id, date, number)
 
     one consignor(id_d_cargo) Organization // Грузоотправитель
     one consignee(id_s_cargo) Organization //Грузополучатель
@@ -49,5 +49,5 @@ entity InvoiceMaterial(dba.fact) {
     one country(id_country) Country
     column entryNumber(custom_nu) char(30) //Номер ГТД
 
-	def toString : string = Format.sub("Пр.счета-фактуры", id, number, material.name, invoice.toString)
+	def toString : String = Format.sub("Пр.счета-фактуры", id, number, material.name, invoice.toString)
 }

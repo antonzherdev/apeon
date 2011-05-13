@@ -164,12 +164,11 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
 
 
   def dataType : Parser[ScriptDataType] = ident ^^ {
-    case "boolean" => ScriptDataTypeBoolean()
-    case "date" => ScriptDataTypeDate()
-    case "decimal" => ScriptDataTypeDecimal()
-    case "int" => ScriptDataTypeInteger()
-    case "integer" => ScriptDataTypeInteger()
-    case "string" => ScriptDataTypeString()
+    case "Boolean" => ScriptDataTypeBoolean()
+    case "Date" => ScriptDataTypeDate()
+    case "Dec" => ScriptDataTypeDecimal()
+    case "Int" => ScriptDataTypeInteger()
+    case "String" => ScriptDataTypeString()
     case entity => ScriptDataTypeEntityByName(entity)
   }
   def dataTypeSpec : Parser[ScriptDataType] = ":" ~> dataType

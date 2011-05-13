@@ -8,7 +8,7 @@ entity Partner(dba.voc_names) {
 
    column locked(data_lock) char(1)
    
-   def toString : string = Format.str("Партнер", id, name)
+   def toString : String = Format.str("Партнер", id, name)
 }
 
 entity Organization(dba.voc_names) extends Partner {
@@ -49,7 +49,7 @@ entity OrganizationGroup(dba.voc_names) {
     many child OrganizationGroup(parent)
     many materials Organization(group)
 	
-	def toString : string = Format.str("Группа организаций", id, name)
+	def toString : String = Format.str("Группа организаций", id, name)
 }
 
 entity Storage(dba.voc_names) extends Partner {
@@ -65,11 +65,11 @@ entity PartnerAddress(dba.voc_names_address){
 
     one partner(id_voc_names) Partner //Организация
 	
-	def toString : string = Format.str("Адрес партнера", id, name)
+	def toString : String = Format.str("Адрес партнера", id, name)
 }
 
 entity Region(dba.region_custom) {
     column id integer primary key
     column name(nm) char(47)
-	def toString : string = Format.str("Регион", id, name)
+	def toString : String = Format.str("Регион", id, name)
 }

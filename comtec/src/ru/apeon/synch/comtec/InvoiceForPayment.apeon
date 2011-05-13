@@ -5,7 +5,7 @@ entity InvoiceForPayment(dba.jscet){
     column date(dat) date
     column number(nu) varchar(17)
 
-    def toString : string = Format.doc("Счет", id, date, number)
+    def toString : String = Format.doc("Счет", id, date, number)
 
     one storage(id_s) Partner
     one customer(id_d) Organization
@@ -50,7 +50,7 @@ entity InvoiceForPaymentMaterial(dba.scet){
     column priceListPrice(price_price) decimal(19, 7) //Цена из прайс-листа
     column amountForPayment(summa_oplata) decimal(19, 7) //Сумма оплаты
 
-    def toString : string = Format.sub("Пр.счета", id, number, material.name, invoiceForPayment.toString)
+    def toString : String = Format.sub("Пр.счета", id, number, material.name, invoiceForPayment.toString)
 }
 
 entity InvoiceText(dba.jscet_txt){
@@ -58,5 +58,5 @@ entity InvoiceText(dba.jscet_txt){
 
     column id integer primary key
     column text(txt) char(255)
-    def toString : string = Format.str("Текст под счетом", id, text)
+    def toString : String = Format.str("Текст под счетом", id, text)
 }

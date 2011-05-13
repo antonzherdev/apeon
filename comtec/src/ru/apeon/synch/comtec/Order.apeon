@@ -8,5 +8,5 @@ entity Order(dba.jdog) {
 
     one organization(id_post) Organization
 	
-	def toString : string = Format.str("Договор", id, number)
+	def toString : String = Format.str("Договор", id, number)
 }

@@ -9,7 +9,7 @@ entity BankAccountStatement(dba.jbanks) {
 
     many moves BankAccountStatementMove(statement)
 
-    def toString : string = Format.doc("Банковская выписка", id, date, number)
+    def toString : String = Format.doc("Банковская выписка", id, date, number)
 }
 
 entity BankAccountStatementMove(dba.banks) {
@@ -27,5 +27,5 @@ entity BankAccountStatementMove(dba.banks) {
     column number(nu) integer //Номер п/п
     column vat(nds) decimal(6,4) //Ставка НДС
 	
-	def toString : string = Format.sub("Пр.банковской выписки", id, number, statement.toString)
+	def toString : String = Format.sub("Пр.банковской выписки", id, number, statement.toString)
 }
