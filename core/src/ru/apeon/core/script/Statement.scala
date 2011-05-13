@@ -92,7 +92,7 @@ case class Eql(string : String) extends Expression {
 
   def preFillRef(env : Environment, imports: Imports) {
      stm = eql.EqlParser(string, env.model, Some(imports),Some({s : String =>
-      val external = new EqlExternalScript(new ScriptParser(env.model).parseStatement(s))
+      val external = new EqlExternalScript(ScriptParser.parseStatement(env.model, s))
       external.preFillRef(env, imports)
       externals.append(external)
       external

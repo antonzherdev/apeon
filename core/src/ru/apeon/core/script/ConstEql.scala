@@ -32,7 +32,7 @@ case class ConstEql(string : String) extends Constant {
 
   override def fillRef(env: Environment, imports: Imports) {
     val externalCreator = Some({s : String =>
-      val external = new EqlExternalScript(new ScriptParser(env.model).parseStatement(s))
+      val external = new EqlExternalScript(ScriptParser.parseStatement(env.model, s))
       external.fillRef(env, imports)
       externals.append(external)
       external

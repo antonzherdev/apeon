@@ -8,8 +8,11 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
   def script(statement : Statement*) = new Script(model, pack, statement.toSeq)
   val article = desc("Article").decl(Id).b
 
-  val parser = new ScriptParser(model)
-  parser.pack = Some(pack)
+  object parser {
+    def parse(s : String) = {
+      ScriptParser.parse(model, CoreModule, pack, s)
+    }
+  }
 
   describe("Def") {
     it("Простая функция") {
