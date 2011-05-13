@@ -9,15 +9,15 @@ import util.parsing.combinator.token.Tokens
 
 object ScriptParser{
   def parse(model : ObjectModel, module : Module, code: String, fileName : Option[String] = None) : Script = {
-    ScriptParserObject.parse(model, module, fileName, None, new BaseScriptParser, code)
+    ScriptParserObject.parse(model, module, fileName, None, new SyncScriptParser(new BaseScriptParser), code)
   }
 
   def parse(model : ObjectModel, module : Module, pack : Package, code: String) : Script = {
-    ScriptParserObject.parse(model, module, None, Some(pack), new BaseScriptParser, code)
+    ScriptParserObject.parse(model, module, None, Some(pack), new SyncScriptParser(new BaseScriptParser), code)
   }
 
   def parseStatement(model : ObjectModel, code: String) : Statement = {
-    ScriptParserObject.parseStatement(model, null, None, None, new BaseScriptParser, code)
+    ScriptParserObject.parseStatement(model, null, None, None, new SyncScriptParser(new BaseScriptParser), code)
   }
 }
 
@@ -133,6 +133,10 @@ trait ScriptParserComponent {
 
   def expression = ScriptParserObject.expression
   def statement = ScriptParserObject.statement
+
+  def dataSourceRef : Parser[Expression]
+  def ref : Parser[Ref]
+  def eqlConstString: Parser[String]
 }
 
 abstract class ScriptParserDecorator extends ScriptParserComponent{
@@ -143,6 +147,10 @@ abstract class ScriptParserDecorator extends ScriptParserComponent{
   }
   def statementDef = decorated.statementDef
   def expressionDef = decorated.expressionDef
+
+  def dataSourceRef = decorated.dataSourceRef
+  def ref = decorated.ref
+  def eqlConstString = decorated.eqlConstString
 }
 
 class BaseScriptParser extends ScriptParserComponent{
@@ -151,7 +159,7 @@ class BaseScriptParser extends ScriptParserComponent{
       ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
       "+=", "-=", "*=", "/=", "+", "-", "*", "/")
     lexical.reserved += (
-            "def", "sync", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
+            "def", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
             "if", "else", "null", "import", "object", "join")
   }
@@ -168,7 +176,6 @@ class BaseScriptParser extends ScriptParserComponent{
     | packDef
     | datasource
     | "{" ~> (statement*) <~ "}" ^^{case statements => Parentheses(statements)}
-    | syncDef
     )
 
   def valStatement : Parser[Val] =
@@ -197,30 +204,6 @@ class BaseScriptParser extends ScriptParserComponent{
     case entity => ScriptDataTypeEntityByName(entity)
   }
   def dataTypeSpec : Parser[ScriptDataType] = ":" ~> dataType
-
-  case class SyncRight(sourceAlias : String, destination : SyncRef, where : String, statements : Seq[Statement])
-  def syncWith : Parser[SyncRight] =
-    ("sync" ~> (as?)) ~ ("to" ~> repsep(ident, ".")) ~! (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
-      case sourceAs ~ destination ~ dataSource ~ destinationAs ~ where ~ statements =>
-        SyncRight(sourceAs.getOrElse{"source"},
-          SyncRef(destination.mkString("."), destinationAs.getOrElse{"dest"}, dataSource),
-          where,
-          statements.getOrElse{Seq()})
-    }
-
-  def syncDef : Parser[SyncDeclaration] =
-    ("sync"~> repsep(ident, ".")) ~ (as?) ~ ("to" ~> repsep(ident, ".")) ~ (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
-      case source ~ sourceAs ~ destination ~ dataSource ~ destinationAs ~ where ~ statements =>
-        SyncDeclaration(
-          SyncRef(source.mkString("."), sourceAs.getOrElse{"source"}),
-          SyncRef(destination.mkString("."), destinationAs.getOrElse{"dest"}, dataSource),
-          where,
-          statements.getOrElse{Seq()}
-        )
-    }
-
-
-  def as : Parser[String] = "as" ~> ident
 
   def eqlConst : Parser[ConstEql] = eqlConstString ^^ (ConstEql(_))
 
@@ -502,14 +485,10 @@ class BaseScriptParser extends ScriptParserComponent{
 
   def e500 : Parser[Expression] = e470 ~
           opt(
-            ("||" ~! e500) ^^ {case o ~ e => new ~(o, e) : Any} |
-                    ("sync" ~> "by" ~! parser.expression) |
-                    syncWith
+            ("||" ~! e500) ^^ {case o ~ e => new ~(o, e) : Any}
           ) ^^ {
     case left ~ Some(r) =>  r match {
       case ~("||", right : Expression) => Or(left, right)
-      case ~("by", by : Expression) => SyncBy(left, by)
-      case right : SyncRight => SyncEntity(left, right.sourceAlias, right.destination, right.where, right.statements)
     }
     case left ~ None => left
   }
