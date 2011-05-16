@@ -78,33 +78,35 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
 
     val ds = select.dataSource
     val store = ds.store
-    store.select(select).map{row =>
-      val id = from.primaryKeys match {
-        case Seq(pk) => new OneEntityId(ds, from, row(pk.name))
-        case Seq() => throw new RuntimeException("No primary key for entity \"%s\".".format(from.fullName))
-        case pks =>  new MultiEntityId(ds, from, pks.map{pk => row(pk.name)})
-      }
-      var ret = entities.get(id)
-      if(ret.isEmpty) {
-        val r = row.map{case ((columnName, value)) =>
-          from.field(columnName) match {
-            case o : ToOne => value match {
-              case m : collection.mutable.Map[String, Any] =>{
-                val iid = m(o.entity.primaryKeys.head.name)
-                if(iid == null) (columnName, null)
-                else {
-                  val oid = new OneEntityId(ds, o.entity, iid)
-                  (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
+    store.transaction{
+      store.select(select).map{row =>
+        val id = from.primaryKeys match {
+          case Seq(pk) => new OneEntityId(ds, from, row(pk.name))
+          case Seq() => throw new RuntimeException("No primary key for entity \"%s\".".format(from.fullName))
+          case pks =>  new MultiEntityId(ds, from, pks.map{pk => row(pk.name)})
+        }
+        var ret = entities.get(id)
+        if(ret.isEmpty) {
+          val r = row.map{case ((columnName, value)) =>
+            from.field(columnName) match {
+              case o : ToOne => value match {
+                case m : collection.mutable.Map[String, Any] =>{
+                  val iid = m(o.entity.primaryKeys.head.name)
+                  if(iid == null) (columnName, null)
+                  else {
+                    val oid = new OneEntityId(ds, o.entity, iid)
+                    (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
+                  }
                 }
+                case _ => (columnName, value)
               }
               case _ => (columnName, value)
             }
-            case _ => (columnName, value)
           }
+          ret = Some(new Entity(this, id, r))
         }
-        ret = Some(new Entity(this, id, r))
+        ret.get
       }
-      ret.get
     }
   }
 
@@ -170,16 +172,25 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
         touchedStories.foreach(_.commit())
         touchedStories.clear()
       }
-
+    } catch {
+      case e : Throwable => {
+        touchedStories.foreach{store =>
+          try{
+            store.rollback()
+          } catch{ case er : Throwable =>
+            log.error(er, "Error while rollback")
+          }
+        }
+        touchedStories.clear()
+        transactionCounter = 0
+        throw new RuntimeException(e)
+      }}
+    finally {
       insertedEntities.clear()
       touchedEntities.clear()
       deletedEntities.clear()
       nextTempId = -1
-    } catch {case e : Exception =>
-      touchedStories.foreach(_.rollback())
-      throw new RuntimeException(e)
     }
-
   }
 
   def register(entity : Entity) {

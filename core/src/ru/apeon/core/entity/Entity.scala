@@ -133,6 +133,8 @@ class Entity(val manager : EntityManager,
       case i : TemporaryEntityId => {
         OneEntityId(i.dataSource, i.description, id.asInstanceOf[Int])
       }
+      case d =>
+        throw new RuntimeException("Save id for not temporary id, for %s".format(d))
     }
     this.id.description.primaryKeys match {
       case Seq(pk) => _data.update(pk.name, id)
@@ -184,6 +186,8 @@ trait EntityId {
   def eqlFindById(alias : Option[String] = None) : Expression
   def const : Expression
 
+  def data : Seq[Any]
+
   def equalAny(id : Any)  : Boolean
 
   override def equals(obj: Any) = obj match {
@@ -214,6 +218,8 @@ case class TemporaryEntityId(dataSource : DataSource, description : Description,
     case t : TemporaryEntityId => t.id == this.id
     case _ => false
   }
+
+  def data = Seq(id)
 }
 
 case class OneEntityId(dataSource : DataSource, description : Description, id : Any) extends EntityId {
@@ -244,6 +250,8 @@ case class OneEntityId(dataSource : DataSource, description : Description, id : 
     case t : OneEntityId => t.id == this.id
     case _ => false
   }
+
+  def data = Seq(id)
 }
 
 case class MultiEntityId(dataSource : DataSource, description : Description, ids : Seq[Any]) extends EntityId {
@@ -283,4 +291,6 @@ case class MultiEntityId(dataSource : DataSource, description : Description, ids
     case t : MultiEntityId => t.ids.corresponds(this.ids){_ == _}
     case _ => false
   }
+
+  def data = ids
 }

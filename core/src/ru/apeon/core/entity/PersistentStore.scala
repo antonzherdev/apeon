@@ -20,6 +20,13 @@ trait ReadOnlyPersistentStore {
    */
   def select(select : eql.Select,
              parameters : collection.Map[String, Any] = Map()) : Seq[collection.mutable.Map[String, Any]]
+
+  override def hashCode() = name.hashCode
+
+  override def equals(obj: Any) = obj match {
+    case r : ReadOnlyPersistentStore => r.name == this.name
+    case _ => false
+  }
 }
 
 trait PersistentStore extends ReadOnlyPersistentStore{
@@ -36,6 +43,13 @@ trait PersistentStore extends ReadOnlyPersistentStore{
   def commit()
 
   def rollback()
+
+  def transaction[A](tr : => A) : A = synchronized{
+    beginTransaction()
+    val ret : A = tr
+    commit()
+    ret
+  }
 }
 
 abstract class SqlPersistentStoreBase
@@ -54,7 +68,7 @@ abstract class SqlPersistentStoreBase
   def dialect : sql.SqlDialect
   def generator : SqlGenerator
 
-  def select(select: eql.Select, parameters: Map[String, Any]) = _eql.transaction{
+  def select(select: eql.Select, parameters: Map[String, Any]) = {
     readOnlyLog.debug("<%s> %s", name, select)
     _eql.select(select, parameters).toSeqMutableMap
   }
