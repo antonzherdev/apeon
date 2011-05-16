@@ -17,6 +17,13 @@ trait ReadOnlyPersistentStore {
    */
   def select(select : eql.Select,
              parameters : collection.Map[String, Any] = Map()) : Seq[collection.mutable.Map[String, Any]]
+
+  override def hashCode() = name.hashCode
+
+  override def equals(obj: Any) = obj match {
+    case r : ReadOnlyPersistentStore => r.name == this.name
+    case _ => false
+  }
 }
 
 trait PersistentStore extends ReadOnlyPersistentStore{
@@ -33,6 +40,13 @@ trait PersistentStore extends ReadOnlyPersistentStore{
   def commit()
 
   def rollback()
+
+  def transaction[A](tr : => A) : A = synchronized{
+    beginTransaction()
+    val ret : A = tr
+    commit()
+    ret
+  }
 }
 
 class SqlPersistentStore(val name : String, val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource)
@@ -43,7 +57,7 @@ class SqlPersistentStore(val name : String, val dataSource : sql.DataSource = sq
     override def dataSource = SqlPersistentStore.this.dataSource
   }
 
-  def select(select: eql.Select, parameters: Map[String, Any]) = e.transaction{
+  def select(select: eql.Select, parameters: Map[String, Any]) = {
     readOnlyLog.debug("<%s> %s", name, select)
     e.select(select, parameters).toSeqMutableMap
   }

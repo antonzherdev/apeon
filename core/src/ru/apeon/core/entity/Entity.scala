@@ -133,6 +133,8 @@ class Entity(val manager : EntityManager,
       case i : TemporaryEntityId => {
         SqlEntityId(i.dataSource, i.description, id.asInstanceOf[Int])
       }
+      case d =>
+        throw new RuntimeException("Save id for not temporary id, for %s".format(d))
     }
     this.id.description.primaryKeys match {
       case Seq(pk) => _data.update(pk.name, id)

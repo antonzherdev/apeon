@@ -77,30 +77,32 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
 
     val ds = select.dataSource
     val store = ds.store
-    store.select(select).map{row =>
-      val id = new SqlEntityId(ds, from, row(from.primaryKeys.head.name).asInstanceOf[Int])
-      var ret = entities.get(id)
-      if(ret.isEmpty) {
-        val r = row.map{case ((columnName, value)) =>
-          from.field(columnName) match {
-            case o : ToOne => value match {
-              case m : collection.mutable.Map[String, Any] =>{
-                val iid = m(o.entity.primaryKeys.head.name)
-                if(iid == null) (columnName, null)
-                else {
-                  val oid = new SqlEntityId(ds, o.entity, iid.asInstanceOf[Int])
-                  (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
+    store.transaction{
+      store.select(select).map{row =>
+        val id = new SqlEntityId(ds, from, row(from.primaryKeys.head.name).asInstanceOf[Int])
+        var ret = entities.get(id)
+        if(ret.isEmpty) {
+          val r = row.map{case ((columnName, value)) =>
+            from.field(columnName) match {
+              case o : ToOne => value match {
+                case m : collection.mutable.Map[String, Any] =>{
+                  val iid = m(o.entity.primaryKeys.head.name)
+                  if(iid == null) (columnName, null)
+                  else {
+                    val oid = new SqlEntityId(ds, o.entity, iid.asInstanceOf[Int])
+                    (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
+                  }
                 }
+                case i : Int => (columnName, i)
+                case _ => throw new RuntimeException("Not map")
               }
-              case i : Int => (columnName, i)
-              case _ => throw new RuntimeException("Not map")
+              case _ => (columnName, value)
             }
-            case _ => (columnName, value)
           }
+          ret = Some(new Entity(this, id, r))
         }
-        ret = Some(new Entity(this, id, r))
+        ret.get
       }
-      ret.get
     }
   }
 
@@ -192,16 +194,25 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
         touchedStories.foreach(_.commit())
         touchedStories.clear()
       }
-
+    } catch {
+      case e : Throwable => {
+        touchedStories.foreach{store =>
+          try{
+            store.rollback()
+          } catch{ case er : Throwable =>
+            log.error(er, "Error while rollback")
+          }
+        }
+        touchedStories.clear()
+        transactionCounter = 0
+        throw new RuntimeException(e)
+      }}
+    finally {
       insertedEntities.clear()
       touchedEntities.clear()
       deletedEntities.clear()
       nextTempId = -1
-    } catch {case e : Exception =>
-      touchedStories.foreach(_.rollback())
-      throw new RuntimeException(e)
     }
-
   }
 
   def register(entity : Entity) {

@@ -17,23 +17,31 @@ trait SqlReadOnly {
   def dialect : SqlDialect = dataSource.dialect
   val readOnlyLog = Logger("ru.apeon.core.sql.SqlReadOnly")
   var connection : Connection = null
+  protected var connectionCounter = 0
 
   def beginTransaction() {
     if (connection == null) {
       connection = dataSource.getConnection
     }
+    connectionCounter += 1
   }
 
   def commit() {
-    connection.commit()
-    connection.close()
-    connection = null
+    connectionCounter -= 1
+    if(connectionCounter <= 0) {
+      connection.commit()
+      connection.close()
+      connection = null
+      connectionCounter = 0
+    }
   }
 
   def rollback() {
+    checkTransaction()
     connection.rollback()
     connection.close()
     connection = null
+    connectionCounter = 0
   }
 
 
@@ -103,7 +111,9 @@ trait SqlReadOnly {
   }
 
   def checkTransaction() {
-    if (connection == null) throw new SqlError("Transaction have not been opened")
+    if (connection == null) {
+      throw new SqlError("Transaction have not been opened")
+    }
   }
 
   def select(sql : String): Rows = select(sql, Map[String, Any]())
