@@ -1,13 +1,13 @@
 package ru.apeon.c1
 
 import ru.apeon.core.entity.{SqlPersistentStoreBase}
-import java.sql.DriverManager
 import ru.apeon.core._
-import eql.{Expression, ConstObject, SqlGenerator}
+import eql.{Expression, ConstObject}
 import script.Environment
 import sql.Column
 import akka.util.Logging
 import com.ipc.oce.objects._OCCommonRef
+import java.sql.{Connection, DriverManager}
 
 class C1PersistentStore(val name : String, val url : String, val userName : String, val password : String)
         extends SqlPersistentStoreBase with Logging
@@ -18,7 +18,7 @@ class C1PersistentStore(val name : String, val url : String, val userName : Stri
   }
 
   def getConnection = connection
-  val generator = new SqlGenerator
+  val generator = new C1SqlGenerator
   val dialect = new C1SqlDialect
 
   override protected val _eql = new Eql{
@@ -31,6 +31,9 @@ class C1PersistentStore(val name : String, val url : String, val userName : Stri
           }
         }
       }
+  }
+
+  override def closeConnection(connection: Connection) {
   }
 
   override def unload() {

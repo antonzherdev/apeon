@@ -53,5 +53,9 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
   def delete(em : EntityManager, entity : Entity) {
     impl.delete(em, entity)
   }
+
+  def lazyLoad(em : EntityManager, entity : Entity, many : ToMany) = {
+    impl.lazyLoad(em, entity, many)
+  }
 }
 

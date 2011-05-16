@@ -62,8 +62,14 @@ abstract class SqlPersistentStoreBase
     override def getConnection = SqlPersistentStoreBase.this.getConnection
     override def dialect = SqlPersistentStoreBase.this.dialect
     override def generator = SqlPersistentStoreBase.this.generator
+    override def closeConnection() {
+      SqlPersistentStoreBase.this.closeConnection(connection)
+    }
   }
 
+  def closeConnection(connection : Connection) {
+    connection.close()
+  }
   def getConnection : Connection
   def dialect : sql.SqlDialect
   def generator : SqlGenerator

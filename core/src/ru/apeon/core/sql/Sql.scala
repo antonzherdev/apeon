@@ -20,6 +20,10 @@ trait SqlReadOnly {
   protected var connectionCounter = 0
 
 
+  def closeConnection() {
+    connection.close()
+  }
+
   def beginTransaction() {
     if (connection == null) {
       connection = getConnection
@@ -31,7 +35,6 @@ trait SqlReadOnly {
     connectionCounter -= 1
     if(connectionCounter <= 0) {
       connection.commit()
-      connection.close()
       connection = null
       connectionCounter = 0
     }

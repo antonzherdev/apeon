@@ -48,6 +48,11 @@ abstract class DataSourceImpl {
     e.id.store.delete(Delete(FromEntity(e.id.description, Some("t"), DataSourceExpressionDataSource(e.id.dataSource)),
           where = Some(e.id.eqlFindById(Some("t")))))
   }
+
+
+  def lazyLoad(em : EntityManager, entity : Entity, many : ToMany) : Set[Entity] =
+    em.select( Select(FromEntity(many.entity, Some("m"), DataSourceExpressionDataSource(dataSource)),
+        where = Some(Equal(Dot(Ref("m"), Ref(many.toOne)), entity.id.const)))).toSet
 }
 
 class DataSourceImplLookup(val dataSource : DataSource) extends DataSourceImpl{

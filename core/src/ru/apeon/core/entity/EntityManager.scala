@@ -49,6 +49,8 @@ trait EntityManager {
     commit()
     ret
   }
+
+  def toEntity(ds: DataSource, description: Description, data: collection.mutable.Map[String, Any]): Entity
 }
 
 class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) extends EntityManager with Logging {
@@ -72,6 +74,40 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
       }
     }
 
+  def toEntity(ds: DataSource, description: Description, data: collection.mutable.Map[String, Any]): Entity = {
+    val id = description.primaryKeys match {
+      case Seq(pk) => new OneEntityId(ds, description, data(pk.name))
+      case Seq() => throw new RuntimeException("No primary key for entity \"%s\".".format(description.fullName))
+      case pks => new MultiEntityId(ds, description, pks.map {
+        pk => data(pk.name)
+      })
+    }
+    var ret = entities.get(id)
+    if (ret.isEmpty) {
+      val r = data.map {
+        case ((columnName, value)) =>
+          description.field(columnName) match {
+            case o: ToOne => value match {
+              case m: collection.mutable.Map[String, Any] => {
+                val iid = m(o.entity.primaryKeys.head.name)
+                if (iid == null) (columnName, null)
+                else {
+                  val oid = new OneEntityId(ds, o.entity, iid)
+                  (columnName, entities.getOrElse(oid, {
+                    new Entity(this, oid, m)
+                  }))
+                }
+              }
+              case _ => (columnName, value)
+            }
+            case _ => (columnName, value)
+          }
+      }
+      ret = Some(new Entity(this, id, r))
+    }
+    ret.get
+  }
+
   def select(select : Select) = {
     val from = select.from.asInstanceOf[FromEntity].entity
     if(!select.columns.isEmpty) throw new RuntimeException("Columns is not empty")
@@ -80,32 +116,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
     val store = ds.store
     store.transaction{
       store.select(select).map{row =>
-        val id = from.primaryKeys match {
-          case Seq(pk) => new OneEntityId(ds, from, row(pk.name))
-          case Seq() => throw new RuntimeException("No primary key for entity \"%s\".".format(from.fullName))
-          case pks =>  new MultiEntityId(ds, from, pks.map{pk => row(pk.name)})
-        }
-        var ret = entities.get(id)
-        if(ret.isEmpty) {
-          val r = row.map{case ((columnName, value)) =>
-            from.field(columnName) match {
-              case o : ToOne => value match {
-                case m : collection.mutable.Map[String, Any] =>{
-                  val iid = m(o.entity.primaryKeys.head.name)
-                  if(iid == null) (columnName, null)
-                  else {
-                    val oid = new OneEntityId(ds, o.entity, iid)
-                    (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
-                  }
-                }
-                case _ => (columnName, value)
-              }
-              case _ => (columnName, value)
-            }
-          }
-          ret = Some(new Entity(this, id, r))
-        }
-        ret.get
+        toEntity(ds, from, row)
       }
     }
   }
@@ -221,8 +232,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   def lazyLoad(entity : Entity, field : Field, data : Any) : Any = field match {
     case many : ToMany =>
       if(entity.id.isTemporary) Set()
-      else select( Select(FromEntity(many.entity, Some("m"), DataSourceExpressionDataSource(entity.id.dataSource)),
-        where = Some(Equal(Dot(Ref("m"), Ref(many.toOne)), entity.id.const)))).toSet
+      else entity.id.dataSource.lazyLoad(this, entity, many)
     case one : ToOne =>
       data match {
         case id : Int => get(new OneEntityId(entity.id.dataSource, one.entity, id)).getOrElse(null)

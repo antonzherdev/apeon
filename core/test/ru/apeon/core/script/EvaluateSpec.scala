@@ -417,6 +417,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 }
 
 class EmptyEntityManager extends EntityManager {
+  def toEntity(ds: DataSource, description: Description, data: collection.mutable.Map[String, Any]) = null
   def model : ObjectModel = null
   def beginTransaction() {}
   def select(select: eql.Select) : Seq[Entity] = Seq()

@@ -3,9 +3,11 @@ package ru.apeon.c1
 datasource c1
 
 query Test {
-//Material(`id = "6600a842-e9f1-11d8-8d32-505054503030"`)
-`from MatMoveIn`.select.foreach {
-    _.remark = "zopa"
+`from MatMoveIn where number = "ТК000000001"`.select.foreach { doc =>
+    doc.materials.foreach{
+        _.quantity = _.number
+    }
+    doc.remark = "11111111111"
 }
 
 //`from MatMoveIn`.select
