@@ -6,6 +6,7 @@ entity MatMoveIn<c1> {
     column id(Ref) char(36) primary key
     column number(Номер) varchar(254)
     column date(Дата) date
+    column remark(Комментарий) text
 
     many materials {
         table Document.ПоступлениеТоваровУслуг.Товары

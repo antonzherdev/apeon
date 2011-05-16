@@ -156,7 +156,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
         }
-        e.id.dataSource.update(this, e, columns)
+        e.id.dataSource.update(this, e, columns.map(column => e.id.description.field(column).asInstanceOf[FieldWithSource]))
       }
 
       deletedEntities.foreach{e =>

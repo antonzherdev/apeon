@@ -35,13 +35,11 @@ abstract class DataSourceImpl {
     e.saveId(id)
   }
 
-  def update(em : EntityManager, e: Entity, columns: collection.Set[String]) {
+  def update(em : EntityManager, e: Entity, fields: collection.Set[FieldWithSource]) {
     e.id.store.update(Update(FromEntity(e.id.description, Some("t"), DataSourceExpressionDataSource(e.id.dataSource)),
       where = Some(e.id.eqlFindById(Some("t"))),
-      columns = columns.map {
-        e.id.description.field(_)
-      }.map {
-        column => UpdateColumn(column.name, Const(e.apply(column)))
+      columns = fields.map {
+        column => UpdateColumn(column.name, Const(e.data(column.name)))
       }.toSeq
     ))
   }

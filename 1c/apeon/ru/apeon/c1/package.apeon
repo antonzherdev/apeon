@@ -4,7 +4,9 @@ datasource c1
 
 query Test {
 //Material(`id = "6600a842-e9f1-11d8-8d32-505054503030"`)
-`from MatMoveIn`.select
+`from MatMoveIn`.select.foreach {
+    _.remark = "zopa"
+}
 
 //`from MatMoveIn`.select
 

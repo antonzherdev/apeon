@@ -3,9 +3,6 @@ package ru.apeon.core.entity
 import ru.apeon.core._
 import loader.Loader
 import script._
-import javax.naming.{Context, InitialContext}
-import sql.{DefaultSqlDialect, SqlDialect}
-import xml.NodeSeq
 
 case class DataSource(pack : Package, name : String) extends Statement with Declaration with InPackage {
   def evaluate(env: Environment) {
@@ -49,8 +46,8 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
     impl.insert(em, entity)
   }
 
-  def update(em : EntityManager, entity : Entity, columns: collection.Set[String]) {
-    impl.update(em, entity, columns)
+  def update(em : EntityManager, entity : Entity, fields: collection.Set[FieldWithSource]) {
+    impl.update(em, entity, fields)
   }
 
   def delete(em : EntityManager, entity : Entity) {
