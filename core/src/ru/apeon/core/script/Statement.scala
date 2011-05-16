@@ -83,9 +83,9 @@ case class Eql(string : String) extends Expression {
         case ScriptDataTypeSeq(ScriptDataTypeEntity(entity)) => env.em.select(select)
         case _ => select.dataSource.store.select(select)
       }
-      case update : eql.Update => update.dataSource.store.update(update)
-      case insert : eql.Insert => insert.dataSource.store.insert(insert)
-      case delete : eql.Delete => delete.dataSource.store.delete(delete)
+//      case update : eql.Update => update.dataSource.store.update(update)
+//      case insert : eql.Insert => insert.dataSource.store.insert(insert)
+//      case delete : eql.Delete => delete.dataSource.store.delete(delete)
     }
   }
 

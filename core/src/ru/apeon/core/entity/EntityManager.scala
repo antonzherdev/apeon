@@ -144,42 +144,17 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
           touchedStories.add(e.id.store)
         }
         touchedEntities.remove(e)
-        val id = e.id.store.insert(Insert(FromEntity(e.id.description, None, DataSourceExpressionDataSource(e.id.dataSource)),
-          e.data.map{kv =>
-            (e.id.description.field(kv._1), kv._2)
-          }.filter(_._2 != null).filter{kv =>
-            kv._1 match {
-              case a : Attribute => !a.isPrimaryKey
-              case o : ToOne => {
-                if(kv._2.isInstanceOf[Entity]) {
-                  val data = kv._2.asInstanceOf[Entity]
-                  if(data.id.isTemporary) {
-                    afterUpdate(e, o.name, data)
-                    false
-                  }
-                  else true
-                } else true
-              }
-              case _ => false
-            }}.map{kv =>
-            InsertColumn(kv._1.name, Const(kv._2))
-          }.toSeq
-        ))
-        e.saveId(id)
+        e.id.dataSource.insert(this, e)
       }
 
       touchedEntities.foreach{kv =>
         val e = kv._1
         val columns = kv._2
-        if(!touchedStories.contains(e.id.store)) {
+        if (!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
         }
-        e.id.store.update(Update(FromEntity(e.id.description, Some("t"), DataSourceExpressionDataSource(e.id.dataSource)),
-          where = Some(e.id.eqlFindById(Some("t"))),
-          columns = columns.map{e.id.description.field(_)}.
-                  map{column => UpdateColumn(column.name, Const(e.apply(column)))}.toSeq
-        ))
+        e.id.dataSource.update(this, e, columns)
       }
 
       deletedEntities.foreach{e =>
@@ -187,8 +162,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
         }
-        e.id.store.delete(Delete(FromEntity(e.id.description, Some("t"), DataSourceExpressionDataSource(e.id.dataSource)),
-          where = Some(e.id.eqlFindById(Some("t")))))
+        e.id.dataSource.delete(this, e)
       }
 
       transactionCounter -= 1

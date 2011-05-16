@@ -19,13 +19,16 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
   def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
 
+  private lazy val xml = Loader.apeonXml.\\("datasource").find(_.\("@name").text == fullName).getOrElse{
+    throw new RuntimeException("Datasource \"%s\" nor found in apeon.xml.".format(name))}
+  private lazy val impl =
+    xml.\("@class").headOption.map{className =>
+      Loader.loadClass(className.text).getConstructor(classOf[DataSource]).newInstance(this).asInstanceOf[DataSourceImpl]
+    }.getOrElse(new DataSourceImplLookup(this))
+
   private var loaded = false
   private lazy val _persistentStore : PersistentStore = {
-    val xml = Loader.apeonXml.\\("datasource").find(_.\("@name").text == fullName).getOrElse{
-      throw new RuntimeException("Datasource \"%s\" nor found in apeon.xml.".format(name))}
-    val impl = xml.\("@class").headOption.map{className =>
-      Loader.newInstance(className.text).asInstanceOf[DataSourceImpl]}.getOrElse(new DataSourceImplLookup)
-    val ret = impl.persistentStore(this, xml)
+    val ret = impl.persistentStore(xml)
     ret.load()
     loaded = true
     ret
@@ -41,29 +44,17 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
       store.unload()
     }
   }
+
+  def insert(em : EntityManager, entity : Entity) {
+    impl.insert(em, entity)
+  }
+
+  def update(em : EntityManager, entity : Entity, columns: collection.Set[String]) {
+    impl.update(em, entity, columns)
+  }
+
+  def delete(em : EntityManager, entity : Entity) {
+    impl.delete(em, entity)
+  }
 }
 
-trait DataSourceImpl {
-  def persistentStore(dataSource : DataSource, xml : NodeSeq) : PersistentStore
-}
-
-class DataSourceImplLookup extends DataSourceImpl{
-  def persistentStore(dataSource : DataSource, xml : NodeSeq) =
-    new SqlPersistentStore(dataSource.fullName,
-      new sql.DataSource(
-        lookup(dataSource, xml),
-        (xml\"@dialect").headOption.map{dialect =>
-          Loader.newInstance(dialect.text).asInstanceOf[SqlDialect]
-        }.getOrElse(new DefaultSqlDialect)
-      ))
-
-  def lookup(dataSource : DataSource, xml : NodeSeq) =
-    (new InitialContext).lookup("java:comp/env") match {
-      case envContext : Context =>
-        envContext.lookup((xml\"@url").headOption.map(_.text).getOrElse(dataSource.fullName)) match {
-          case ds : javax.sql.DataSource => ds
-          case _ => throw new RuntimeException("Could not get datasource")
-        }
-      case _ => throw new RuntimeException("Could not get enviroment context")
-    }
-}

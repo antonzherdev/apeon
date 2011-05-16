@@ -6,8 +6,8 @@ import ru.apeon.core._
 import sql.Column
 
 
-class ComtecDataSource extends DataSourceImplLookup {
-  override def persistentStore(dataSource: DataSource, xml: NodeSeq) =
+class ComtecDataSource(dataSource : DataSource) extends DataSourceImplLookup(dataSource) {
+  override def persistentStore(xml: NodeSeq) =
     new SqlPersistentStore(dataSource.fullName,
       new sql.DataSource(lookup(dataSource, xml),new ComtecAsaSqlDialect),
       new ComtecSqlGenerator
