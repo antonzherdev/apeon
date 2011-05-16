@@ -2,6 +2,7 @@ package ru.apeon.core.script
 
 import ru.apeon.core._
 import eql.SqlGeneration
+import java.math.MathContext
 
 /**
  * @author Anton Zherdev
@@ -32,7 +33,7 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
 
   def toDec = new Declaration with SqlGeneration{
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
-      val r = BigDecimal(env.dotRef.get.asInstanceOf[String], BigDecimal.defaultMathContext)
+      val r = BigDecimal(env.dotRef.get.asInstanceOf[String], MathContext.DECIMAL128)
       parameters match {
         case Some(Seq(p)) => r.setScale(p.value.asInstanceOf[Int], BigDecimal.RoundingMode.FLOOR)
         case _ => r
