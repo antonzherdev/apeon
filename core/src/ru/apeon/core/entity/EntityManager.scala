@@ -234,10 +234,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
       if(entity.id.isTemporary) Set()
       else entity.id.dataSource.lazyLoad(this, entity, many)
     case one : ToOne =>
-      data match {
-        case id : Int => get(new OneEntityId(entity.id.dataSource, one.entity, id)).getOrElse(null)
-        case _ => throw new RuntimeException("Data not int")
-      }
+      entity.id.dataSource.lazyLoad(this, entity, one, data)
     case _ =>
       throw new RuntimeException("Not support lazy load for not to one and not to many in field \"%s\" for \"%s\"".format(field, entity))
   }

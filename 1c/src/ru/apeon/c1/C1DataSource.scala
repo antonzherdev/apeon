@@ -2,9 +2,9 @@ package ru.apeon.c1
 
 import xml.NodeSeq
 import ru.apeon.core.entity._
-import com.ipc.oce.OCVariant
 import akka.util.Logging
 import com.ipc.oce.objects._
+import com.ipc.oce.{OCObject, OCVariant}
 
 class C1DataSource(val dataSource : DataSource) extends DataSourceImpl with Logging{
   def persistentStore(xml: NodeSeq) = new C1PersistentStore(dataSource.name, xml.\("@url").text,
@@ -64,14 +64,39 @@ class C1DataSource(val dataSource : DataSource) extends DataSourceImpl with Logg
     }
   }
 
+  private def fromVariant(field: Field, v: OCVariant): Any = {
+    val m = field.asInstanceOf[Attribute].dataType match {
+      case AttributeDataTypeBoolean() => v.getBoolean
+      case c: AttributeDataTypeChar => v.getString
+      case d: AttributeDataTypeDate => v.getDate
+      case d: AttributeDataTypeDateTime => v.getDate
+      case d: AttributeDataTypeDecimal => BigDecimal(
+        try {
+          v.getDouble.doubleValue
+        }
+        catch {
+          case e: Throwable => v.getInt.doubleValue
+        }, BigDecimal.defaultMathContext)
+      case d: AttributeDataTypeInteger => v.getInt
+      case d: AttributeDataTypeText => v.getString
+      case d: AttributeDataTypeTime => v.getDate
+      case d: AttributeDataTypeVarchar => v.getString
+    }
+    m
+  }
+
+  private def tabular(obj: _OCCommonObject, e: Description): OCTabularSectionManager = {
+    val tabName = tabularName(e)
+    obj match {
+      case doc: OCDocumentObject => doc.getTabularSection(tabName)
+      case doc: OCCatalogObject => doc.getTabularSection(tabName)
+    }
+  }
+
   override def lazyLoad(em: EntityManager, entity: Entity, many: ToMany) : Set[Entity] = {
-    val tabName = tabularName(many.entity)
     val ref: _OCCommonRef = entity.id.data.head.asInstanceOf[C1Ref].ref
     val uuid = ref.getUUID.toString
-    val tab = ref.getObject match {
-      case doc : OCDocumentObject => doc.getTabularSection(tabName)
-      case doc : OCCatalogObject => doc.getTabularSection(tabName)
-    }
+    val tab = tabular(ref.getObject, many.entity)
     Range(0, tab.size.intValue).map{i =>
       val row = tab.get(i)
       val b = collection.mutable.Map.newBuilder[String, Any]
@@ -82,23 +107,59 @@ class C1DataSource(val dataSource : DataSource) extends DataSourceImpl with Logg
       }.foreach{
         field => {
           val v = row.getColumnValue(field.asInstanceOf[Attribute].columnName(dataSource))
-          val m = field.asInstanceOf[Attribute].dataType match {
-            case AttributeDataTypeBoolean() => v.getBoolean
-            case c : AttributeDataTypeChar => v.getString
-            case d : AttributeDataTypeDate => v.getDate
-            case d : AttributeDataTypeDateTime => v.getDate
-            case d : AttributeDataTypeDecimal => BigDecimal(
-              try{v.getDouble.doubleValue}
-              catch {case e : Throwable => v.getInt.doubleValue}, BigDecimal.defaultMathContext)
-            case d : AttributeDataTypeInteger => v.getInt
-            case d : AttributeDataTypeText => v.getString
-            case d : AttributeDataTypeTime => v.getDate
-            case d : AttributeDataTypeVarchar => v.getString
-          }
-          b += ((field.name, m))
+          b += ((field.name, fromVariant(field, v)))
         }
       }
+
+      many.entity.fields.filter{
+        field => field.isInstanceOf[ToOne] && field.name != "parent"
+      }.map{
+        field => {
+          val ref = row.getColumnValue(field.asInstanceOf[ToOne].columnName(dataSource)).value[_OCCommonRef]
+          b += ((field.name, C1Ref(ref.getUUID.toString, ref)))
+        }
+      }
+
       em.toEntity(dataSource, many.entity, b.result())
     }.toSet
+  }
+
+  override def lazyLoad(em: EntityManager, entity: Entity, one: ToOne, data: Any) = data match {
+    case r : C1Ref => {
+      val b = collection.mutable.Map.newBuilder[String, Any]
+      b += (("id", r))
+      val o = r.ref.getObject.asInstanceOf[AttributeBean]
+
+      one.entity.attributes.filterNot(_.isPrimaryKey).foreach{field =>
+        val v = o.getAttributeValue(field.columnName(dataSource))
+        b += ((field.name, fromVariant(field, v)))
+      }
+      one.entity.fields.filter{_.isInstanceOf[ToOne]}.foreach{field =>
+        val ref = o.getAttributeValue(field.asInstanceOf[ToOne].columnName(dataSource)).value[_OCCommonRef]
+        b += ((field.name, C1Ref(ref.getUUID.toString, ref)))
+      }
+      em.toEntity(dataSource, one.entity, b.result())
+    }
+    case _ => throw new RuntimeException("Not ref")
+  }
+
+  override def delete(em: EntityManager, e: Entity) {
+    e.id.data match {
+      case Seq(r : C1Ref) => r.ref.getObject match {
+        case doc : OCDocumentObject => {
+          doc.setDeletionMark(true)
+          doc.write()
+        }
+        case doc : OCCatalogObject => {
+          doc.setDeletionMark(true)
+          doc.write()
+        }
+      }
+      case Seq(r : C1Ref, number : Int) => {
+        val o = r.ref.getObject
+        tabular(o, e.id.description).delete(number - 1)
+        o.write()
+      }
+    }
   }
 }

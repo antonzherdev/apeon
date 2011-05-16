@@ -57,5 +57,9 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
   def lazyLoad(em : EntityManager, entity : Entity, many : ToMany) = {
     impl.lazyLoad(em, entity, many)
   }
+
+  def lazyLoad(em : EntityManager, entity : Entity, one : ToOne, data : Any) : Entity = {
+    impl.lazyLoad(em, entity, one, data)
+  }
 }
 
