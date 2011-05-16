@@ -223,6 +223,8 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
   }
 
   override protected def children = parameters
+
+  override def toString = name
 }
 
 case class ConstNumeric(value : BigDecimal) extends Expression {

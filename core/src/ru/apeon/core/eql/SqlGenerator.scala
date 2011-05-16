@@ -276,7 +276,16 @@ class SqlGenerator {
       case toOne : ToOne => ef.find(joinToOne(toOne, ef, genFromTable(ef, ref.left, toOne.tableName(ef.dataSource))), tableName)
       case _ => throw SqlGeneratorError("Not to one")
     }
-    case ref : Ref => ef.get(ref.from, tableName)
+    case ref : Ref =>
+      if(ref.isFrom) {
+        ef.get(ref.from, tableName)
+      }
+      else {
+        ref.declaration match {
+          case toOne : ToOne => ef.find(joinToOne(toOne, ef, ef.get(ref.defaultFrom, toOne.tableName(ef.dataSource))), tableName)
+          case _ => throw SqlGeneratorError("Not to one")
+        }
+      }
     case _ => throw SqlGeneratorError("Unknown expression")
   }
 
