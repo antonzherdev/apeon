@@ -32,14 +32,15 @@ case class ScriptDataTypeOption(dataType : ScriptDataType) extends ScriptDataTyp
   def getOrElse = new Declaration{
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       env.ref.asInstanceOf[Option[Any]].getOrElse{
-        parameters.get.head.asInstanceOf[BuiltInFunction].run(env)
+        parameters.get.head.value.asInstanceOf[BuiltInFunction].run(env)
       }
     }
     def name = "getOrElse"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeOption.this.dataType
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(b : BuiltInFunction)) => true
+      case Some(Seq(Par(b : BuiltInFunction, _))) => true
       case _ => false
     }
+    override def builtInParametersDataTypes(env: Environment, parameterNumber: Int, parameter: Par) = Seq()
   }
 }
