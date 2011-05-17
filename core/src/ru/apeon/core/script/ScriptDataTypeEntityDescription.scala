@@ -40,6 +40,7 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
         throw ScriptException(env, "Entity not found by %s".format(parameters.get.head.value))
       }
     override  def name = "apply"
+    override def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(description)
   }
 
   def findEql = new FindEql
@@ -56,7 +57,7 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
       }
     }
     def name = "find"
-    def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(description)
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) : ScriptDataType = ScriptDataTypeOption(ScriptDataTypeEntityByDescription(description))
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
       case Some(Seq(par)) => par.expression.dataType(env) == ScriptDataTypeEqlExpression()
       case _ => false

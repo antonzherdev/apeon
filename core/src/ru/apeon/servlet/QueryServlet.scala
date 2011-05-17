@@ -30,8 +30,7 @@ class QueryServlet  extends BaseHttpServlet {
     resp.setCharacterEncoding("utf8")
     resp.setContentType("text/plain")
     val query = EntityConfiguration.model.obj(queryName(req)).asInstanceOf[Query]
-    val ans = query.execute(pars).toString
-    resp.getWriter.print(ans)
+    resp.getWriter.print("%s".format(query.execute(pars)))
   }
 
   def queryName(req: HttpServletRequest) : String = req.getRequestURI.split("/").last

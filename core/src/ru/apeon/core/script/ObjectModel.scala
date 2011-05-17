@@ -39,6 +39,7 @@ trait ObjectModel {
   protected def loadDefaultObjects() {
     addObj(DateObject)
     addObj(LogObject)
+    addObj(EntityManagerObject)
   }
 }
 

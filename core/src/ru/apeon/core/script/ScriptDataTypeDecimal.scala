@@ -13,7 +13,7 @@ case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("dec") {
       case _ => false
     }
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[BigDecimal].round(new MathContext(parameters.get.head.value.asInstanceOf[Int] + 1))
+      env.ref.asInstanceOf[BigDecimal].setScale(parameters.get.head.value.asInstanceOf[Int], BigDecimal.RoundingMode.HALF_UP)
   }
   def round = new Declaration {
     def name = "round"
