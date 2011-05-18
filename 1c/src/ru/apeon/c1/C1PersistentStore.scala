@@ -8,8 +8,7 @@ import sql.Column
 import akka.util.Logging
 import com.ipc.oce.objects._OCCommonRef
 import java.sql.{Connection, DriverManager}
-import util.parsing.combinator.RegexParsers
-import java.util.Properties
+import com.ipc.oce.OCApp
 
 class C1PersistentStore(val name : String, val url : String, val userName : String, val password : String)
         extends SqlPersistentStoreBase with Logging
@@ -17,6 +16,12 @@ class C1PersistentStore(val name : String, val url : String, val userName : Stri
   val connection = {
     Class.forName("com.ipc.oce.jdbc.OCEDriver")
     DriverManager.getConnection(url, userName, password)
+  }
+
+  val app = {
+    val field = connection.getClass.getDeclaredField("application")
+    field.setAccessible(true)
+    field.get(connection).asInstanceOf[OCApp]
   }
 
   def getConnection = connection
@@ -54,45 +59,4 @@ case class C1Ref(uuid : String, ref : _OCCommonRef) extends ConstObject{
 
 case class ConstRef(ref : C1Ref) extends Expression {
   def dataType(env: Environment) = script.ScriptDataTypeString()
-}
-
-object C1URLParser {
-  def apply(str : String) : Properties = {
-    val p = new C1URLParser
-    p.parse(p.phrase(p.url), str) match {
-      case p.Success(ret, _) => ret
-      case p.NoSuccess(err, _) => throw new RuntimeException(err)
-    }
-  }
-}
-
-class C1URLParser extends RegexParsers {
-  protected def integer : Parser[Int] = """\d*""".r ^^ { _.toInt }
-
-  protected def ip = integer ~ ("." ~> integer) ~ ("." ~> integer) ~ ("." ~> integer) ^^ {case i1 ~ i2 ~ i3 ~ i4 =>
-    "%d.%d.%d.%d".format(i1, i2, i3, i4)
-  }
-
-  protected val dns = "(\\w|-)*".r
-
-  protected def host : Parser[String] = (ip | dns)
-
-  protected val ident : Parser[String] = """(\w|-)*""".r
-
-  protected def prop  = rep1sep(ident, ".") ~ ("=" ~>  """(\w|[-\\/:])*""".r) ^^ { case p ~ v => (p.mkString("."), v)}
-
-  def url : Parser[Properties] =
-    ("jdbc:oce:dcom://" ~> host) ~ (":" ~> ident) ~ ("@" ~> ident) ~ (";" ~> repsep(prop, ";"))  ^^ {
-    case host ~ user ~ pwd ~ props => {
-      val r = new Properties
-      r.setProperty("oce.host", host)
-      r.setProperty("oce.host.user", user)
-      r.setProperty("oce.host.password", pwd)
-      props.foreach{
-        prop => r.setProperty(prop._1, prop._2)
-      }
-      r
-    }
-  }
-
 }

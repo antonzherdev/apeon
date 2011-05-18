@@ -2,8 +2,8 @@ package ru.apeon.c1
 
 import java.io.File
 import java.sql.{DriverManager}
-import com.ipc.oce.objects.{OCUUID, OCCatalogObject, OCDocumentRef, OCCatalogRef}
 import com.ipc.oce._
+import objects._
 import org.jinterop.dcom.core.JIVariant
 import java.util.{UUID, Properties}
 
@@ -14,7 +14,7 @@ import java.util.{UUID, Properties}
 object Test extends Application with ConfigurationConstants{
   System.out.println("TEST")
 
-/*  val configuration = new Properties
+  val configuration = new Properties
   configuration.setProperty("oce.driver", "V81Driver");
   configuration.setProperty("oce.host", "192.168.100.100");
   configuration.setProperty("oce.host.user", "ttt");
@@ -28,36 +28,15 @@ object Test extends Application with ConfigurationConstants{
   app.setApplicationDriver(driver);
   try{
     app.connect(configuration);
-    //val co : OCCatalogObject = app.findDataObject("Catalog.Номенклатура", "6600a842-e9f1-11d8-8d32-505054503030")
-    val query = app.newQuery("SELECT t.Наименование FROM Catalog.Номенклатура AS t Where t.Ссылка = &r");
-    //val r1 = co.getRef
-    //val r2 = new OCCatalogRef(JIVariant.makeVariant("6600a842-e9f1-11d8-8d32-505054503030"))
-
-//    query.setParameter("r", new OCVariant(r1));
-    query.setParameter("r", new OCVariant(UUID.fromString("6600a842-e9f1-11d8-8d32-505054503030").));
-    val result = query.execute
-    val selection = result.choose
-    while (selection.next()) {
-      System.out.println(selection.getString(0))
-    }
-    /*val co : OCCatalogObject = app.findDataObject("Catalog.Номенклатура", "6600a842-e9f1-11d8-8d32-505054503030")
-    System.out.println(co.getRef.getUUID)
-    System.out.println(co.getDataExchange.getRecipients.size);*/
-    /*val manager = app.getCatalogManager("Банки")
-    val ref = manager.findByDescription("Г МОСКВА")
-    val selection = manager.selectHierarchically(ref)
-    while(selection.next.booleanValue){
-      val level = selection.getLevelInSelection
-      if(level == 0)
-        System.out.println(selection.getCode + " " + selection.getDescription);
-    } */
-
+    val man = app.getCatalogManager("Номенклатура")
+    val doc = man.createItem()
+    doc.write()
     System.out.println("Computer name: "+app.getComputerName)
   }finally{
     app.exit()
   }
-   */
-  Class.forName("com.ipc.oce.jdbc.OCEDriver")
+
+ /* Class.forName("com.ipc.oce.jdbc.OCEDriver")
   val con = DriverManager.getConnection("jdbc:oce:dcom://192.168.100.100:ttt@z;oce.1c.dbpath=C:\\1c\\upp1;oce.driver=V81Driver;autoRegistration=true", "test", "z")
   try{
     //val rs = con.getMetaData.getColumns(null, null, "Номенклатура", "")
@@ -87,5 +66,5 @@ from
   }
   finally{
     if(con!=null) con.close()
-  }
+  }*/
 }

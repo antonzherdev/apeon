@@ -7,8 +7,20 @@ import eql.DataSourceExpressionDataSource
 
 
 case class ScriptDataTypeEntityDescription(model : ObjectModel, description : Description) extends ScriptDataType {
-  private var obj : Option[ObjectBase] = model.objOption(description.fullName)
-  override val declarations = Seq(applyId, applyEql, findEql, insert) ++ obj.map(_.declarations).getOrElse(Seq())
+  private val obj : Option[ObjectBase] = model.objOption(description.fullName)
+  override val declarations =
+    Seq(applyId, applyEql, findEql, insert) ++
+          obj.map(_.declarations).getOrElse(Seq()) ++
+          description.fields.filter(_.isInstanceOf[ToManyBuiltIn]).map{
+            field => new Declaration {
+              def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+                field.asInstanceOf[ToManyBuiltIn].entity
+              def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+                ScriptDataTypeEntityDescription(model, field.asInstanceOf[ToManyBuiltIn].entity)
+              def name = field.name
+              def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
+            }
+          }
 
   def insert = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
@@ -46,10 +58,10 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
   def findEql = new FindEql
 
   class FindEql extends Declaration {
-    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression])  = {
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) : Any  = {
       val where = parameters.get.head.value.asInstanceOf[eql.Expression]
       val select = eql.Select(eql.FromEntity(description, None,
-        DataSourceExpressionDataSource(env.dataSource(dataSource).get)), where = Some(where))
+        DataSourceExpressionDataSource(env.dataSource(dataSource).getOrElse{description.dataSource})), where = Some(where))
       env.em.select(select) match {
         case Seq(e) => Some(e)
         case Seq() => None

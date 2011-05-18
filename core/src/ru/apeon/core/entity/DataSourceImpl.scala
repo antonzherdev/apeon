@@ -10,17 +10,18 @@ import ru.apeon.core.eql._
 abstract class DataSourceImpl {
   val dataSource : DataSource
   def persistentStore(xml : NodeSeq) : PersistentStore
-  def insert(em : EntityManager, e: Entity) {
-    val id = e.id.store.insert(Insert(FromEntity(e.id.description, None, DataSourceExpressionDataSource(e.id.dataSource)),
-      e.data.map{kv =>
+  protected def toInsertColumns(em: EntityManager, e: Entity): Seq[InsertColumn] = {
+    e.data.map {
+      kv =>
         (e.id.description.field(kv._1), kv._2)
-      }.filter(_._2 != null).filter{kv =>
+    }.filter(_._2 != null).filter {
+      kv =>
         kv._1 match {
-          case a : Attribute => !a.isPrimaryKey
-          case o : ToOne => {
-            if(kv._2.isInstanceOf[Entity]) {
+          case a: Attribute => !a.isPrimaryKey
+          case o: ToOne => {
+            if (kv._2.isInstanceOf[Entity]) {
               val data = kv._2.asInstanceOf[Entity]
-              if(data.id.isTemporary) {
+              if (data.id.isTemporary) {
                 em.afterUpdate(e, o.name, data)
                 false
               }
@@ -28,9 +29,16 @@ abstract class DataSourceImpl {
             } else true
           }
           case _ => false
-        }}.map{kv =>
+        }
+    }.map {
+      kv =>
         InsertColumn(kv._1.name, Const(kv._2))
-      }.toSeq
+    }.toSeq
+  }
+
+  def insert(em : EntityManager, e: Entity) {
+    val id = e.id.store.insert(Insert(FromEntity(e.id.description, None, DataSourceExpressionDataSource(e.id.dataSource)),
+      toInsertColumns(em, e)
     ))
     e.saveId(id)
   }

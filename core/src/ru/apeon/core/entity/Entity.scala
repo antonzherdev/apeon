@@ -129,15 +129,31 @@ class Entity(val manager : EntityManager,
   }
 
   def saveId(id : Any) {
-    _id  = this.id match {
-      case i : TemporaryEntityId => {
-        OneEntityId(i.dataSource, i.description, id.asInstanceOf[Int])
-      }
-      case d =>
-        throw new RuntimeException("Save id for not temporary id, for %s".format(d))
-    }
     this.id.description.primaryKeys match {
-      case Seq(pk) => _data.update(pk.name, id)
+      case Seq(pk) => {
+        _id  = this.id match {
+          case i : TemporaryEntityId => {
+            OneEntityId(i.dataSource, i.description, id)
+          }
+          case d =>
+            throw new RuntimeException("Save id for not temporary id, for %s".format(d))
+        }
+        _data.update(pk.name, id)
+      }
+      case pks => {
+        _id  = this.id match {
+          case i : TemporaryEntityId => {
+            MultiEntityId(i.dataSource, i.description, id.asInstanceOf[Seq[Any]])
+          }
+          case d =>
+            throw new RuntimeException("Save id for not temporary id, for %s".format(d))
+        }
+        val pkI = pks.iterator
+        val idI = id.asInstanceOf[Seq[Any]].iterator
+        while(pkI.hasNext) {
+          _data.update(pkI.next.name, idI.next)
+        }
+      }
     }
   }
 

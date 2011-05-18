@@ -6,7 +6,7 @@ import ru.apeon.core.script._
 case class Query(model : ObjectModel, module : Module, pack : Package, name : String, declaredDeclarations : Seq[DeclarationStatement],
                  extendsClass : Option[ClassBase] = None) extends ObjectBase
 {
-  def execute(parameters: Map[String, String] = Map()) = {
+  def execute(parameters: Map[String, String] = Map()) {
 
     val apply = declarations.find{
       case dec : Def =>
@@ -17,19 +17,16 @@ case class Query(model : ObjectModel, module : Module, pack : Package, name : St
     }.get.asInstanceOf[Def]
     val e = new DefaultEnvironment(model)
     e.start()
-    try {
-      e.atomic{
-        apply.value(e, apply.parameters.map {
-          par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
-        } match {
-          case Seq() => None
-          case s => Some(s)
-        })
-      }
+    val ret = e.atomic{
+      apply.value(e, apply.parameters.map {
+        par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
+      } match {
+        case Seq() => None
+        case s => Some(s)
+      })
     }
-    finally {
-      e.end()
-    }
+    e.end()
+    ret
   }
 }
 

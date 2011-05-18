@@ -3,15 +3,8 @@ package ru.apeon.c1
 datasource c1
 
 query Test {
-`from MatMoveIn where number = "МСК00015"`.select.foreach { doc =>
-    doc.materials.foreach{
-        _.delete
-    }
-}
+    val m = MatMoveIn.materials.insert
+    m.material = Material(`name = "Вентилятор настольный"`)
+    MatMoveIn(`number = "ТК000000014"`).materials += m
 
-//`from MatMoveIn`.select
-
-/*`from Material<c1>`.select.foreach {material =>
-    material sync as s to comtec.Material<comtec.comtec> as d where `s.number = d.number and s.name = d.name`
-	}*/
 }
