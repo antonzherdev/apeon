@@ -73,3 +73,12 @@ entity Region(dba.region_custom) {
     column name(nm) char(47)
 	def toString : String = Format.str("Регион", id, name)
 }
+
+
+entity Employee(dba.voc_names) extends Partner {
+    table dba.kad(id)
+
+    column firstName(kad.fam) varchar(27)
+    column secondName(kad.nam) varchar(98)
+    column middleName(kad.ot) varchar(27)
+}
