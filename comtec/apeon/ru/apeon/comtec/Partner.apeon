@@ -87,3 +87,21 @@ entity Region<comtec> {
     column name(nm) char(47)
 	def toString : String = Format.str("Регион", id, name)
 }
+
+
+entity Employee<comtec> extends Partner {
+    table dba.voc_names
+    join dba.kad(id)
+
+    one person(kad.id_person) Person
+    column group(belong_id) integer default 4
+}
+
+entity Person<comtec> {
+    table dba.person
+
+    column id integer primary key
+    column firstName(firstname) varchar(63)
+    column secondName(secondname) varchar(63)
+    column middleName(patronymic) varchar(63)
+}

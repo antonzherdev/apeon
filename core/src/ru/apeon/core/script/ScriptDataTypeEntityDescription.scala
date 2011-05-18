@@ -9,7 +9,7 @@ import eql.DataSourceExpressionDataSource
 case class ScriptDataTypeEntityDescription(model : ObjectModel, description : Description) extends ScriptDataType {
   private val obj : Option[ObjectBase] = model.objOption(description.fullName)
   override val declarations =
-    Seq(applyId, applyEql, findEql, insert) ++
+    Seq(applyId, applyEql, findEql, insert, findId) ++
           obj.map(_.declarations).getOrElse(Seq()) ++
           description.fields.filter(_.isInstanceOf[ToManyBuiltIn]).map{
             field => new Declaration {
@@ -30,16 +30,26 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
-  def applyId = new Declaration {
-    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+  def applyId = new FindId {
+    override def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      super.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].getOrElse{
+          throw ScriptException(env, "Entity %s not found for id %d".format(description, parameters.get.head.value))
+      }
+    override def name = "apply"
+    override def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(description)
+  }
+
+  def findId = new FindId
+
+  class FindId extends Declaration {
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) : Any =
       parameters.get.head.value match {
-        case id : Int => env.em.get(new OneEntityId(env.dataSource(dataSource).getOrElse(description.dataSource), description, id)).getOrElse(
-          throw ScriptException(env, "Entity not found")
-        )
+        case id : Int => env.em.get(new OneEntityId(env.dataSource(dataSource).getOrElse(description.dataSource), description, id))
         case _ => throw ScriptException(env, "Not integer")
       }
-    def name = "apply"
-    def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(description)
+    def name = "find"
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) : ScriptDataType =
+      ScriptDataTypeOption(ScriptDataTypeEntityByDescription(description))
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
       case Some(Seq(par)) => par.expression.dataType(env) == ScriptDataTypeInteger()
       case _ => false
