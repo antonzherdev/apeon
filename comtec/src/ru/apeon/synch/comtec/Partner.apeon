@@ -78,7 +78,14 @@ entity Region(dba.region_custom) {
 entity Employee(dba.voc_names) extends Partner {
     table dba.kad(id)
 
-    column firstName(kad.fam) varchar(27)
-    column secondName(kad.nam) varchar(98)
-    column middleName(kad.ot) varchar(27)
+    one person(kad.id_person) Person
+    column group(belong_id) integer default 4
+}
+
+entity Person(dba.person) {
+    column id integer primary key
+
+    column firstName(firstname) varchar(63)
+    column secondName(secondname) varchar(63)
+    column middleName(patronymic) varchar(63)
 }
