@@ -32,14 +32,17 @@ trait Declaration{
   /**
    * Вернуть типы параметров для встроенной функции
    * @param env окружение
+   * @param parametes параметры
    * @param parameterNumber номер параметра
    * @param parameter параметер
    */
-  def builtInParametersDataTypes(env : Environment, parameterNumber : Int, parameter : Par) : Seq[ScriptDataType] =
+  def builtInParameters(env : Environment, parameters: Option[Seq[Par]], parameterNumber : Int, parameter : Par) : Seq[BuiltInParameterDef] =
     throw ScriptException(env, "Not supported")
 
   def declarationString : String = toString
 }
+
+case class BuiltInParameterDef(defaultName : String, dataType : ScriptDataType)
 
 trait DeclarationStatement extends Statement with Declaration {
   def preFillRef(env: Environment, imports: Imports) {}
@@ -48,22 +51,28 @@ trait DeclarationStatement extends Statement with Declaration {
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = dataType(env)
 }
 
+case class DeclarationThis(thisType : Option[ScriptDataType], declaration : Declaration)
+
 /**
  * Ссылка на задекларированную переменную
  */
 case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource : Option[Expression] = None) extends Expression {
-  private var _declaration : Declaration = _
+  private var _declaration : DeclarationThis = _
+  def declaration : Declaration = _declaration.declaration
 
-  def declaration : Declaration = _declaration
-
-  def dataType(env : Environment) = _declaration.dataType(env, parameters)
+  def dataType(env : Environment) =
+    env.withDotType(_declaration.thisType) {
+      declaration.dataType(env, parameters)
+    }
 
   def evaluate(env: Environment) =
-    _declaration.value(env,
-      env.withDotRef(None) {
-        parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
-      },
-      dataSource)
+    env.withDotType(_declaration.thisType) {
+      declaration.value(env,
+        env.withDotRef(None) {
+          parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
+        },
+        dataSource)
+    }
 
 
   def fillRef(env : Environment, imports : Imports) {
@@ -82,8 +91,11 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
       var number = 0
       parameters.get.foreach{par =>
         if(par.expression.isInstanceOf[BuiltInFunction]) {
+          val bps = env.withDotType(_declaration.thisType) {
+            declaration.builtInParameters(env, parameters, number, par)
+          }
           env.withDotType(None) {
-            par.expression.asInstanceOf[BuiltInFunction].fillRef(env, imports, _declaration.builtInParametersDataTypes(env, number, par))
+            par.expression.asInstanceOf[BuiltInFunction].fillRef(env, imports, bps)
           }
         }
         number += 1
@@ -120,14 +132,14 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
 
   def value = this
 
-  private var parameters : Seq[ParDeclaration] = _
-  def fillRef(env: Environment, imports: Imports, parametersTypes : Seq[ScriptDataType]) = {
+  private var _parameters : Seq[ParDeclaration] = _
+  def fillRef(env: Environment, imports: Imports, parametersTypes : Seq[BuiltInParameterDef]) = {
     val iAliases = aliases.iterator
-    parameters = parametersTypes.map(tp =>
-      ParDeclaration(if(iAliases.hasNext) iAliases.next() else "_", tp)
+    _parameters = parametersTypes.map(tp =>
+      ParDeclaration(if(iAliases.hasNext) iAliases.next() else tp.defaultName, tp.dataType)
     )
     env.atomic{
-      parameters.foreach(env.addDeclaration(_))
+      _parameters.foreach(env.addDeclaration(_))
       env.fillRef(statement, imports)
     }
   }
@@ -142,11 +154,11 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
-  def parameter(number : Int) = parameters(number)
+  def parameters : Seq[ParDeclaration] = _parameters
 
   def run(env: Environment, parameterValues : Any*) : Any = env.atomic{
     val iValues = parameterValues.iterator
-    parameters.foreach{parameter =>
+    _parameters.foreach{parameter =>
       env.addDeclaration(parameter)
       env.update(parameter, iValues.next())
     }

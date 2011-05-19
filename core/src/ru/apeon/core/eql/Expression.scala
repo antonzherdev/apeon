@@ -190,7 +190,7 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
           case s => Some(s)
         }).getOrElse{
           throw new RuntimeException("Function %s not found".format(name))
-        }
+        }.declaration
         if(!declaration.isInstanceOf[SqlGeneration] && !declaration.isInstanceOf[Field]) {
           throw new RuntimeException("Function %s is not supported in eql".format(name))
         }
@@ -209,7 +209,7 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
   def defaultFrom = _defaultFrom
 
   case class ScriptDataTypeFrom(from : From) extends script.ScriptDataType {
-    override def declarations = from.fields
+    override lazy val declarations = from.fields
   }
 
   def isFrom = data.isInstanceOf[FromData]

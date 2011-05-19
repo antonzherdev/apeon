@@ -1,15 +1,20 @@
 package ru.apeon.core.script
 
-case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataType {
-  override def declarations = Seq(foreach, filter, filterNot, find, isEmpty, size)
+case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataType
+
+object ScriptDataTypeSeqDescription {
+  def declarations = Seq(foreach, filter, filterNot, find, isEmpty, size)
+
+  def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeSeq]
+  def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeSeq].dataType
 
   abstract class OneBuiltInDeclaration extends Declaration {
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
       case Some(Seq(Par(b : BuiltInFunction, _))) => true
       case _ => false
     }
-    override def builtInParametersDataTypes(env: Environment, parameterNumber: Int, parameter: Par) =
-      Seq(ScriptDataTypeSeq.this.dataType)
+    override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) =
+      Seq(BuiltInParameterDef("_", tp(env)))
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       value(env,  env.ref.asInstanceOf[Iterable[Any]], parameters.get.head.value.asInstanceOf[BuiltInFunction])
     }
@@ -28,14 +33,14 @@ case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataType {
 
   def filter = new OneBuiltInDeclaration{
     def name = "filter"
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq.this
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = items.filter{item =>
       f.run(env, item).asInstanceOf[Boolean]}
   }
 
   def filterNot = new OneBuiltInDeclaration{
     def name = "filterNot"
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq.this
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = items.filterNot{item =>
       f.run(env, item).asInstanceOf[Boolean]}
   }
@@ -44,7 +49,7 @@ case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataType {
   def find = new OneBuiltInDeclaration{
     def name = "find"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
-      ScriptDataTypeOption(ScriptDataTypeSeq.this.dataType)
+      ScriptDataTypeOption(tp(env))
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = items.find {
       item => f.run(env, item).asInstanceOf[Boolean]
     }

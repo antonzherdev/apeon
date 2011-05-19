@@ -4,12 +4,13 @@ import ru.apeon.core._
 import eql.SqlGeneration
 import java.math.MathContext
 
-/**
- * @author Anton Zherdev
- */
 
 case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
-  override def declarations = Seq(format, toInt, toDec, replace)
+  override def valueOf(str: String) = str
+}
+
+object ScriptDataTypeStringDescription {
+  def declarations = Seq(format, toInt, toDec, replace)
 
   def format = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
@@ -70,6 +71,4 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
       sql.Call("replace", Seq(ref, parameters(0), parameters(1)))
   }
-
-  override def valueOf(str: String) = str
 }

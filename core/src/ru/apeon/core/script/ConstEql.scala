@@ -52,30 +52,34 @@ case class ConstEql(string : String) extends Constant {
 case class ScriptDataTypeEqlExpression() extends ScriptDataType
 
 abstract class ScriptDataTypeEqlSelectBase extends ScriptDataType {
-  override def declarations = Seq(fSelect, fGet)
-
+  override lazy val declarations = ScriptDataTypeDescription.declarations(classOf[ScriptDataTypeEqlSelectBase])
   def sel(env : Environment) : eql.Select = env.ref.asInstanceOf[eql.Select]
+  def rowDataType : ScriptDataType
+  def evaluate(env : Environment) : Seq[Any]
+}
+
+object ScriptDataTypeEqlSelectBaseDescription {
+  def declarations = Seq(fSelect, fGet)
 
   def fSelect : FSelect = new FSelect
   def fGet : FGet = new FGet
 
-  def rowDataType : ScriptDataType
-
-  def evaluate(env : Environment) : Seq[Any]
+  def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeEqlSelectBase]
+  def rowDataType(env : Environment) = tp(env).rowDataType
+  def evaluate(env : Environment) = tp(env).evaluate(env)
 
   class FSelect extends Declaration{
     def name = "select"
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(rowDataType)
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(rowDataType(env))
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       evaluate(env)
-
   }
 
   class FGet extends Declaration{
     def name = "get"
     def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType(env)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
       case Seq(ret) => ret
       case Seq() => throw ScriptException(env, "Not found")
@@ -97,8 +101,10 @@ case class ScriptDataTypeEqlSelectOne(dataType : ScriptDataType) extends ScriptD
   def evaluate(env: Environment) = sel(env).evaluate.map{_.head._2}
 }
 
-case class ScriptDataTypeEqlStatement() extends ScriptDataType {
-  override def declarations = Seq(execute)
+case class ScriptDataTypeEqlStatement() extends ScriptDataType
+
+object ScriptDataTypeEqlStatementDescription {
+  def declarations = Seq(execute)
 
   def execute = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {

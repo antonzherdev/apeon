@@ -144,7 +144,7 @@ trait Environment{
   def addDeclaration(declaration : Declaration)
   def declarationsMap : collection.Map[String, Seq[Declaration]]
   def declarations(name : String) : Seq[Declaration] = declarationsMap(name)
-  def declaration(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Declaration =
+  def declaration(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : DeclarationThis =
     declarationOption(name, parameters, imports).getOrElse{
       if(dotType.isDefined) {
         throw ScriptException(this,
@@ -160,12 +160,12 @@ Variants:
       throw ScriptException(this, "Could not find ref \"%s\"".format(name))
     }
 
-  def declarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[Declaration] = {
+  def declarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[DeclarationThis] = {
     if(dotType.isDefined) {
       dotType.get.declaration(this, name, parameters)
     }
     else {
-      var ret = declarationsMap.getOrElse(name,Seq()).find(_.correspond(this, parameters))
+      var ret : Option[DeclarationThis] = declarationsMap.getOrElse(name,Seq()).find(_.correspond(this, parameters)).map(r => DeclarationThis(None, r))
       if(!ret.isDefined) {
         if(thisType.isDefined) {
           ret = thisType.get.declaration(this, name, parameters)
@@ -178,8 +178,9 @@ Variants:
     }
   }
 
-  def globalDeclarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[Declaration] = {
+  def globalDeclarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[DeclarationThis]  = {
     var ret : Option[Declaration] = model.dataSourceOption(name, imports)
+    var thisType : Option[ScriptDataType] = None
     if(!ret.isDefined) {
       ret = model.packOption(name, imports)
       if(!ret.isDefined) {
@@ -188,12 +189,14 @@ Variants:
           ret = model.objOption(name, imports)
         }
         if(ret.isDefined) {
-          if(parameters.isDefined)
-            ret = ret.get.dataType(this, None).declaration(this, "apply", parameters)
+          if(parameters.isDefined) {
+            thisType = Some(ret.get.dataType(this, None))
+            ret = thisType.get.declaration(this, "apply", parameters).map(d=> d.declaration)
+          }
         }
       }
     }
-    ret
+    ret.map{r => DeclarationThis(thisType, r)}
   }
 
 

@@ -4,9 +4,34 @@ import ru.apeon.core.entity._
 
 abstract class ScriptDataTypeEntity extends ScriptDataType {
   def description : Description
+  override lazy val declarations =
+    description.declarations ++ ScriptDataTypeDescription.declarations(classOf[ScriptDataTypeEntity])
+  override def equals(obj: Any) = obj match {
+    case e : ScriptDataTypeEntity => e.description == this.description
+    case _ => false
+  }
+}
 
-  override def declarations =
-    description.declarations ++ Seq(copy, delete)
+object ScriptDataTypeEntity {
+  def unapply(e : ScriptDataTypeEntity) : Option[Description] = Some(e.description)
+}
+
+case class ScriptDataTypeEntityByName(entityName : String) extends ScriptDataTypeEntity {
+  var description : Description = _
+
+
+  override def preFillRef(env : Environment, imports: Imports) {
+    description = env.entityDescription(entityName, Some(imports))
+  }
+}
+
+case class ScriptDataTypeObject(query : ObjectBase) extends ScriptDataType {
+  override lazy val declarations = query.declarations
+}
+case class ScriptDataTypeEntityByDescription(description : Description) extends ScriptDataTypeEntity
+
+object ScriptDataTypeEntityTypeDescription {
+  def declarations = Seq(copy, delete)
 
   def delete = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) {
@@ -30,8 +55,8 @@ abstract class ScriptDataTypeEntity extends ScriptDataType {
     }
     def name = "copy"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = parameters match {
-      case None =>  ScriptDataTypeEntityByDescription(description)
-      case Some(Seq()) => ScriptDataTypeEntityByDescription(description)
+      case None =>  env.dotType.get
+      case Some(Seq()) => env.dotType.get
       case Some(Seq(p)) =>  ScriptDataTypeEntityByDescription(
         p.expression.dataType(env).asInstanceOf[ScriptDataTypeEntityDescription].description)
     }
@@ -43,27 +68,4 @@ abstract class ScriptDataTypeEntity extends ScriptDataType {
       case _ => false
     }
   }
-
-  override def equals(obj: Any) = obj match {
-    case e : ScriptDataTypeEntity => e.description == this.description
-    case _ => false
-  }
 }
-
-object ScriptDataTypeEntity {
-  def unapply(e : ScriptDataTypeEntity) : Option[Description] = Some(e.description)
-}
-
-case class ScriptDataTypeEntityByName(entityName : String) extends ScriptDataTypeEntity {
-  var description : Description = _
-
-
-  override def preFillRef(env : Environment, imports: Imports) {
-    description = env.entityDescription(entityName, Some(imports))
-  }
-}
-
-case class ScriptDataTypeObject(query : ObjectBase) extends ScriptDataType {
-  override def declarations = query.declarations
-}
-case class ScriptDataTypeEntityByDescription(description : Description) extends ScriptDataTypeEntity
