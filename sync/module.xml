@@ -3,4 +3,5 @@
   xsi:noNamespaceSchemaLocation="../core/module.xsd">
     <name>ru.apeon.sync</name>
     <version>1.0</version>
+    <listener>ru.apeon.sync.SyncListener</listener>
 </module>

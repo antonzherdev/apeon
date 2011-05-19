@@ -27,15 +27,19 @@ object ScriptDataTypeDescription {
     _declarations.getOrElseUpdate(clazz, Buffer.empty[Declaration]).append(declarations : _*)
   }
 
-  addDeclaration(classOf[ScriptDataTypeDate], ScriptDataTypeDateDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeDecimal], ScriptDataTypeDecimalDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeEntity], ScriptDataTypeEntityTypeDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeEntityDescription], ScriptDataTypeEntityDescriptionTypeDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeOption], ScriptDataTypeOptionDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeSeq], ScriptDataTypeSeqDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeString], ScriptDataTypeStringDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeEqlSelectBase], ScriptDataTypeEqlSelectBaseDescription.declarations : _*)
-  addDeclaration(classOf[ScriptDataTypeEqlStatement], ScriptDataTypeEqlStatementDescription.declarations : _*)
+  def load() {
+    _declarations.clear()
+    addDeclaration(classOf[ScriptDataTypeDate], ScriptDataTypeDateDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeDecimal], ScriptDataTypeDecimalDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeEntity], ScriptDataTypeEntityTypeDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeEntityDescription], ScriptDataTypeEntityDescriptionTypeDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeOption], ScriptDataTypeOptionDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeSeq], ScriptDataTypeSeqDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeString], ScriptDataTypeStringDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeEqlSelectBase], ScriptDataTypeEqlSelectBaseDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeEqlStatement], ScriptDataTypeEqlStatementDescription.declarations : _*)
+  }
+  load()
 }
 
 case class ScriptDataTypeDataSource() extends ScriptDataType

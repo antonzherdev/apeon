@@ -4,8 +4,8 @@ import java.io.File
 import akka.util.Logging
 import java.net.{URLClassLoader, URL}
 import xml.{NodeSeq, XML}
-import ru.apeon.core.script.{Module, DefaultObjectModel, ObjectModel}
 import ru.apeon.core.entity.{EntityConfiguration}
+import ru.apeon.core.script.{ScriptDataTypeDescription, Module, DefaultObjectModel, ObjectModel}
 
 object Loader extends Logging {
   var modules : Seq[Module] = Seq()
@@ -55,8 +55,10 @@ object Loader extends Logging {
 
     classLoader = new URLClassLoader(urls.result(), getClass.getClassLoader)
 
+    ScriptDataTypeDescription.load()
+    createListeners()
+    preloadListeners()
     ScriptLoader.load(model, modules)
-
     loadListeners()
     model.dataSources.foreach(_.load())
 
@@ -74,7 +76,7 @@ object Loader extends Logging {
     log.info("Unloaded modules")
   }
 
-  def loadListeners() {
+  def createListeners() {
     val listenersBuilder = Seq.newBuilder[Listener]
     for (module <- modules) {
       for (listener <- module.listeners) {
@@ -82,15 +84,24 @@ object Loader extends Logging {
       }
     }
     listeners = listenersBuilder.result()
+  }
 
-    log.info("Loading listeners")
+  def preloadListeners() {
+    listeners.foreach {
+      listener =>
+        log.info("Preloading %s".format(listener.getClass.getName))
+        listener.preLoad()
+        log.info("Preloaded %s".format(listener.getClass.getName))
+    }
+  }
+
+  def loadListeners() {
     listeners.foreach {
       listener =>
         log.info("Loading %s".format(listener.getClass.getName))
         listener.load()
         log.info("Loaded %s".format(listener.getClass.getName))
     }
-    log.info("Loaded listeners")
   }
 
   def loadModule(model : ObjectModel, dir : File) : Module = {

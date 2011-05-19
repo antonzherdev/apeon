@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact name="apeon-sync">
+    <output-path>$PROJECT_DIR$/out/artifacts/apeon-sync</output-path>
+    <root id="root">
+      <element id="file-copy" path="$PROJECT_DIR$/sync/module.xml" />
+      <element id="directory" name="classes">
+        <element id="module-output" name="sync" />
+      </element>
+      <element id="directory" name="apeon">
+        <element id="dir-copy" path="$PROJECT_DIR$/sync/apeon" />
+      </element>
+    </root>
+  </artifact>
+</component>

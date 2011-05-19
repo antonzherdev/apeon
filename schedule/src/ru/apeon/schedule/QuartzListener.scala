@@ -10,6 +10,10 @@ import ru.apeon.core.loader.Listener
 class QuartzListener extends Listener{
   var scheduler : Scheduler = null
 
+  def preLoad() {
+
+  }
+
   def load() {
     scheduler = StdSchedulerFactory.getDefaultScheduler
     scheduler.start()

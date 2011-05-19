@@ -1,0 +1,6 @@
+package ru.apeon.sync
+import ru.apeon.comtec._
+
+query Test{
+   Material(723).sync(Material, `s.id != d.id and s.name = d.name`)
+}

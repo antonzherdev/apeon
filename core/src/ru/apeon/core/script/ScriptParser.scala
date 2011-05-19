@@ -11,7 +11,7 @@ object ScriptParser{
     data._model = model
     data._module = module
     data._fileName = fileName
-    data._component = new SyncScriptParser(new BaseScriptParser(data))
+    data._component = new BaseScriptParser(data)
     data.parse(code)
   }
 
@@ -21,7 +21,7 @@ object ScriptParser{
     data._module = module
     data._fileName = None
     data.pack = Some(pack)
-    data._component = new SyncScriptParser(new BaseScriptParser(data))
+    data._component = new BaseScriptParser(data)
     data.parse(code)
   }
 
@@ -30,7 +30,7 @@ object ScriptParser{
     data._model = model
     data._module = CoreModule
     data._fileName = None
-    data._component = new SyncScriptParser(new BaseScriptParser(data))
+    data._component = new BaseScriptParser(data)
     data.parseStatement(code)
   }
 }
