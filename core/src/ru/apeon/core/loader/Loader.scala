@@ -28,11 +28,11 @@ object Loader extends Logging {
 
     val modulesBuilder = Seq.newBuilder[Module]
     if(apeonFolder.exists) {
-      apeonFolder.listFiles.foreach{dir =>
+      apeonFolder.listFiles.par.foreach{dir =>
         modulesBuilder += loadModule(model, dir)
       }
     }
-    apeonXml.\\("module").foreach{module =>
+    apeonXml.\\("module").par.foreach{module =>
       modulesBuilder += loadModule(model, new File(module.\("@dir").text))
     }
 

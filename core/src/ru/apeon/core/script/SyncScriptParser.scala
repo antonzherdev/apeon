@@ -35,7 +35,7 @@ class SyncScriptParser(val decorated : ScriptParserComponent) extends ScriptPars
 
   override def expressionDef = super.expressionDef ~
           opt(
-            ("sync" ~> "by" ~! parser.expression) |
+            ("sync" ~> "by" ~! expression) |
                     syncWith
           ) ^^ {
     case left ~ Some(r) =>  r match {

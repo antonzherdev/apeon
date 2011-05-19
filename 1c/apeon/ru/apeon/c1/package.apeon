@@ -3,8 +3,5 @@ package ru.apeon.c1
 datasource c1
 
 query Test {
-    val m = MatMoveIn.materials.insert
-    m.material = Material(`name = "Вентилятор настольный"`)
-    MatMoveIn(`number = "ТК000000014"`).materials += m
-
+    Material(`name = "Вентилятор настольный"`)
 }

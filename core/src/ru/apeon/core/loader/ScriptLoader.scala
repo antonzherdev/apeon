@@ -8,12 +8,12 @@ import ru.apeon.core.script._
 
 object ScriptLoader extends Logging {
   def load(model : ObjectModel, modules : Seq[Module]) {
-    val files = modules.map{module => (module, new File(module.path + "/apeon"))}.
+    val files = modules.par.map{module => (module, new File(module.path + "/apeon"))}.
       filter(_._2.isDirectory).
       map(module => allFiles(module._2).map(file => (module._1, file))).
       foldLeft(Seq[(Module, File)]()){_ ++ _}
 
-    val scripts = files.map{file =>
+    val scripts = files.par.map{file =>
       log.info("Parsing file " + file._2.getAbsolutePath)
       val script = parse(model, file._1, file._2)
       log.info("Parsed file " + file._2.getAbsolutePath)
