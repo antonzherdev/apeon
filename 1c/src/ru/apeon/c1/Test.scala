@@ -11,7 +11,7 @@ import java.util.{UUID, Properties}
  * @author Anton Zherdev
  */
 
-object Test extends Application with ConfigurationConstants{
+object Test extends App with ConfigurationConstants{
   System.out.println("TEST")
 
   val configuration = new Properties
