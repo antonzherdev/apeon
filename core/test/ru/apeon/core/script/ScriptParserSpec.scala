@@ -129,33 +129,6 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
     }
   }
 
-  describe("Sync") {
-    it("def") {
-      parser.parse("def articleSync =\n" +
-              "     sync Art as s to Article as a where `a.name = s.name and a.id <> s.id`") should equal (
-        script(Def("articleSync", SyncDeclaration(SyncRef("Art", "s"), SyncRef("Article", "a"), "a.name = s.name and a.id <> s.id")))
-      )
-    }
-    it("SyncWithCode") {
-      parser.parse("Article<\"db1\">(id) sync as s to Article<\"db2\"> as a\n" +
-              "     where `a.uid = s.uid` {\n" +
-              "         a.article\n" +
-              "     }") should equal (
-        script(
-          SyncEntity(Ref("Article", Ref("id"), Some(ConstString("db1"))),
-            "s", SyncRef("Article", "a", Some(ConstString("db2"))), "a.uid = s.uid", statements = Seq(
-              Dot(Ref("a"), Ref("article"))))
-        )
-      )
-    }
-    it("SyncBy") {
-      parser.parse("a.article sync by articleSync") should equal (
-        script(
-          SyncBy(Dot(Ref("a"), Ref("article")), Ref("articleSync")))
-      )
-    }
-  }
-
   describe("Foreach") {
     it("test") {
       parser.parse("`from ToSync as s where s.entityName = 'Invoice'`.select.foreach {ss =>\n" +

@@ -9,11 +9,17 @@ class SyncListener extends Listener{
   }
 
   def preLoad() {
-    ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeEntity], SyncDeclaration)
-    ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeSeq], SyncDeclaration)
+    SyncListener.preLoad()
   }
 
   def load() {
 
+  }
+}
+
+object SyncListener {
+  def preLoad() {
+    ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeEntity], SyncDeclaration)
+    ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeSeq], SyncDeclaration)
   }
 }

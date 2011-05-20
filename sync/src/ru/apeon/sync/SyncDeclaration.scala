@@ -3,7 +3,6 @@ package ru.apeon.sync
 import ru.apeon.core.eql
 import ru.apeon.core.entity.{Entity, Description}
 import ru.apeon.core.script._
-import ru.apeon.core.loader.Listener
 
 object SyncDeclaration extends Declaration {
   def name = "sync"
@@ -66,6 +65,11 @@ object SyncDeclaration extends Declaration {
     case _ => false
   }
 
-  override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par)
-  = Seq(BuiltInParameterDef("s", env.dotType.get), BuiltInParameterDef("d", parameters.get.head.expression.dataType(env)))
+  override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) =
+    Seq(BuiltInParameterDef("s", env.dotType.get),
+      BuiltInParameterDef("d",
+        if(parameters.isDefined && !parameters.get.isEmpty && parameters.get.head.expression.isInstanceOf[Ref])
+          parameters.get.head.expression.dataType(env)
+        else env.dotType.get )
+    )
 }
