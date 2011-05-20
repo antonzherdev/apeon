@@ -58,7 +58,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
 
   class TestedEntityManager extends EmptyEntityManager {
-    override def model = model
+    override val model = EvaluateSpec.this.model
 
     override def get(id: EntityId) = id.description match {
       case a if a == article => id match {
@@ -416,21 +416,18 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
   }
 }
 
-class EmptyEntityManager extends EntityManager {
-  def toEntity(ds: DataSource, description: Description, data: collection.mutable.Map[String, Any]) = null
-  def model : ObjectModel = null
-  def beginTransaction() {}
-  def select(select: eql.Select) : Seq[Entity] = Seq()
-  def register(entity: Entity) {}
-  def lazyLoad(entity: Entity, field : Field, data : Any) : Any = null
-  def insert(description: Description, dataStore: DataSource) : Entity = null
-  def get(id: EntityId) : Option[Entity] = None
-  def commit() {}
-  def beforeUpdate(entity: Entity, key: String, data: Any) {}
-  def beforeDelete(entity: Entity) {}
-  def afterUpdate(entity: Entity, key: String, data: Any) {}
-  def afterInsert(entity: Entity) {}
-  def afterDelete(entity: Entity) {}
+class EmptyEntityManager extends DefaultEntityManager {
+  override def beginTransaction() {}
+  override def select(select: eql.Select) : Seq[Entity] = Seq()
+  override def register(entity: Entity) {}
+  override def lazyLoad(entity: Entity, field : Field, data : Any) : Any = null
+  override def get(id: EntityId) : Option[Entity] = None
+  override def commit() {}
+  override def beforeUpdate(entity: Entity, key: String, data: Any) {}
+  override def beforeDelete(entity: Entity) {}
+  override def afterUpdate(entity: Entity, key: String, data: Any) {}
+  override def afterInsert(entity: Entity) {}
+  override def afterDelete(entity: Entity) {}
 }
 class Env(override val em : EntityManager) extends DefaultEnvironment {
   override protected def createEntityManager = null

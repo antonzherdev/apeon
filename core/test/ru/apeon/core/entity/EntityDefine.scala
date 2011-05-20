@@ -13,6 +13,8 @@ trait EntityDefine {
 
   def createDataSource : DataSource = DataSource(pack, "ds")
 
+  def des(entityName : String) : Description = model.entityDescription(entityName, Some(Imports(pack)))
+
   def clearModel() {
     _model = new DefaultObjectModel
     init()
@@ -56,6 +58,11 @@ trait EntityDefine {
     FieldSources(FieldSource(source._2, Some(source._1)))
 
   def desc(name : String) = new DescriptionBuilder(name)
+
+  def att(name : String, dataType : AttributeDataType) = Attribute(pack, name, FieldSources(FieldSource(name)), dataType)
+  def int = AttributeDataTypeInteger()
+  def id = Id
+  def one(name : String, entityName : String) = ToOne(pack, name, FieldSources(FieldSource("id_" + name)), entityName)
 
   class DescriptionBuilder(val name : String) {
     private var module : Module = CoreModule
@@ -116,5 +123,11 @@ trait EntityDefine {
       defaultDataSourceName = name
       this
     }
+  }
+
+  def withModel(define :  => Unit) {
+    clearModel()
+    define
+    fillRef()
   }
 }

@@ -8,9 +8,8 @@ import collection.Map
 import script._
 import org.scalatest.{Spec}
 
-class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDefine {
+class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTest {
   SyncListener.preLoad()
-  def ps = EntityConfiguration.dataSource
   val M = collection.mutable.Map
 
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
@@ -23,9 +22,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
   val cons = desc("Cons").decl(Id, articleCol, uid, col1).b
 
   fillRef()
-
-  def run(em : EntityManager, statement : Statement*) = Script(model, pack, statement : _*).evaluate(new Env(em))
-
+  //TODO: Тест синхронизации коллекции сущностей
   describe("Sync") {
     it("Изменение") {
       var ok = false
@@ -33,7 +30,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
         new EmptyEntityManager() {
           override def get(id: EntityId) = Some(new Entity(this, id, M("id" -> 1, "col1" -> 2, "col2" -> 11)))
 
-          val id2 = new OneEntityId(ps, article, 2)
+          val id2 = new OneEntityId(dataSource, article, 2)
           override def select(select: eql.Select) =
             Seq(new Entity(this, id2, M("id" -> 2, "col1" -> 2, "col2" -> 22)))
 
@@ -93,7 +90,6 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
     }
 
     it("ToMany") {
-      val id2 = new OneEntityId(ps, article, 2)
       run(
         new EmptyEntityManager() {
           override def get(id: EntityId) = id.asInstanceOf[OneEntityId].id match {
@@ -101,12 +97,11 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptDef
             case 2 => Some(new Entity(this, id, M("id" -> 2, "col1" -> 2, "col2" -> 11)))
           }
 
-          def id(v : Int) = new OneEntityId(ps, cons, v)
+          def id(v : Int) = new OneEntityId(dataSource, cons, v)
           def e(m : collection.mutable.Map[String, Any]) = new Entity(this, id(m("id").asInstanceOf[Int]), m)
           override def select(select: eql.Select) = {
             val f = select.from.asInstanceOf[eql.FromEntity]
             f.entity should equal(cons)
-            val a = f.alias
             select.where.get match {
               case eql.And(eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(1)),
               eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("article")), eql.Const(2))) =>

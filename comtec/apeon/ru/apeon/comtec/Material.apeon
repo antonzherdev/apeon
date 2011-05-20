@@ -6,6 +6,10 @@ entity Material<comtec> {
 
     def toString : String = "ТМЦ(%d: %s[%s])".format(id, name, number)
 
+    def syncWhere = `s.number = d.number and s.id != d.id`
+    /*def syncWhere = ["number"]
+    */
+
     column id integer primary key
     column name(nm) varchar(254)
     column number(nomen) char(19)

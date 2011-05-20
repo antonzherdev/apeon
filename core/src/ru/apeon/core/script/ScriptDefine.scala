@@ -1,5 +1,6 @@
 package ru.apeon.core.script
 
+
 trait ScriptDefine {
   implicit def expressionToSeqPar(e: Expression) : Option[Seq[Par]] = Some(Seq(Par(e)))
 
@@ -14,6 +15,8 @@ trait ScriptDefine {
 
   implicit def toExpression(d : ExpressionBuilder) : Expression = d.expression
   implicit def toBuilder(d : Expression) : ExpressionBuilder = new ExpressionBuilder(d)
+
+  def seq(es : Expression*) = ConstSeq(es.toSeq)
 
   def Eql(s : String) = ConstEql(s)
 
