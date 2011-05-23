@@ -4,25 +4,25 @@ entity BankAccountStatement<comtec> extends StandardDocument {
     table dba.jbanks
 
     one bankAccount(id_bank) BankAccount
-    column startBalance(begsaldo) decimal(17, 5) //Начальное сальдо
-    column remark(rem) char(57) //Примечание
+    column startBalance(begsaldo) Dec(17, 5) //Начальное сальдо
+    column remark(rem) String(57) //Примечание
 
     many moves(id_jbanks) extends StandardSubDocument {
         table dba.banks
 
-        column debitAmount(deb) decimal(6, 4) //Сумма прихода
-        column creditAmount(cre) decimal(6, 4) //Сумма расхода
+        column debitAmount(deb) Dec(6, 4) //Сумма прихода
+        column creditAmount(cre) Dec(6, 4) //Сумма расхода
 
-        column currencyDebitAmount(debv) decimal(6, 4) //Сумма прихода в валюте
-        column currencyCreditAmount(credv) decimal(6, 4) //Сумма расхода в валюте
+        column currencyDebitAmount(debv) Dec(6, 4) //Сумма прихода в валюте
+        column currencyCreditAmount(credv) Dec(6, 4) //Сумма расхода в валюте
         one partner(id_post) Partner //Дебитор-кредитор
-        column remark(rem) char(210) //Примечание
-        column documentDate(dat_docum) date //Дата документа
-        column documentNumber(docnu) char(20) //Номер документа
-        column vat(nds) decimal(6,4) //Ставка НДС
+        column remark(rem) String(210) //Примечание
+        column documentDate(dat_docum) Date //Дата документа
+        column documentNumber(docnu) String(20) //Номер документа
+        column vat(nds) Dec(6,4) //Ставка НДС
 
         def toString : String = Format.sub("Пр.банковской выписки", id, number, parent.toString)
     }
 
-    def toString : String = Format.doc("Банковская выписка", id, date, number)
+    def toString : String = Format.doc("Банковская выписка", id, Date, number)
 }

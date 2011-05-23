@@ -15,7 +15,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     override def store = EntityConfiguration.store
   }
 
-  val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeText())
+  val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeString())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger())
   val test1 = desc("test1").decl(Id, col1, col2).b
   val eft1 = eql.FromEntity(test1, None)

@@ -9,7 +9,7 @@ create TRIGGER "newid" before insert order 100 on %1$s
 referencing new as new_name
 for each row
 begin
-	declare ll_id integer;
+	declare ll_id Int;
 	set ll_id=new_name.id;
 	if ll_id is null then
 		set new_name.id=get_next_id('%3$s','id');

@@ -10,17 +10,17 @@ abstract class AttributeDataType {
 }
 
 object AttributeDataType {
-  def apply(nm : String, width : Int, scale : Int) : AttributeDataType = nm match {
-    case "boolean" => AttributeDataTypeBoolean()
-    case "char" => AttributeDataTypeChar(width)
-    case "date" => AttributeDataTypeDate()
-    case "datetime" => AttributeDataTypeDateTime()
-    case "integer" => AttributeDataTypeInteger()
-    case "decimal" => AttributeDataTypeDecimal(width, scale)
-    case "text" => AttributeDataTypeText()
-    case "time" => AttributeDataTypeTime()
-    case "varchar" => AttributeDataTypeVarchar(width)
-    case "uid" => AttributeDataTypeUID()
+  def apply(nm : String, width : Option[Int], scale : Option[Int]) : AttributeDataType = nm match {
+    case "Boolean" => AttributeDataTypeBoolean()
+    case "String" => AttributeDataTypeString(width)
+    case "Date" => AttributeDataTypeDate()
+    case "Int" => AttributeDataTypeInteger()
+    case "Dec" => (width, scale) match {
+      case (Some(w), Some(s)) => AttributeDataTypeDecimal(w, s)
+      case (Some(s), None) => AttributeDataTypeDecimal(30, s)
+      case (None, None) => AttributeDataTypeDecimal(30, 17)
+    }
+
     case _ => throw new RuntimeException("Unknown datatype \"%s\"".format(nm))
   }
 }
@@ -34,40 +34,22 @@ case class AttributeDataTypeBoolean() extends AttributeDataType {
   def toSqlDataType = SqlDataType("bit")
   def toScriptDataType = ScriptDataTypeBoolean()
 }
-case class AttributeDataTypeChar(width : Int) extends AttributeDataType {
-  def toSqlDataType = SqlDataType("char", Some(width))
+case class AttributeDataTypeString(width : Option[Int] = None) extends AttributeDataType {
+  def toSqlDataType = width match {
+    case Some(w) => SqlDataType("varchar", Some(w))
+    case None => SqlDataType("text")
+  }
   def toScriptDataType = ScriptDataTypeString()
 }
 case class AttributeDataTypeDate() extends AttributeDataType {
-  def toSqlDataType = SqlDataType("date")
-  def toScriptDataType = ScriptDataTypeDate()
-}
-case class AttributeDataTypeDateTime() extends AttributeDataType {
   def toSqlDataType = SqlDataType("datetime")
   def toScriptDataType = ScriptDataTypeDate()
 }
 case class AttributeDataTypeInteger() extends AttributeDataType {
-  def toSqlDataType = SqlDataType("integer")
+  def toSqlDataType = SqlDataType("Int")
   def toScriptDataType = ScriptDataTypeInteger()
 }
 case class AttributeDataTypeDecimal(width : Int, scale : Int) extends AttributeDataType {
-  def toSqlDataType = SqlDataType("decimal", Some(width), Some(scale))
+  def toSqlDataType = SqlDataType("Dec", Some(width), Some(scale))
   def toScriptDataType = ScriptDataTypeDecimal()
-}
-case class AttributeDataTypeText() extends AttributeDataType {
-  def toSqlDataType = SqlDataType("text")
-  def toScriptDataType = ScriptDataTypeString()
-}
-case class AttributeDataTypeTime() extends AttributeDataType {
-  def toSqlDataType = SqlDataType("time")
-  def toScriptDataType = ScriptDataTypeDate()
-}
-case class AttributeDataTypeVarchar(width : Int) extends AttributeDataType {
-  def toSqlDataType = SqlDataType("varchar", Some(width))
-  def toScriptDataType = ScriptDataTypeString()
-}
-
-case class AttributeDataTypeUID() extends AttributeDataType {
-  def toSqlDataType = SqlDataType("uniqueidentifier")
-  def toScriptDataType = ScriptDataTypeString()
 }

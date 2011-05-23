@@ -54,7 +54,7 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) : Any =
       parameters.get.head.value match {
         case id : Int => env.em.get(new OneEntityId(env.dataSource(dataSource).getOrElse(des(env).dataSource), des(env), id))
-        case _ => throw ScriptException(env, "Not integer")
+        case _ => throw ScriptException(env, "Not Int")
       }
     def name = "find"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) : ScriptDataType =

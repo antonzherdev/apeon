@@ -18,8 +18,8 @@ case class SqlDataType(name : String, width : Option[Int] = None, scale : Option
   def isEqualsTypeName(tp : String) =
     if(tp == "text" || tp == "long varchar")
       name == "text" || name == "long varchar"
-    else if(tp == "int" || tp == "integer")
-      name == "int" || name == "integer"
+    else if(tp == "int" || tp == "Int")
+      name == "int" || name == "Int"
     else
       name == tp
 

@@ -33,7 +33,7 @@ class SqlChecker(val dialect : SqlDialect = SqlConfiguration.dialect) extends Lo
     if(rs.next) {
       Some(new SqlColumn(column.table, column.name,
         (rs.getString("TYPE_NAME") match {
-          case s if s == "decimal" || s == "numeric" =>
+          case s if s == "Dec" || s == "numeric" =>
             new SqlDataType(s, Some(rs.getInt("COLUMN_SIZE")), Some(rs.getInt("DECIMAL_DIGITS")))
           case s if s == "char" || s == "varchar" =>
              new SqlDataType(s, Some(rs.getInt("COLUMN_SIZE")), None)

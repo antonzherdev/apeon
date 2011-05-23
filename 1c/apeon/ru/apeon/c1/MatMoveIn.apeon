@@ -11,10 +11,10 @@ entity MatMoveIn<c1> {
     many materials {
         table Document.ПоступлениеТоваровУслуг.Товары
         one parent(Ref) MatMoveIn primary key
-        column number(НомерСтроки) integer primary key
+        column number(НомерСтроки) Int primary key
 
         one material(Номенклатура) Material
-        column quantity(Количество) decimal(15, 3)
-        column amount(Сумма) decimal(15, 2)
+        column quantity(Количество) Dec(15, 3)
+        column amount(Сумма) Dec(15, 2)
     }
 }

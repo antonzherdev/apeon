@@ -8,9 +8,9 @@ entity Material<comtec> extends StandardCatalog {
 
     def syncWhere = ["number"]
 
-    column number(nomen) char(19)
-    column barCode(code) char(19)
-    column vat(percent_nds) decimal(6, 4)
+    column number(nomen) String(19)
+    column barCode(code) String(19)
+    column vat(percent_nds) Dec(6, 4)
 
     one unit1(id_edizm1) Unit
     one unit2(id_edizm2) Unit
@@ -19,23 +19,23 @@ entity Material<comtec> extends StandardCatalog {
     one currency(id_curr) Currency //Валюта пересчета
     one group(belong_id) MaterialGroup
 
-    column estimatedVat(percent_rnds) decimal(6, 4)  //Расчетная ставка НДС
-    column quantityInPackage("package") decimal(13, 5)   //Кол-во в упак в осн ед измерения
-    column photoFileName(foto) varchar(1024) //Фото
-    column price(prc1) decimal(17, 2) //Справочная цена
-    column inventoryNumber(inv) decimal(17, 2)  //Инвентарный номер
-    column packingType(packing) char(19) //Вид упаковки
-    column volume(vol_bat) decimal(6, 3) //Объем
-    column displayedInPriceList(active_in_price) integer //Показывать в прайс-листе
-    column locked(data_lock) char(1)  //Закрыто для коррекции
-    column cancellationMethod(methods) char(1) //Метод списания
-    column isKit(is_compl) char(1)   //Комплект
-    column hasConsignments(has_cons) char(1)  //Вести партионный учет
-    column consignmentCancellationMethod(cons_methods) char(1) //Метод автосписания партий
-    column displayedConsignmentColumns(cons_view) char(1) //Колонки из партий
-    column appliedConsignmentPriceCancellation(method2cons) char(1) //Списание по цене партии
-    column durability(srok) decimal(10,4) //Срок службы
-    column isCommissionMaterial(is_commis) char(1) //Признак комиссионного товара
+    column estimatedVat(percent_rnds) Dec(6, 4)  //Расчетная ставка НДС
+    column quantityInPackage("package") Dec(13, 5)   //Кол-во в упак в осн ед измерения
+    column photoFileName(foto) String(1024) //Фото
+    column price(prc1) Dec(17, 2) //Справочная цена
+    column inventoryNumber(inv) Dec(17, 2)  //Инвентарный номер
+    column packingType(packing) String(19) //Вид упаковки
+    column volume(vol_bat) Dec(6, 3) //Объем
+    column displayedInPriceList(active_in_price) Int //Показывать в прайс-листе
+    column locked(data_lock) String(1)  //Закрыто для коррекции
+    column cancellationMethod(methods) String(1) //Метод списания
+    column isKit(is_compl) String(1)   //Комплект
+    column hasConsignments(has_cons) String(1)  //Вести партионный учет
+    column consignmentCancellationMethod(cons_methods) String(1) //Метод автосписания партий
+    column displayedConsignmentColumns(cons_view) String(1) //Колонки из партий
+    column appliedConsignmentPriceCancellation(method2cons) String(1) //Списание по цене партии
+    column durability(srok) Dec(10,4) //Срок службы
+    column isCommissionMaterial(is_commis) String(1) //Признак комиссионного товара
 }
 
 entity MaterialGroup<comtec> {
@@ -46,8 +46,8 @@ entity MaterialGroup<comtec> {
 
     def syncWhere = ["name", "parent.name"]
 
-    column id integer primary key
-    column name(nm) varchar(254)
+    column id Int primary key
+    column name(nm) String(254)
     one parent(belong_id) MaterialGroup
 
     many child MaterialGroup.parent
@@ -64,7 +64,7 @@ entity Unit<comtec> extends StandardCatalog{
 entity Size<comtec> extends StandardCatalog{
     table dba.size
 
-    column remark(rem)  char(37)
+    column remark(rem)  String(37)
 
     def toString : String = Format.str("Размер", id, name)
     def syncWhere = ["name"]

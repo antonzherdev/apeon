@@ -103,7 +103,7 @@ trait SqlReadOnly {
 
   implicit def cellAsInt(r : Cell) : Int = r match {
     case CellData(d : Int) => d
-    case CellData(_) => throw new SqlError("Cell is not integer")
+    case CellData(_) => throw new SqlError("Cell is not Int")
     case CellNull() =>  0
   }
 

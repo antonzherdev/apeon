@@ -72,9 +72,8 @@ class C1DataSource(val dataSource : DataSource) extends DataSourceImpl with Logg
   private def fromVariant(field: Field, v: OCVariant): Any = {
     val m = field.asInstanceOf[Attribute].dataType match {
       case AttributeDataTypeBoolean() => v.getBoolean
-      case c: AttributeDataTypeChar => v.getString
+      case c: AttributeDataTypeString => v.getString
       case d: AttributeDataTypeDate => v.getDate
-      case d: AttributeDataTypeDateTime => v.getDate
       case d: AttributeDataTypeDecimal => BigDecimal(
         try {
           v.getDouble.doubleValue
@@ -83,9 +82,6 @@ class C1DataSource(val dataSource : DataSource) extends DataSourceImpl with Logg
           case e: Throwable => v.getInt.doubleValue
         }, BigDecimal.defaultMathContext)
       case d: AttributeDataTypeInteger => v.getInt
-      case d: AttributeDataTypeText => v.getString
-      case d: AttributeDataTypeTime => v.getDate
-      case d: AttributeDataTypeVarchar => v.getString
     }
     m
   }

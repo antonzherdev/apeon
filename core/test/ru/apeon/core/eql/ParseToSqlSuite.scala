@@ -12,7 +12,7 @@ import script._
  */
 
 class ParseToSqlSuite extends FunSuite with ShouldMatchers with EntityDefine{
-  val entityName = Attribute(pack, "entityName", "entityName", AttributeDataTypeVarchar(64))
+  val entityName = Attribute(pack, "entityName", "entityName", AttributeDataTypeString())
   val toSync = desc("ToSync").table("x_sync").decl(Id, entityName).b
   override def createDataSource  = new DataSource(pack, "ds") {
     override def store = EntityConfiguration.store

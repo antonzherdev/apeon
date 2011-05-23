@@ -19,7 +19,7 @@ class DefaultSqlDialect extends SqlDialect with TextGen {
 
   //TODO: Колонка id не является обязательной. Нужно добавлять таблицу без колонки id. Может быть, добавлять пустую колонку или выполнять проверку только с одной уже известной колонкий. Добавлять pk нужно уже при добавлении соответствующей колонки.
   def createTableStatement(table : SqlTable) : String =
-    """create table %s(id integer primary key default autoincrement)""".format(table)
+    """create table %s(id Int primary key default autoincrement)""".format(table)
 
   def createColumnStatement(column : SqlColumn) =
     """alter table %s add %s;""".format(column.table, columnDefinitionStatement(column))
@@ -427,7 +427,7 @@ class AsaSqlDialect extends DefaultSqlDialect {
   override val schema = "dba"
 
   override def createTableStatement(table: SqlTable) =
-    """create table %1$s(id integer default 0 primary key);
+    """create table %1$s(id Int default 0 primary key);
  insert into %1$s(id) values(0);""".format(table)
 }
 

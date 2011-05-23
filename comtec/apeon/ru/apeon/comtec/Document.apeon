@@ -1,16 +1,16 @@
 package ru.apeon.comtec
 
 entity StandardDocument<comtec> {
-    column id integer primary key
-    column date(dat) date
-    column number(nu) char(17)
-    column locked(data_lock) char(1)
+    column id Int primary key
+    column date(dat) Date
+    column number(nu) String(17)
+    column locked(data_lock) String(1)
 
-    def syncWhere = ["date", "number"]
+    def syncWhere = ["Date", "number"]
 }
 
 entity StandardSubDocument<comtec> {
-    column id integer primary key
-    column number(nu) integer
+    column id Int primary key
+    column number(nu) Int
     def syncWhere = ["parent", "number"]
 }

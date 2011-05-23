@@ -3,7 +3,7 @@ package ru.apeon.comtec
 entity Guide<comtec> {
     table dba.guides
 
-    column id integer primary key
+    column id Int primary key
 
 	def syncWhere = ["id"]
 	def toString : String = "Документ(%d)".format(id)

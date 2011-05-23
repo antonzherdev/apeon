@@ -6,7 +6,7 @@ entity Partner<comtec> extends StandardCatalog{
 
    many addresses PartnerAddress.partner
 
-   column locked(data_lock) char(1)
+   column locked(data_lock) String(1)
    
    def toString : String = Format.str("Партнер", id, name)
 }
@@ -15,19 +15,19 @@ entity Organization<comtec> extends Partner {
     table dba.voc_names
     join dba.post(id)
 
-    column inn(post.inn) char(14)
-    column kpp(post.kpp) char(10)
-    column okonh(post.okonx) char(5)
-    column okpo(post.okpo) char(10)
-    column okved(post.okved) char(8)
-    column phone char(37)
+    column inn(post.inn) String(14)
+    column kpp(post.kpp) String(10)
+    column okonh(post.okonx) String(5)
+    column okpo(post.okpo) String(10)
+    column okved(post.okved) String(8)
+    column phone String(37)
 
-    column email(post.e_mail) char(37)
-    column remark(rem) char(301) //Примечание
+    column email(post.e_mail) String(37)
+    column remark(rem) String(301) //Примечание
 
-    column legalAddress(address) varchar(355)
-    column actualAddress(address_fact) varchar(355)
-    column number(code) char(7)
+    column legalAddress(address) String(355)
+    column actualAddress(address_fact) String(355)
+    column number(code) String(7)
 
 
     one country(id_country) Country
@@ -46,8 +46,8 @@ entity OrganizationGroup<comtec> {
     table dba.voc_names
     discriminator is_group="1"
 
-    column id integer primary key
-    column name(nm) varchar(254)
+    column id Int primary key
+    column name(nm) String(254)
     one parent(belong_id) OrganizationGroup
 
     many child OrganizationGroup.parent
@@ -65,15 +65,15 @@ entity Storage<comtec> extends Place {
     table dba.voc_names
     join dba.storage(id)
 
-    column belong(belong_id) integer default 2
+    column belong(belong_id) Int default 2
 }
 
 entity PartnerAddress<comtec>{
     table dba.voc_names_address
 
-    column id integer primary key
-    column name(nm) varchar(203) //Альтернативное наименование организации
-    column address varchar(1024) //Адрес
+    column id Int primary key
+    column name(nm) String(203) //Альтернативное наименование организации
+    column address String(1024) //Адрес
 
     one partner(id_voc_names) Partner //Организация
 	
@@ -93,16 +93,16 @@ entity Employee<comtec> extends Partner {
     join dba.kad(id)
 
     one person(kad.id_person) Person
-    column group(belong_id) integer default 4
+    column group(belong_id) Int default 4
 }
 
 entity Person<comtec> {
     table dba.person
 
-    column id integer primary key
-    column firstName(firstname) varchar(63)
-    column secondName(secondname) varchar(63)
-    column middleName(patronymic) varchar(63)
+    column id Int primary key
+    column firstName(firstname) String(63)
+    column secondName(secondname) String(63)
+    column middleName(patronymic) String(63)
 
     def syncWhere = ["firstName", "secondName", "middleName"]
 }

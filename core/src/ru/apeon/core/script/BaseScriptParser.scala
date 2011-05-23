@@ -189,7 +189,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     }
 
   def attributeDataType : Parser[AttributeDataType] = ident ~ opt(attributeDataTypePar) ^^ {
-    case n ~ w => AttributeDataType(n, w.getOrElse((0, 0))._1, w.getOrElse((0, 0))._2)
+    case n ~ w => AttributeDataType(n, w.map(_._1), w.map(_._2))
   }
   def attributeDataTypePar : Parser[(Int, Int)]= "(" ~> numericLit ~ opt("," ~> numericLit) <~ ")" ^^ {
     case width ~ scale => (width.toInt, scale.getOrElse("0").toInt)

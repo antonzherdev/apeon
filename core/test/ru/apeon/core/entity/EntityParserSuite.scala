@@ -41,10 +41,10 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        column name(nm) varchar(254)
+        column name(nm) String(254)
       }
       """)should equal(script(
-    desc("Article").decl(Attribute(pack, "name", "nm", AttributeDataTypeVarchar(254))).b
+    desc("Article").decl(Attribute(pack, "name", "nm", AttributeDataTypeString(Some(254)))).b
     ))
   }
 
@@ -52,22 +52,22 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        column name(nm, nam<ds>) varchar(254)
+        column name(nm, nam<ds>) String(254)
       }
       """)should equal(script(
     desc("Article").decl(
-          Attribute(pack, "name", FieldSources(FieldSource("nm"), Map("ds" -> FieldSource("nam"))), AttributeDataTypeVarchar(254))
+          Attribute(pack, "name", FieldSources(FieldSource("nm"), Map("ds" -> FieldSource("nam"))), AttributeDataTypeString(Some(254)))
           ).b
     ))
 
     ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        column name(nam<ds>) varchar(254)
+        column name(nam<ds>) String
       }
       """)should equal(script(
     desc("Article").decl(
-          Attribute(pack, "name", FieldSources(FieldSource("name"), Map("ds" -> FieldSource("nam"))), AttributeDataTypeVarchar(254))
+          Attribute(pack, "name", FieldSources(FieldSource("name"), Map("ds" -> FieldSource("nam"))), AttributeDataTypeString())
           ).b
     ))
   }
@@ -76,11 +76,11 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        column name("entity") varchar(254)
+        column name("entity") String(254)
       }
       """)should equal(script(
     desc("Article").decl(
-          Attribute(pack, "name", "entity", AttributeDataTypeVarchar(254))
+          Attribute(pack, "name", "entity", AttributeDataTypeString(Some(254)))
           ).b
     ))
   }
@@ -89,11 +89,11 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        column name(post.nm) varchar(254)
+        column name(post.nm) String(254)
       }
       """)should equal(script(
     desc("Article").decl(
-          Attribute(pack, "name", ("post", "nm"), AttributeDataTypeVarchar(254))
+          Attribute(pack, "name", ("post", "nm"), AttributeDataTypeString(Some(254)))
           ).b
     ))
   }
@@ -102,11 +102,11 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        column name varchar(254) default "test"
+        column name String(254) default "test"
       }
       """)should equal(script(
     desc("Article").decl(
-          Attribute(pack, "name", "name", AttributeDataTypeVarchar(254), default = Some(DefaultString("test")))
+          Attribute(pack, "name", "name", AttributeDataTypeString(Some(254)), default = Some(DefaultString("test")))
           ).b
     ))
   }
@@ -115,7 +115,7 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
     ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        column id integer primary key
+        column id Int primary key
       }
       """)should equal(script(
     desc("Article").decl(
@@ -211,13 +211,13 @@ entity InvoiceForPayment<ds>{
       """
       entity Article<ds> {
         many test(tst) {
-          column name varchar(254)
+          column name String(254)
         }
       }
       """)
     val t = desc("Article.test").table("Article_test").decl(
       ToOne(pack, "parent", "tst", "Article"),
-      Attribute(pack, "name", "name", AttributeDataTypeVarchar(254))
+      Attribute(pack, "name", "name", AttributeDataTypeString(Some(254)))
     ).b
     val ed = desc("Article").table("Article").decl(
       ToManyBuiltIn(pack, "test",t)
@@ -233,7 +233,7 @@ entity InvoiceForPayment<ds>{
       entity Article<ds> {
         many test extends T{
           one parent(tst) Article primary key
-          column number integer primary key
+          column number Int primary key
         }
       }
       """)
@@ -254,13 +254,13 @@ entity Article<ds>{
     table dba.inv
     discriminator is_group="0"
 
-    column id integer primary key
-    column name(nm) varchar(254)
+    column id Int primary key
+    column name(nm) String(254)
 }
       """)should equal(script(
       desc("Article").table("dba", "inv").decl(
         Attribute(pack, "id", "id", AttributeDataTypeInteger(), isPrimaryKey = true),
-          Attribute(pack, "name", "nm", AttributeDataTypeVarchar(254))).
+          Attribute(pack, "name", "nm", AttributeDataTypeString(Some(254)))).
         discriminator("is_group", "0").b
     ))
   }
@@ -304,7 +304,7 @@ entity Article<ds>{
   test("extend entity") {
     ScriptParser.parse(model, CoreModule, pack,
     """extend entity Material{
-    column e integer
+    column e Int
     }"""
     ) should equal (
       script(ExtendEntity(CoreModule, "Material",

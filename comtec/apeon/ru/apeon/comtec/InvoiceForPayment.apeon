@@ -5,7 +5,7 @@ entity InvoiceForPayment<comtec> extends StandardDocument{
 
     discriminator tp1="3"
 
-    def toString : String = Format.doc("Счет", id, date, number)
+    def toString : String = Format.doc("Счет", id, Date, number)
 
     one storage(id_s) Partner
     one customer(id_d) Organization
@@ -19,16 +19,16 @@ entity InvoiceForPayment<comtec> extends StandardDocument{
     one text(id_text) InvoiceText
 
     one currency(id_curr) Currency
-    column rate(curr) decimal(14, 6)
-    column rateDate(datv) date //Дата курса
+    column rate(curr) Dec(14, 6)
+    column rateDate(datv) Date //Дата курса
 
-    column remark(rem) text //Примечание
-    column state char(1) //Состояние
-    column delayDaysCount(real_days) integer //Дней отсрочки
-    column editingDateTimeString(dat_edit) char(23) //Дата редактирования
+    column remark(rem) String //Примечание
+    column state String(1) //Состояние
+    column delayDaysCount(real_days) Int //Дней отсрочки
+    column editingDateTimeString(dat_edit) String(23) //Дата редактирования
 
     one deliveryAddress(id_address) PartnerAddress //Адрес доставки
-    column deliveryDate(dat_supply) date //Дата поставки*/
+    column deliveryDate(dat_supply) Date //Дата поставки*/
 
     many materials(id_jmat) extends StandardSubDocument{
         table dba.scet
@@ -36,16 +36,16 @@ entity InvoiceForPayment<comtec> extends StandardDocument{
         one invoiceForPayment() InvoiceForPayment
         one material(id_inv) Material
 
-        column quantity(kol1) decimal(17, 5)
-        column amount(summa_sale) decimal(17, 5)
-        column currencyAmount(summa_salev) decimal(17, 5)
-        column vat(percent_nds) decimal(6, 4)
-        column vatAmount(summa_nds) decimal(19, 7)
+        column quantity(kol1) Dec(17, 5)
+        column amount(summa_sale) Dec(17, 5)
+        column currencyAmount(summa_salev) Dec(17, 5)
+        column vat(percent_nds) Dec(6, 4)
+        column vatAmount(summa_nds) Dec(19, 7)
 
-        column accountAmount(summa) decimal(19, 7) //Учетная сумма
-        column quantity2(kol2) decimal(17, 5) //Кол-во в доп ед
-        column priceListPrice(price_price) decimal(19, 7) //Цена из прайс-листа
-        column amountForPayment(summa_oplata) decimal(19, 7) //Сумма оплаты
+        column accountAmount(summa) Dec(19, 7) //Учетная сумма
+        column quantity2(kol2) Dec(17, 5) //Кол-во в доп ед
+        column priceListPrice(price_price) Dec(19, 7) //Цена из прайс-листа
+        column amountForPayment(summa_oplata) Dec(19, 7) //Сумма оплаты
 
         def toString : String = Format.sub("Пр.счета", id, number, material.name, parent.toString)
     }
@@ -55,8 +55,8 @@ entity InvoiceText<comtec>{
     table dba.jscet_txt
     discriminator id_jour="1005"
 
-    column id integer primary key
-    column text(txt) char(255)
+    column id Int primary key
+    column text(txt) String(255)
     def toString : String = Format.str("Текст под счетом", id, text)
     def syncWhere = ["text"]
 }

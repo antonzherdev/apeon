@@ -3,9 +3,9 @@ package ru.apeon.comtec
 entity Order<comtec> extends StandardDocument {
     table dba.jdog
 
-    column startDate(dat_workbeg) date
-    column endDate(dat_workend) date
-    column name(nm) text
+    column startDate(dat_workbeg) Date
+    column endDate(dat_workend) Date
+    column name(nm) String
 
     one organization(id_post) Organization
 	

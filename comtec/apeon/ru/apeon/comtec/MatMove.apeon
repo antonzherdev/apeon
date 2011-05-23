@@ -10,47 +10,47 @@ entity MatMove<comtec> extends StandardDocument{
     one consignee(id_d_cargo) Organization
 
     one guide(id_guide) Guide
-    column tp1 char(1)
-    column tp2 char(1)
-    column tp3 char(1)
-    column tp4 char(1)
+    column tp1 String(1)
+    column tp2 String(1)
+    column tp3 String(1)
+    column tp4 String(1)
 
-    column factOut(fact_out) char(1) default "1"
+    column factOut(fact_out) String(1) default "1"
 
     one currency(id_curr) Currency
-    column rate(curr) decimal(14, 6)
-    column rateDate(datv) date
+    column rate(curr) Dec(14, 6)
+    column rateDate(datv) Date
 
-    column ground(osn) varchar(127)        //Основание
-    column remark(rem) text       //Примечание
-    column byWhom(kogo) varchar(37)     //Через кого
-    column who(komy) varchar(37)  //Кому
-    column locked(data_lock) char(1)
+    column ground(osn) String(127)        //Основание
+    column remark(rem) String       //Примечание
+    column byWhom(kogo) String(37)     //Через кого
+    column who(komy) String(37)  //Кому
+    column locked(data_lock) String(1)
 	
-	def toString : String = Format.doc("Движение материалов", id, date, number)
+	def toString : String = Format.doc("Движение материалов", id, Date, number)
 
     many materials(id_jmat) extends StandardSubDocument{
         table dba.mat
 
         one material(id_inv) Material
 
-        column quantity(kol1) decimal(17, 5)
-        column amount(summa_sale) decimal(17, 5)
+        column quantity(kol1) Dec(17, 5)
+        column amount(summa_sale) Dec(17, 5)
 
-        column currencyAmount(summa_curr) decimal(17, 5) //Сумма в валюте в обычной накладной
-        column currencyAmountForImportExport(summa_salev) decimal(17, 5) //Сумма в валюте в валютной накладной
-        column currencyAccountAmount(summa_freev) decimal(17, 5) //Учетная сумма в валюте
+        column currencyAmount(summa_curr) Dec(17, 5) //Сумма в валюте в обычной накладной
+        column currencyAmountForImportExport(summa_salev) Dec(17, 5) //Сумма в валюте в валютной накладной
+        column currencyAccountAmount(summa_freev) Dec(17, 5) //Учетная сумма в валюте
 
-        column vat(percent_nds) decimal(6, 4)
-        column vatAmount(summa_nds_sale) decimal(19, 7) //Сумма НДС продажи
-        column vatAccountAmount(summa_nds) decimal(19, 7)
+        column vat(percent_nds) Dec(6, 4)
+        column vatAmount(summa_nds_sale) Dec(19, 7) //Сумма НДС продажи
+        column vatAccountAmount(summa_nds) Dec(19, 7)
 
-        column accountAmount(summa) decimal(17, 5) //Учетная сумма
+        column accountAmount(summa) Dec(17, 5) //Учетная сумма
 
 
-        column quantity2(kol2) decimal(17, 5)
-        column mustHaveQuantity(kol3) decimal(17, 5) //Количество по документу
-        column priceListPrice(price_price) decimal(19, 7)
+        column quantity2(kol2) Dec(17, 5)
+        column mustHaveQuantity(kol3) Dec(17, 5) //Количество по документу
+        column priceListPrice(price_price) Dec(19, 7)
 
         def toString : String = Format.sub("Пр.движения материалов", id, number, material.name, parent.toString)
     }
@@ -64,7 +64,7 @@ object MatMove{
 		ret.tp3 = "2"
 		ret.tp4 = "0"
 		ret.guide = 1120
-		ret.date = Date.now
+		ret.Date = Date.now
 		ret
 	}
 	def insertFromStorage : MatMove = {
@@ -74,7 +74,7 @@ object MatMove{
 		ret.tp3 = "1"
 		ret.tp4 = "0"
 		ret.guide = 1210
-		ret.date = Date.now
+		ret.Date = Date.now
 		ret
 	}
 }

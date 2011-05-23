@@ -30,7 +30,7 @@ trait Declaration{
   def correspond(env : Environment, parameters : Option[Seq[Par]]) : Boolean = parameters match {
     case None => this.parameters.isEmpty
     case _ => parameters.get.corresponds(this.parameters){(p : Par, dp : DefPar) =>
-      dp.dataType == p.expression.dataType(env)
+      dp.dataType.correspond(p.expression.dataType(env))
     }
   }
 
