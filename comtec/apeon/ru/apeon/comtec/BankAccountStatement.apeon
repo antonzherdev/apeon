@@ -24,5 +24,5 @@ entity BankAccountStatement<comtec> extends StandardDocument {
         def toString : String = Format.sub("Пр.банковской выписки", id, number, parent.toString)
     }
 
-    def toString : String = Format.doc("Банковская выписка", id, Date, number)
+    def toString : String = Format.doc("Банковская выписка", id, date, number)
 }

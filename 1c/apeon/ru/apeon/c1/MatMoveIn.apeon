@@ -3,10 +3,10 @@ package ru.apeon.c1
 entity MatMoveIn<c1> {
     table Document.ПоступлениеТоваровУслуг
 
-    column id(Ref) char(36) primary key
-    column number(Номер) varchar(254)
-    column date(Дата) date
-    column remark(Комментарий) text
+    column id(Ref) String(36) primary key
+    column number(Номер) String(254)
+    column date(Дата) Date
+    column remark(Комментарий) String
 
     many materials {
         table Document.ПоступлениеТоваровУслуг.Товары

@@ -5,7 +5,7 @@ entity Invoice<comtec> extends StandardDocument{
 
 	column type(tp) String(1) //Тип счет-фактуры
 
-	def toString : String = Format.doc("Счет-фактура", id, Date, number)
+	def toString : String = Format.doc("Счет-фактура", id, date, number)
 
     one consignor(id_d_cargo) Organization // Грузоотправитель
     one consignee(id_s_cargo) Organization //Грузополучатель

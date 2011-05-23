@@ -27,7 +27,7 @@ entity MatMove<comtec> extends StandardDocument{
     column who(komy) String(37)  //Кому
     column locked(data_lock) String(1)
 	
-	def toString : String = Format.doc("Движение материалов", id, Date, number)
+	def toString : String = Format.doc("Движение материалов", id, date, number)
 
     many materials(id_jmat) extends StandardSubDocument{
         table dba.mat
@@ -64,7 +64,7 @@ object MatMove{
 		ret.tp3 = "2"
 		ret.tp4 = "0"
 		ret.guide = 1120
-		ret.Date = Date.now
+		ret.date = Date.now
 		ret
 	}
 	def insertFromStorage : MatMove = {
@@ -74,7 +74,7 @@ object MatMove{
 		ret.tp3 = "1"
 		ret.tp4 = "0"
 		ret.guide = 1210
-		ret.Date = Date.now
+		ret.date = Date.now
 		ret
 	}
 }

@@ -5,7 +5,7 @@ entity InvoiceForPayment<comtec> extends StandardDocument{
 
     discriminator tp1="3"
 
-    def toString : String = Format.doc("Счет", id, Date, number)
+    def toString : String = Format.doc("Счет", id, date, number)
 
     one storage(id_s) Partner
     one customer(id_d) Organization
