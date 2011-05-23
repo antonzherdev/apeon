@@ -29,10 +29,7 @@ object ScriptDataTypeDateDescription {
     }
 
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDate()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(p)) => p.expression.dataType(env) == ScriptDataTypeInteger()
-      case _ => false
-    }
+    override def parameters = Seq(DefPar("value", ScriptDataTypeInteger()))
   }
 
   def daysTo = new Declaration {
@@ -50,14 +47,8 @@ object ScriptDataTypeDateDescription {
       }
       b.result()
     }
-
     def name = "daysTo"
-
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(ScriptDataTypeDate())
-
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(Par(dat, _))) => dat.dataType(env) == ScriptDataTypeDate()
-      case _ => false
-    }
+    override def parameters = Seq(DefPar("to", ScriptDataTypeDate()))
   }
 }

@@ -53,7 +53,7 @@ object SyncDeclaration extends Declaration {
       }
     }
 
-  def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+  override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
     case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _), Par(bf : BuiltInFunction, _))) =>
       entity.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription]
     case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _))) =>

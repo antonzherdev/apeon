@@ -16,6 +16,8 @@ abstract class ScriptDataType {
   def fillRef(env: Environment, imports: Imports) {}
 
   def valueOf(str : String) : Any = throw new ScriptException("Unsupported conversation from string to \"%s\".".format(getClass))
+
+  def correspond(dataType : ScriptDataType) : Boolean = dataType == this
 }
 
 object ScriptDataTypeDescription {

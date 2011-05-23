@@ -31,7 +31,7 @@ case class ScriptDataTypeObject(query : ObjectBase) extends ScriptDataType {
 case class ScriptDataTypeEntityByDescription(description : Description) extends ScriptDataTypeEntity
 
 object ScriptDataTypeEntityTypeDescription {
-  def declarations = Seq(copy, delete)
+  def declarations = Seq(copy0, copy1, delete)
 
   def delete = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) {
@@ -39,33 +39,26 @@ object ScriptDataTypeEntityTypeDescription {
     }
     def name = "delete"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeUnit()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty || parameters.get.isEmpty
   }
 
-  def copy = new Declaration {
+  def copy0 = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       val source = env.ref.asInstanceOf[Entity]
-      source.copy(
-        parameters match {
-          case None => source.id.description
-          case Some(Seq()) => source.id.description
-          case Some(Seq(p)) => p.value.asInstanceOf[Description]
-        },
+      source.copy(source.id.description, env.dataSource(dataSource).getOrElse(source.id.dataSource))
+    }
+    def name = "copy"
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) = env.dotType.get
+  }
+
+  def copy1 = new Declaration {
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val source = env.ref.asInstanceOf[Entity]
+      source.copy(parameters.get.head.value.asInstanceOf[Description],
         env.dataSource(dataSource).getOrElse(source.id.dataSource))
     }
     def name = "copy"
-    def dataType(env: Environment, parameters : Option[Seq[Par]]) = parameters match {
-      case None =>  env.dotType.get
-      case Some(Seq()) => env.dotType.get
-      case Some(Seq(p)) =>  ScriptDataTypeEntityByDescription(
-        p.expression.dataType(env).asInstanceOf[ScriptDataTypeEntityDescription].description)
-    }
-
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case None => true
-      case Some(Seq()) => true
-      case Some(Seq(p)) => p.expression.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription]
-      case _ => false
-    }
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(
+      parameters.get.head.expression.dataType(env).asInstanceOf[ScriptDataTypeEntityDescription].description)
+    override def parameters = Seq(DefPar("entity", ScriptDataTypeEntityDescriptionTemplate()))
   }
 }

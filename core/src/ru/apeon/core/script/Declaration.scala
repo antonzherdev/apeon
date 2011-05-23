@@ -27,7 +27,12 @@ trait Declaration{
    * Соответствует ли набор параметров тому, что можно выполнить
    * @param parameters параметры
    */
-  def correspond(env : Environment, parameters : Option[Seq[Par]]) : Boolean
+  def correspond(env : Environment, parameters : Option[Seq[Par]]) : Boolean = parameters match {
+    case None => this.parameters.isEmpty
+    case _ => parameters.get.corresponds(this.parameters){(p : Par, dp : DefPar) =>
+      dp.dataType == p.expression.dataType(env)
+    }
+  }
 
   /**
    * Вернуть типы параметров для встроенной функции
@@ -40,6 +45,11 @@ trait Declaration{
     throw ScriptException(env, "Not supported")
 
   def declarationString : String = toString
+
+  def equalsSignature(declaration : Declaration) : Boolean =
+    this.name == declaration.name && this.parameters.sameElements(declaration.parameters)
+
+  def parameters : Seq[DefPar] = Seq()
 }
 
 case class BuiltInParameterDef(defaultName : String, dataType : ScriptDataType)
@@ -151,7 +161,6 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
   case class ParDeclaration(name : String, dataType : ScriptDataType) extends  Declaration{
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.value(this)
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = dataType
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
   def parameters : Seq[ParDeclaration] = _parameters
@@ -176,7 +185,7 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
  * @param resultType возвращаемый тип, если явно указан
  * @param statement выражение
  */
-case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = Seq(),
+case class Def(name : String, statement : Statement, override val parameters : Seq[DefPar] = Seq(),
                resultType : Option[ScriptDataType] = None)
         extends DeclarationStatement
 {
@@ -211,14 +220,6 @@ case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = 
     }
   }
 
-  def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters match {
-    case None => this.parameters.isEmpty
-    case _ => parameters.get.corresponds(this.parameters){(p : Par, dp : DefPar) =>
-      dp.dataType == p.expression.dataType(env)
-    }
-  }
-
-
   override def fillRef(env: Environment, imports: Imports) {
     env.addDeclaration(this)
     env.atomic{
@@ -250,11 +251,7 @@ case class ParVal(value : Any, name : Option[String])
  */
 case class DefPar(name : String, dataType : ScriptDataType) extends Declaration {
   def dataType(env: Environment, parameters : Option[Seq[Par]]) = dataType
-
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.value(this)
-
-  def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-
   override def toString = "%s : %s".format(name, dataType)
 }
 
@@ -273,9 +270,6 @@ abstract class VariableDeclaration extends DeclarationStatement {
     case None => init.dataType(env)
   }
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.value(this)
-
-  def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-
   def init : Expression
 
   override def fillRef(env: Environment, imports: Imports) {

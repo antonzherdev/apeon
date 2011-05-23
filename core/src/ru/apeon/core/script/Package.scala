@@ -10,7 +10,6 @@ case class Package(name : String) extends Statement with Declaration {
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypePackage(this)
-  def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   def preFillRef(env : Environment, imports: Imports) {}
   def fillRef(env: Environment, imports: Imports) {}
   def evaluate(env: Environment) = {

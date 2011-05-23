@@ -52,14 +52,13 @@ case class Description(module : Module,
   }
 
 
-  override protected def declarationsLoad =
-    super.declarationsLoad ++ extendedFields
+  override protected def declarationsLoad = extendedDeclarations ++ super.declarationsLoad
 
   lazy val fields : Seq[Field] = declarations.filter(_.isInstanceOf[Field]).asInstanceOf[Seq[Field]]
   lazy val joinedTables : Seq[JoinedTable] = declaredJoinedTables ++ extendsClass.map{_.joinedTables}.getOrElse(Seq())
 
-  def extend(field : Field) {
-    extendedFields.append(field)
+  def extend(declaration : DeclarationStatement) {
+    extendedDeclarations.append(declaration)
   }
 
   private var _defaultDataSource : DataSource = _
@@ -100,7 +99,7 @@ case class Description(module : Module,
     case Some(d) => evaluateDef(entity.manager.model, d, entity).toString
   }
 
-  private val extendedFields = Buffer[Field]()
+  private val extendedDeclarations = Buffer[DeclarationStatement]()
 
   override def evaluate(env: Environment) = {
     env.model.addEntityDescription(this)
@@ -152,8 +151,6 @@ abstract class Field extends DeclarationStatement {
   def scriptDataType : ScriptDataType
 
   override def toString = name
-
-  def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
 
   def dataType(env: Environment) = scriptDataType
 
@@ -247,14 +244,14 @@ abstract class Discriminator
 case class DiscriminatorNull() extends Discriminator
 case class DiscriminatorColumn(columnName : String, value : Any) extends Discriminator
 
-case class ExtendEntity(module : Module, entityName : String, fields : Seq[Field]) extends Statement {
+case class ExtendEntity(module : Module, entityName : String, declarations : Seq[DeclarationStatement]) extends Statement {
   def evaluate(env: Environment) {}
 
   override def preFillRef(env : Environment, imports: Imports) {
     entityDescription = env.model.entityDescription(entityName, Some(imports))
-    fields.foreach{field =>
-      entityDescription.extend(field)
-      env.preFillRef(field, imports)
+    declarations.foreach{declaration =>
+      entityDescription.extend(declaration)
+      env.preFillRef(declaration, imports)
     }
   }
 
@@ -263,7 +260,7 @@ case class ExtendEntity(module : Module, entityName : String, fields : Seq[Field
   def dataType(env: Environment) = ScriptDataTypeUnit()
 
   def fillRef(env : Environment, imports : Imports) {
-    fields.foreach{field =>
+    declarations.foreach{field =>
       env.fillRef(field, imports)
     }
   }

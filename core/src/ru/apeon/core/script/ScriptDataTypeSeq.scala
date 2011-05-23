@@ -9,16 +9,13 @@ object ScriptDataTypeSeqDescription {
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeSeq].dataType
 
   abstract class OneBuiltInDeclaration extends Declaration {
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(Par(b : BuiltInFunction, _))) => true
-      case _ => false
-    }
     override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) =
       Seq(BuiltInParameterDef("_", tp(env)))
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       value(env,  env.ref.asInstanceOf[Iterable[Any]], parameters.get.head.value.asInstanceOf[BuiltInFunction])
     }
     def value(env : Environment, items : Iterable[Any], f : BuiltInFunction) : Any
+    override def parameters = Seq(DefPar("f", ScriptDataTypeBuiltInFunction()))
   }
 
   def foreach = new OneBuiltInDeclaration{
@@ -60,7 +57,6 @@ object ScriptDataTypeSeqDescription {
       env.ref.asInstanceOf[Seq[_]].isEmpty
     def name = "isEmpty"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
   def size = new Declaration {
@@ -68,6 +64,5 @@ object ScriptDataTypeSeqDescription {
       env.ref.asInstanceOf[Seq[_]].size
     def name = "size"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 }

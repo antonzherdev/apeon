@@ -70,7 +70,6 @@ object ScriptDataTypeEqlSelectBaseDescription {
 
   class FSelect extends Declaration{
     def name = "select"
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(rowDataType(env))
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       evaluate(env)
@@ -78,7 +77,6 @@ object ScriptDataTypeEqlSelectBaseDescription {
 
   class FGet extends Declaration{
     def name = "get"
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType(env)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
       case Seq(ret) => ret
@@ -116,6 +114,5 @@ object ScriptDataTypeEqlStatementDescription {
     }
     def name = "execute"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeUnit()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 }

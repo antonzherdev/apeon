@@ -3,9 +3,9 @@ package ru.apeon.sync
 import org.scalatest.matchers.ShouldMatchers
 import collection.mutable.Map
 import ru.apeon.core.eql
-import ru.apeon.core.entity.{OneEntityId, Entity, EntityId, EntityDefine}
 import ru.apeon.core.script._
 import org.scalatest.{Spec}
+import ru.apeon.core.entity._
 
 class SyncWhereSuite extends Spec with ShouldMatchers with ScriptTest with EntityDefine{
   SyncListener.preLoad()
@@ -65,5 +65,36 @@ class SyncWhereSuite extends Spec with ShouldMatchers with ScriptTest with Entit
     }
   }
 
-  //TODO: Переопределение syncWhere с помощью extend entity и наследования
+  describe("Overriding") {
+    def check() {
+      run(new EmptyEntityManager {
+        override def get(id: EntityId) = Some(new Entity(this, id, Map("id" -> 1, "uid" -> 2, "uid2" -> 3)))
+
+        override def select(select: eql.Select) = select.where.get match {
+          case eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid2")), eql.Const(3)) => Seq()
+          case w => fail("Bad where %s".format(w))
+        }
+      },
+        ref("B", 1) ~ ref("sync")
+      )
+    }
+    it("Inherit") {
+      withModel{
+        desc("A").decl(id, att("uid", int), att("uid2", int), syncWhere("d.uid = s.uid")).b
+        desc("B").ext("A").decl(syncWhere("d.uid2 = s.uid2")).b
+      }
+      check()
+    }
+    it("ExtendEntity") {
+      withModel{
+        desc("B").decl(id, att("uid", int), att("uid2", int), syncWhere("d.uid = s.uid")).b
+        val env = new DefaultEnvironment(model)
+        val e = ExtendEntity(CoreModule, "B", Seq(syncWhere("d.uid2 = s.uid2")))
+        e.evaluate(env)
+        e.preFillRef(env, Imports(pack))
+        e.fillRef(env, Imports(pack))
+      }
+      check()
+    }
+  }
 }

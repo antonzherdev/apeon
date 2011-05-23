@@ -5,8 +5,12 @@ import entity._
 import eql.DataSourceExpressionDataSource
 
 
+abstract class ScriptDataTypeBaseEntityDescription extends ScriptDataType {
+  override def correspond(dataType: ScriptDataType) = dataType.isInstanceOf[ScriptDataTypeBaseEntityDescription]
+}
 
-case class ScriptDataTypeEntityDescription(model : ObjectModel, description : Description) extends ScriptDataType {
+case class ScriptDataTypeEntityDescriptionTemplate() extends ScriptDataType
+case class ScriptDataTypeEntityDescription(model : ObjectModel, description : Description) extends ScriptDataTypeBaseEntityDescription {
   private lazy val obj : Option[ObjectBase] = model.objOption(description.fullName)
   override lazy val declarations =
     ScriptDataTypeDescription.declarations(classOf[ScriptDataTypeEntityDescription]) ++
@@ -18,7 +22,6 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
                 def dataType(env: Environment, parameters: Option[Seq[Par]]) =
                   ScriptDataTypeEntityDescription(model, field.asInstanceOf[ToManyBuiltIn].entity)
                 def name = field.name
-                def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
               }
             }
 }
@@ -34,7 +37,6 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
       env.em.insert(des(env), env.dataSource(dataSource).getOrElse(des(env).dataSource))
     def name = "insert"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(des(env))
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
   def applyId = new FindId {
@@ -57,10 +59,7 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
     def name = "find"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) : ScriptDataType =
       ScriptDataTypeOption(ScriptDataTypeEntityByDescription(des(env)))
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(par)) => par.expression.dataType(env) == ScriptDataTypeInteger()
-      case _ => false
-    }
+    override def parameters = Seq(DefPar("id", ScriptDataTypeInteger()))
   }
 
   def applyEql = new FindEql {
@@ -88,9 +87,6 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
     def name = "find"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) : ScriptDataType =
       ScriptDataTypeOption(ScriptDataTypeEntityByDescription(des(env)))
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(par)) => par.expression.dataType(env) == ScriptDataTypeEqlExpression()
-      case _ => false
-    }
+    override def parameters = Seq(DefPar("where", ScriptDataTypeEqlExpression()))
   }
 }

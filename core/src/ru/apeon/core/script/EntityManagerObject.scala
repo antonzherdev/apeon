@@ -12,7 +12,6 @@ object EntityManagerObject extends ObjectBase {
       env.em.transaction{}
     }
     def name = "commit"
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
   )
 }

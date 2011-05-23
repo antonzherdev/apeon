@@ -16,7 +16,6 @@ object DateObject extends ObjectBase {
       }
       def name = "now"
       def dataType(env: Environment) = ScriptDataTypeDate()
-      def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
     }
   )
 }

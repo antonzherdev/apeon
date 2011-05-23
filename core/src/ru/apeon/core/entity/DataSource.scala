@@ -14,7 +14,6 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
   def fillRef(env: Environment, imports: Imports) {}
   def preFillRef(env : Environment, imports: Imports) {}
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
-  def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
 
   private lazy val xml = Loader.apeonXml.\\("datasource").find(_.\("@name").text == fullName).getOrElse{
     throw new RuntimeException("Datasource \"%s\" nor found in apeon.xml.".format(name))}

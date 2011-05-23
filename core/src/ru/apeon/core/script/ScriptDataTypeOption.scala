@@ -13,7 +13,6 @@ object ScriptDataTypeOptionDescription {
     }
     def name = "get"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = tp(env)
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
   def isDefined = new Declaration{
@@ -22,7 +21,6 @@ object ScriptDataTypeOptionDescription {
     }
     def name = "isDefined"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
   def isEmpty = new Declaration{
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
@@ -30,7 +28,6 @@ object ScriptDataTypeOptionDescription {
     }
     def name = "isEmpty"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
   def getOrElse = new Declaration{
@@ -41,10 +38,7 @@ object ScriptDataTypeOptionDescription {
     }
     def name = "getOrElse"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = tp(env)
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(Par(b : BuiltInFunction, _))) => true
-      case _ => false
-    }
     override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) = Seq()
+    override def parameters = Seq(DefPar("default", ScriptDataTypeBuiltInFunction()))
   }
 }

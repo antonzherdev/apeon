@@ -1,5 +1,7 @@
 package ru.apeon.core.script
 
+import collection.mutable.Buffer
+
 trait ClassBase extends Declaration with Statement with InPackage {
   def declaredDeclarations : Seq[DeclarationStatement]
   def extendsClass : Option[ClassBase]
@@ -8,7 +10,17 @@ trait ClassBase extends Declaration with Statement with InPackage {
 
 
   protected def declarationsLoad : Seq[Declaration] = declaredDeclarations ++ extendsClass.map{_.declarations}.getOrElse(Seq())
-  private lazy val _declarations : Seq[Declaration] = declarationsLoad
+  private lazy val _declarations : Seq[Declaration] = filterOverride(declarationsLoad)
+  private def filterOverride(declarations : Seq[Declaration]) : Seq[Declaration] = {
+    val ret = Buffer[Declaration]()
+    for(declaration <- declarations) {
+      if(ret.forall(!_.equalsSignature(declaration))) {
+        ret.append(declaration)
+      }
+    }
+    ret.toSeq
+  }
+
   def declarations : Seq[Declaration] = _declarations
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
 
@@ -32,7 +44,6 @@ trait ClassBase extends Declaration with Statement with InPackage {
     this
   }
 
-  def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   def elementDataType(env: Environment) : ScriptDataType
 
   /**
