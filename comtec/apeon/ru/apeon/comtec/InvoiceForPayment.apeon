@@ -1,13 +1,9 @@
 package ru.apeon.comtec
 
-entity InvoiceForPayment<comtec>{
+entity InvoiceForPayment<comtec> extends StandardDocument{
     table dba.jscet
 
     discriminator tp1="3"
-
-    column id integer primary key
-    column date(dat) date
-    column number(nu) varchar(17)
 
     def toString : String = Format.doc("Счет", id, date, number)
 
@@ -26,7 +22,6 @@ entity InvoiceForPayment<comtec>{
     column rate(curr) decimal(14, 6)
     column rateDate(datv) date //Дата курса
 
-    column locked(data_lock) char(1)
     column remark(rem) text //Примечание
     column state char(1) //Состояние
     column delayDaysCount(real_days) integer //Дней отсрочки
@@ -35,11 +30,9 @@ entity InvoiceForPayment<comtec>{
     one deliveryAddress(id_address) PartnerAddress //Адрес доставки
     column deliveryDate(dat_supply) date //Дата поставки*/
 
-    many materials(id_jmat){
+    many materials(id_jmat) extends StandardSubDocument{
         table dba.scet
 
-        column id integer primary key
-        column number(nu) integer
         one invoiceForPayment() InvoiceForPayment
         one material(id_inv) Material
 
@@ -65,4 +58,5 @@ entity InvoiceText<comtec>{
     column id integer primary key
     column text(txt) char(255)
     def toString : String = Format.str("Текст под счетом", id, text)
+    def syncWhere = ["text"]
 }

@@ -1,11 +1,8 @@
 package ru.apeon.comtec
 
-entity Partner<comtec> {
+entity Partner<comtec> extends StandardCatalog{
    table dba.voc_names
    discriminator is_group="0"
-
-   column id integer primary key
-   column name(nm) varchar(254)
 
    many addresses PartnerAddress.partner
 
@@ -41,6 +38,8 @@ entity Organization<comtec> extends Partner {
 
     one region(post.id_region_custom) Region //Регион для аналитики
     one defaultAddress(post.id_address) PartnerAddress //Адрес доставки по умолчанию
+
+    def syncWhere = ["inn"]
 }
 
 entity OrganizationGroup<comtec> {
@@ -55,6 +54,7 @@ entity OrganizationGroup<comtec> {
     many materials Organization.group
 	
 	def toString : String = Format.str("Группа организаций", id, name)
+	def syncWhere = ["name", "parent.name"]
 }
 
 entity Place<comtec> extends Partner {
@@ -78,13 +78,12 @@ entity PartnerAddress<comtec>{
     one partner(id_voc_names) Partner //Организация
 	
 	def toString : String = Format.str("Адрес партнера", id, name)
+	def syncWhere = ["partner", "name"]
 }
 
-entity Region<comtec> {
+entity Region<comtec> extends  StandardCatalog{
     table dba.region_custom
 
-    column id integer primary key
-    column name(nm) char(47)
 	def toString : String = Format.str("Регион", id, name)
 }
 
@@ -104,4 +103,6 @@ entity Person<comtec> {
     column firstName(firstname) varchar(63)
     column secondName(secondname) varchar(63)
     column middleName(patronymic) varchar(63)
+
+    def syncWhere = ["firstName", "secondName", "middleName"]
 }

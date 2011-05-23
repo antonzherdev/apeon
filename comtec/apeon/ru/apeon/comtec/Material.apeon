@@ -1,17 +1,13 @@
 package ru.apeon.comtec
 
-entity Material<comtec> {
+entity Material<comtec> extends StandardCatalog {
     table dba.inv
     discriminator is_group="0"
 
     def toString : String = "ТМЦ(%d: %s[%s])".format(id, name, number)
 
-    def syncWhere = `s.number = d.number and s.id != d.id`
-    /*def syncWhere = ["number"]
-    */
+    def syncWhere = ["number"]
 
-    column id integer primary key
-    column name(nm) varchar(254)
     column number(nomen) char(19)
     column barCode(code) char(19)
     column vat(percent_nds) decimal(6, 4)
@@ -48,6 +44,8 @@ entity MaterialGroup<comtec> {
 
     def toString : String = Format.str("Группа ТМЦ", id, name)
 
+    def syncWhere = ["name", "parent.name"]
+
     column id integer primary key
     column name(nm) varchar(254)
     one parent(belong_id) MaterialGroup
@@ -57,20 +55,17 @@ entity MaterialGroup<comtec> {
 }
 
 
-entity Unit<comtec> {
+entity Unit<comtec> extends StandardCatalog{
     table dba.edizm
-
-    column id integer primary key
-    column name(nm) char(17)
 
     def toString : String = Format.str("Ед.изм.", id, name)
 }
 
-entity Size<comtec> {
+entity Size<comtec> extends StandardCatalog{
     table dba.size
 
-    column id integer primary key
-    column name(nm) char(17)
     column remark(rem)  char(37)
+
     def toString : String = Format.str("Размер", id, name)
+    def syncWhere = ["name"]
 }

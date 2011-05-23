@@ -1,11 +1,7 @@
 package ru.apeon.comtec
 
-entity MatMove<comtec> {
+entity MatMove<comtec> extends StandardDocument{
     table dba.jmat
-
-    column id integer primary key
-    column date(dat) date
-    column number(nu) varchar(17)
 
     one source(id_s) Partner
     one destination(id_d) Partner
@@ -33,11 +29,9 @@ entity MatMove<comtec> {
 	
 	def toString : String = Format.doc("Движение материалов", id, date, number)
 
-    many materials(id_jmat) {
+    many materials(id_jmat) extends StandardSubDocument{
         table dba.mat
 
-        column id integer primary key
-        column number(nu) integer
         one material(id_inv) Material
 
         column quantity(kol1) decimal(17, 5)
@@ -60,10 +54,6 @@ entity MatMove<comtec> {
 
         def toString : String = Format.sub("Пр.движения материалов", id, number, material.name, parent.toString)
     }
-}
-
-query Test {
-    `from MatMove.materials as t`.select
 }
 
 object MatMove{

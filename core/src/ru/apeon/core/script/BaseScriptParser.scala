@@ -6,7 +6,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
   def init(lexical: Lexer) {
     lexical.delimiters ++= List( "&&", "||",
       ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
-      "+=", "-=", "*=", "/=", "+", "-", "*", "/")
+      "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]")
     lexical.reserved += (
             "def", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
@@ -89,7 +89,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     }}) ~! (("<" ~> ident <~ ">") ^^ {case ds => {
       dataSourceName = ds
       ds
-    }}) ~ (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
+    }}) ~ (extendz?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
       case name ~ ds ~ ext ~ rows => {
         description(rows, ext)
       }
@@ -108,7 +108,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     ret
   }
 
-  def _extends = "extends" ~> entityRef
+  def extendz = "extends" ~> entityRef
 
   def entityRef = repsep(ident, ".") ^^ {case s => s.mkString(".")}
 
@@ -158,11 +158,11 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     ("many" ~> (ident ^^ {case n => {
       builtInName = n
       n
-    }})) ~ (dbName?) ~ ("{" ^^ {case "{" => {
+    }})) ~ (dbName?) ~ (extendz?) ~ ("{" ^^ {case "{" => {
       entityName.push(builtInName)
       "{"
     }}) ~! ((entityStatement*) <~ "}")  ^^ {
-      case name ~ dbName ~ "{" ~ statements => {
+      case name ~ dbName ~ extendz ~ "{" ~ statements => {
         ToManyBuiltIn(parser.pack.get, name, description(
           statements.find{
             case s : ToOne => s.name == "parent"
@@ -173,7 +173,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
             entityName.tail.reverse.mkString(".")
           ) +: statements
           case Some(p) => statements
-        }
+        }, extendz
         ))
       }
     }
@@ -259,7 +259,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       case s ~ None => ConstInt(-s.toInt)
       case s ~ Some(d) => ConstDecimal(BigDecimal(-(s + "." + d).toDouble))
     })
-
+  def seq = "[" ~> repsep(expression, ",") <~ "]" ^^ {s => ConstSeq(s)}
   def extendEntity = "extend" ~> "entity" ~> ident ~ ("{" ~> (extendEntityStatement*) <~ "}") ^^ {
     case name ~ statements => ExtendEntity(parser.module, name, statements)
   }
@@ -274,7 +274,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     | varStatement
     )
 
-  def term : Parser[Expression] = string | numeric | ref | eqlConst | nullConst | ifExpr | builtInFunction | bracket
+  def term : Parser[Expression] = string | numeric | ref | eqlConst | nullConst | ifExpr | builtInFunction | bracket | seq
 
   def expressionDef : Parser[Expression] = e500
 

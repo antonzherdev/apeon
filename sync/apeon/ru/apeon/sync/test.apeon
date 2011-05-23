@@ -1,6 +1,8 @@
 package ru.apeon.sync
 import ru.apeon.comtec._
 
+datasource loc2
+
 query Test{
-   Material(723).sync
+   Material(723).sync<loc2>
 }

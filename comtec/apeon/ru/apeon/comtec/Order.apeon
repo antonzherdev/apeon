@@ -1,11 +1,8 @@
 package ru.apeon.comtec
 
-entity Order<comtec> {
+entity Order<comtec> extends StandardDocument {
     table dba.jdog
 
-    column id integer primary key
-    column number(nu) varchar(98)
-    column dateOfSigning(dat) date
     column startDate(dat_workbeg) date
     column endDate(dat_workend) date
     column name(nm) text

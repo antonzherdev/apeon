@@ -1,11 +1,8 @@
 package ru.apeon.comtec
 
-entity Invoice<comtec> {
+entity Invoice<comtec> extends StandardDocument{
     table dba.jfact
 
-    column id integer primary key
-    column date(dat) date
-    column number(nu) char(25)
 	column type(tp) char(1) //Тип счет-фактуры
 
 	def toString : String = Format.doc("Счет-фактура", id, date, number)
@@ -29,11 +26,9 @@ entity Invoice<comtec> {
 
     one guide(id_guide2) Guide
 
-    many materials(id_jfact) {
+    many materials(id_jfact) extends StandardSubDocument{
         table dba.fact
 
-        column id integer primary key
-        column number(nu) integer
         one material(id_inv) Material
         column materialName(inv_free_type) char(255) //Произвольное наименование
 

@@ -1,0 +1,16 @@
+package ru.apeon.comtec
+
+entity StandardDocument<comtec> {
+    column id integer primary key
+    column date(dat) date
+    column number(nu) char(17)
+    column locked(data_lock) char(1)
+
+    def syncWhere = ["date", "number"]
+}
+
+entity StandardSubDocument<comtec> {
+    column id integer primary key
+    column number(nu) integer
+    def syncWhere = ["parent", "number"]
+}

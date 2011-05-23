@@ -231,13 +231,13 @@ entity InvoiceForPayment<ds>{
     val parsed = ScriptParser.parse(model, CoreModule, pack,
       """
       entity Article<ds> {
-        many test {
+        many test extends T{
           one parent(tst) Article primary key
           column number integer primary key
         }
       }
       """)
-    val t = desc("Article.test").table("Article_test").decl(
+    val t = desc("Article.test").table("Article_test").ext("T").decl(
       ToOne(pack, "parent", "tst", "Article", None, true),
       Attribute(pack, "number", "number", AttributeDataTypeInteger(), None, true)
     ).b

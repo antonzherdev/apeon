@@ -3,6 +3,7 @@ package ru.apeon.comtec
 entity BankAccount<comtec> {
     table dba.bank
 
+    def syncWhere = ["organization", "number"]
     column id integer primary key
     one organization(id_voc) Organization
     column bankName(nm) char(98)

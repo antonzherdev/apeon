@@ -1,20 +1,15 @@
 package ru.apeon.comtec
 
-entity BankAccountStatement<comtec> {
+entity BankAccountStatement<comtec> extends StandardDocument {
     table dba.jbanks
 
-    column id integer primary key
-    column date(dat) date
-    column number(nu) char(17)
-    column remark(rem) char(57)
-    column locked(data_lock) char(1)
     one bankAccount(id_bank) BankAccount
     column startBalance(begsaldo) decimal(17, 5) //Начальное сальдо
+    column remark(rem) char(57) //Примечание
 
-    many moves(id_jbanks) {
+    many moves(id_jbanks) extends StandardSubDocument {
         table dba.banks
 
-        column id integer primary key
         column debitAmount(deb) decimal(6, 4) //Сумма прихода
         column creditAmount(cre) decimal(6, 4) //Сумма расхода
 
@@ -24,7 +19,6 @@ entity BankAccountStatement<comtec> {
         column remark(rem) char(210) //Примечание
         column documentDate(dat_docum) date //Дата документа
         column documentNumber(docnu) char(20) //Номер документа
-        column number(nu) integer //Номер п/п
         column vat(nds) decimal(6,4) //Ставка НДС
 
         def toString : String = Format.sub("Пр.банковской выписки", id, number, parent.toString)

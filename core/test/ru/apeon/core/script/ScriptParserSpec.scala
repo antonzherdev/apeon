@@ -68,6 +68,11 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
         script(ConstDecimal(BigDecimal(-1.7)))
       )
     }
+    it("Коллекция"){
+      parser.parse("[1, 5, 7]") should equal {
+        script(seq(1, 5, 7))
+      }
+    }
   }
 
   describe("Арифметика") {
