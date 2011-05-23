@@ -14,14 +14,16 @@ object Sync {
     case _ => None
   }
 
-  def syncWhereDeclaration(env: Environment, destinationDescription: Description): Declaration = {
+  def syncWhereDeclaration(env: Environment, destinationDescription: Description): Option[Declaration] =
     destinationDescription.declarations.find {
       dec => dec.name == "syncWhere" && dec.isInstanceOf[Def] && dec.asInstanceOf[Def].parameters.isEmpty
-    }.getOrElse(throw ScriptException(env, "Sync where is not found."))
-  }
+    }
+
 
   def syncWhere(env: Environment, description: Description, dataSource: Option[Expression]): eql.Expression = {
-    syncWhereDeclaration(env, description).value(env, None, dataSource) match {
+    syncWhereDeclaration(env, description).getOrElse{
+      throw ScriptException(env, "Sync where is not found.")
+    }.value(env, None, dataSource) match {
       case e : eql.Expression => e
       case fields : Seq[String] => {
         val ands = fields.map{field => eql.Equal(eql.Dot("d." + field),  eql.Dot("s." + field))}
@@ -34,7 +36,6 @@ object Sync {
     }
   }
 
-  //TODO : Where по массиву колонок
   def buildWhere(env: Environment, source: Entity, destinationDescription: Description, where: Option[eql.Expression],
                  aliases: (String, String), dataSource: Option[Expression]): eql.Expression =
   {
@@ -93,7 +94,7 @@ object Sync {
   //TODO: Возможность синхронизации без update. Если такой записи нет, то insert, иначе ничего. Это необходимо для оптимизации.
   def sync(env : Environment, source : Entity, destinationDescription : Description,
            dataSource : Option[Expression], where : Option[eql.Expression] = None,
-           func : Option[BuiltInFunction] = None) : Entity =
+           func : Option[BuiltInFunction] = None, autoUpdate : Boolean = true) : Entity =
   {
     val aliases = func.map{ f =>
       val pars = f.parameters
@@ -135,20 +136,20 @@ object Sync {
         case Seq(e) => e
         case many @ _ =>
           throw ScriptException(env,
-"""Many entities to sync.
-Source datasource = %s
-Source = %s
+            """Many entities to sync.
+          Source datasource = %s
+          Source = %s
 
-Destination datasource = %s
-Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, many))
+          Destination datasource = %s
+          Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, many))
       }
     }
     if(toOne != null) {
       d.update(toOne, parent)
     }
 
-    //if(auto) {
-    //TODO: Автоматический проход по ссылкам ToOne и ToMany
+    if(autoUpdate) {
+      //TODO: Автоматический проход по ссылкам ToMany
       destinationDescription.attributes.foreach{column =>
         if(!column.isPrimaryKey) {
           source.id.description.fieldOption(column.name) match {
@@ -161,7 +162,19 @@ Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, m
           }
         }
       }
-    //}
+      destinationDescription.ones.filter(one => syncWhereDeclaration(env, one.entity).isDefined).foreach{
+        one => source.id.description.fieldOption(one.name) match {
+          case Some(f : ToOne) => if(f.entity == one.entity) {
+            d.update(one, source(f) match {
+              case e : Entity => sync(env, e, one.entity, dataSource, autoUpdate = false)
+              case null => null
+            })
+          }
+          case _ => {}
+        }
+
+      }
+    }
     if(func.isDefined) {
       func.get.run(env, source , d)
     }

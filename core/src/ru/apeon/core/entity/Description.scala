@@ -27,6 +27,12 @@ case class Description(module : Module,
   def attributes : Seq[Attribute] =
     fields.filter{_.isInstanceOf[Attribute]}.asInstanceOf[Seq[Attribute]]
 
+  def ones : Seq[ToOne] =
+    fields.filter{_.isInstanceOf[ToOne]}.asInstanceOf[Seq[ToOne]]
+
+  def manies : Seq[ToMany] =
+    fields.filter{_.isInstanceOf[ToMany]}.asInstanceOf[Seq[ToMany]]
+
   def columnsWithColumn : Seq[FieldWithSource] =
     fields.filter{_.isInstanceOf[FieldWithSource]}.asInstanceOf[Seq[FieldWithSource]]
 

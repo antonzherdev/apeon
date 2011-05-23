@@ -18,8 +18,8 @@ class SyncWhereSuite extends Spec with ShouldMatchers with ScriptTest with Entit
       override def get(id: EntityId) = Some(new Entity(this, id, Map("id" -> 1, "uid" -> 2, "uid2" -> 3)))
       override def select(select: eql.Select) = select.where.get match {
         case eql.And(
-          eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(2)),
-          eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid2")), eql.Const(3)))=> Seq()
+        eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(2)),
+        eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid2")), eql.Const(3)))=> Seq()
         case w => fail("Bad where %s".format(w))
       }
     }
@@ -45,6 +45,7 @@ class SyncWhereSuite extends Spec with ShouldMatchers with ScriptTest with Entit
 
   describe("toOne") {
     it("Simple to one") {
+      var ok = false
       withModel{
         desc("Cat").decl(id, att("uid", int), syncWhere("d.uid = s.uid")).b
         desc("Doc").decl(id, att("num", int), one("cat", "Cat"), syncWhere("d.num = s.num and d.cat = s.cat")).b
@@ -57,11 +58,18 @@ class SyncWhereSuite extends Spec with ShouldMatchers with ScriptTest with Entit
           eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("num")), eql.Const(22)),
           eql.Equal(eql.Dot(eql.Dot(eql.Ref("d"), eql.Ref("cat")), eql.Ref("uid")), eql.Const(33)))
           => Seq()
+          case eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(33))
+          => Seq()
           case w => fail("Bad where %s".format(w))
+        }
+        override def insert(description : Description, source : DataSource) = {
+          if(description.name == "Cat") ok = true
+          super.insert(description, source)
         }
       },
         ref("Doc", 1) ~ ref("sync")
       )
+      ok should equal(true)
     }
   }
 
