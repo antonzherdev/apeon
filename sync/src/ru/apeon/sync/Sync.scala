@@ -3,6 +3,7 @@ package ru.apeon.sync
 import ru.apeon.core.entity._
 import ru.apeon.core.eql
 import ru.apeon.core.script._
+import java.lang.Boolean
 
 object Sync {
   private def replaceRef(source : Entity, sourceAlias : String, dot : eql.Dot) : Option[Any] = dot.left match {
@@ -94,7 +95,8 @@ object Sync {
   //TODO: Возможность синхронизации без update. Если такой записи нет, то insert, иначе ничего. Это необходимо для оптимизации.
   def sync(env : Environment, source : Entity, destinationDescription : Description,
            dataSource : Option[Expression], where : Option[eql.Expression] = None,
-           func : Option[BuiltInFunction] = None, autoUpdate : Boolean = true) : Entity =
+           func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
+           options : SyncOptions = SyncOptions()) : Entity =
   {
     val aliases = func.map{ f =>
       val pars = f.parameters
@@ -106,24 +108,22 @@ object Sync {
     var ds = env.dataSource(dataSource).getOrElse(destinationDescription.dataSource)
     var d : Entity = null
     var toOne : ToOne = null
-    var parent : Entity = null
-    if(env.leftEntity.isDefined) {
-      parent = env.leftEntity.get
-      ds = parent.id.dataSource
-      parent.id.description.field(env.currentSet.get.left.asInstanceOf[Dot].right.name) match {
-        case many : ToMany => {
-          if(parent.id.isTemporary) {
-            env.em.transaction{}
-            d = env.em.insert(destinationDescription, ds)
-            d.update(many.toOne, parent)
-          }
-          else {
-            toOne = many.toOne
-            w = eql.And(w,
-              eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(many.toOne.name)), parent.id.const))
-          }
-        }
-        case _ => {}
+    var par : Entity = null
+    var inserted : Boolean = false
+    if(parent.isDefined) {
+      par = parent.get.entity
+      toOne = parent.get.toOne
+      ds = par.id.dataSource
+      if(par.id.isTemporary || !parent.get.checkUnique) {
+        env.em.transaction{}
+        d = env.em.insert(destinationDescription, ds)
+        inserted = true
+        d.update(toOne, par)
+        toOne = null
+      }
+      else {
+        w = eql.And(w,
+          eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(toOne.name)), par.id.const))
       }
     }
 
@@ -132,7 +132,10 @@ object Sync {
         eql.FromEntity(destinationDescription, Some(aliases._2), eql.DataSourceExpressionDataSource(ds)),
         where = Some(w))
       d = env.em.select(select) match {
-        case Seq() => env.em.insert(destinationDescription, ds)
+        case Seq() => {
+          inserted = true
+          env.em.insert(destinationDescription, ds)
+        }
         case Seq(e) => e
         case many @ _ =>
           throw ScriptException(env,
@@ -145,34 +148,61 @@ object Sync {
       }
     }
     if(toOne != null) {
-      d.update(toOne, parent)
+      d.update(toOne, par)
     }
 
-    if(autoUpdate) {
-      //TODO: Автоматический проход по ссылкам ToMany
-      destinationDescription.attributes.foreach{column =>
-        if(!column.isPrimaryKey) {
-          source.id.description.fieldOption(column.name) match {
-            case Some(a : Attribute) => {
-              if(a.dataType == column.dataType) {
-                d.update(column, source(a))
+    if(options.sync match {
+      case InsertOnly() => inserted
+      case _ => true
+    }) {
+      options.auto match {case AutoUpdate(one, many) =>
+        destinationDescription.attributes.foreach{column =>
+          if(!column.isPrimaryKey) {
+            source.id.description.fieldOption(column.name) match {
+              case Some(a : Attribute) => {
+                if(a.dataType == column.dataType) {
+                  d.update(column, source(a))
+                }
               }
+              case _ => {}
             }
-            case _ => {}
           }
         }
-      }
-      destinationDescription.ones.filter(one => syncWhereDeclaration(env, one.entity).isDefined).foreach{
-        one => source.id.description.fieldOption(one.name) match {
-          case Some(f : ToOne) => if(f.entity == one.entity) {
-            d.update(one, source(f) match {
-              case e : Entity => sync(env, e, one.entity, dataSource, autoUpdate = false)
-              case null => null
-            })
-          }
-          case _ => {}
-        }
+        env.em.transaction{}
 
+        one match {case AutoToOne() =>
+          destinationDescription.ones.filter{one =>
+            syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne)
+          }.foreach{
+            one => source.id.description.fieldOption(one.name) match {
+              case Some(f : ToOne) => if(f.entity == one.entity) {
+                d.update(one, source(f) match {
+                  case e : Entity => sync(env, e, one.entity, dataSource, options = SyncOptions(InsertOnly()))
+                  case null => null
+                })
+              }
+              case _ => {}
+            }
+          }
+        }
+        many match {case a : AutoToMany =>
+          destinationDescription.manies.filter(many => syncWhereDeclaration(env, many.entity).isDefined).foreach{
+            many => source.id.description.fieldOption(many.name) match {
+              case Some(f : ToMany) => if(f.entity == many.entity && f.toOne == many.toOne) {
+                d.update(many, source(f) match {
+                  case entities : Seq[Entity] =>
+                    entities.map{
+                      e => sync(env, e, many.entity, dataSource,
+                          options = SyncOptions(InsertOnly()),
+                          parent = Some(ParentSync(d, many.toOne, !inserted)))
+                    }
+                  case null => null
+                })
+              }
+              case _ => {}
+            }
+          }
+        }
       }
     }
     if(func.isDefined) {
@@ -182,3 +212,5 @@ object Sync {
     d
   }
 }
+
+case class ParentSync(entity : Entity, toOne : ToOne, checkUnique : Boolean = true)

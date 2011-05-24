@@ -27,7 +27,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTes
     it("Изменение") {
       var ok = false
       run(
-        new EmptyEntityManager() {
+        new TestEntityManager() {
           override def get(id: EntityId) = Some(new Entity(this, id, M("id" -> 1, "col1" -> 2, "col2" -> 11)))
 
           val id2 = new OneEntityId(dataSource, article, 2)
@@ -49,7 +49,7 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTes
       var ok2 = false
       var ok3 = false
       run(
-        new EmptyEntityManager() {
+        new TestEntityManager() {
           override def get(id: EntityId) = Some(new Entity(this, id, M("id" -> 1, "col1" -> 2, "col2" -> 11)))
 
           override def select(select: eql.Select) =
@@ -91,21 +91,21 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTes
 
     it("ToMany") {
       run(
-        new EmptyEntityManager() {
+        new TestEntityManager() {
           override def get(id: EntityId) = id.asInstanceOf[OneEntityId].id match {
             case 1 => Some(new Entity(this, id, M("id" -> 1, "col1" -> 2, "col2" -> 11)))
             case 2 => Some(new Entity(this, id, M("id" -> 2, "col1" -> 2, "col2" -> 11)))
           }
 
           def id(v : Int) = new OneEntityId(dataSource, cons, v)
-          def e(m : collection.mutable.Map[String, Any]) = new Entity(this, id(m("id").asInstanceOf[Int]), m)
+          def ee(m : collection.mutable.Map[String, Any]) = new Entity(this, id(m("id").asInstanceOf[Int]), m)
           override def select(select: eql.Select) = {
             val f = select.from.asInstanceOf[eql.FromEntity]
             f.entity should equal(cons)
             select.where.get match {
               case eql.And(eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(1)),
               eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("article")), eql.Const(2))) =>
-                Seq(e(M("id" -> 3, "article" -> 2, "uid" -> 1, "col1" -> 11)))
+                Seq(ee(M("id" -> 3, "article" -> 2, "uid" -> 1, "col1" -> 11)))
 
               case eql.And(eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("uid")), eql.Const(2)),
               eql.Equal(eql.Dot(eql.Ref("d"), eql.Ref("article")), eql.Const(2))) => Seq()
@@ -119,11 +119,11 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTes
             field.name should equal("conses")
             entity.id.asInstanceOf[OneEntityId].id match {
               case 1 => Seq(
-                e(M("id" -> 1, "article" -> 1, "uid" -> 1, "col1" -> 22)),
-                e(M("id" -> 2, "article" -> 1, "uid" -> 2, "col1" -> 32)))
+                ee(M("id" -> 1, "article" -> 1, "uid" -> 1, "col1" -> 22)),
+                ee(M("id" -> 2, "article" -> 1, "uid" -> 2, "col1" -> 32)))
               case 2 => Seq(
-                e(M("id" -> 3, "article" -> 2, "uid" -> 1, "col1" -> 11)),
-                e(M("id" -> 4, "article" -> 2, "uid" -> 3, "col1" -> 16)))
+                ee(M("id" -> 3, "article" -> 2, "uid" -> 1, "col1" -> 11)),
+                ee(M("id" -> 4, "article" -> 2, "uid" -> 3, "col1" -> 16)))
               case _ => throw new RuntimeException("Unknown id")
             }
           }

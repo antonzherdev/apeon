@@ -63,6 +63,7 @@ trait EntityDefine {
   def int = AttributeDataTypeInteger()
   def id = Id
   def one(name : String, entityName : String) = ToOne(pack, name, FieldSources(FieldSource("id_" + name)), entityName)
+  def many(name : String, entityName : String, toOne : String) = ToManyRef(pack, name, entityName, toOne)
 
   class DescriptionBuilder(val name : String) {
     private var module : Module = CoreModule

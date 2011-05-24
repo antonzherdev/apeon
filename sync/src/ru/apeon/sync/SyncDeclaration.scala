@@ -1,11 +1,20 @@
 package ru.apeon.sync
 
 import ru.apeon.core.eql
-import ru.apeon.core.entity.{Entity, Description}
 import ru.apeon.core.script._
+import ru.apeon.core.entity.{ToMany, Entity, Description}
 
 object SyncDeclaration extends Declaration {
   def name = "sync"
+
+  def parent(env: Environment) : Option[ParentSync] = env.leftEntity match{
+    case Some(par) => par.id.description.field(env.currentSet.get.left.asInstanceOf[Dot].right.name) match {
+        case many : ToMany => Some(ParentSync(par, many.toOne))
+        case _ => None
+      }
+    case None => None
+  }
+
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref match {
     case source : Entity => value(env, parameters, dataSource, source)
     case sources : Traversable[Entity] => sources.map{
@@ -18,22 +27,22 @@ object SyncDeclaration extends Declaration {
       ParVal(destinationDescription : Description, _),
       ParVal(where : eql.Expression, _),
       ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), Some(func))
+    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), Some(func), parent(env))
     case Some(Seq(
       ParVal(destinationDescription : Description, _),
       ParVal(where : eql.Expression, _)
-    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), None)
+    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), None, parent(env))
     case Some(Seq(
       ParVal(where : eql.Expression, _),
       ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), Some(func))
+    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), Some(func), parent(env))
     case Some(Seq(
       ParVal(where : eql.Expression, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), None)
+    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), None, parent(env))
     case Some(Seq(
       ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, None, Some(func))
-    case None => Sync.sync(env, source, source.id.description, dataSource, None, None)
+    )) => Sync.sync(env, source, source.id.description, dataSource, None, Some(func), parent(env))
+    case None => Sync.sync(env, source, source.id.description, dataSource, None, None, parent(env))
     case _ => throw ScriptException(env, "Error in parameters.")
   }
 
@@ -72,4 +81,6 @@ object SyncDeclaration extends Declaration {
           parameters.get.head.expression.dataType(env)
         else env.dotType.get )
     )
+
+
 }

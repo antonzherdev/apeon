@@ -1,10 +1,6 @@
 package ru.apeon.core.script
 
-import ru.apeon.core.entity.EntityManager
-
-/**
- * @author Anton Zherdev
- */
+import ru.apeon.core.entity.{Env, EntityManager}
 
 trait ScriptTest extends ScriptDefine{
   def model : ObjectModel

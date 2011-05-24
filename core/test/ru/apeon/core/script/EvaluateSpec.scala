@@ -52,12 +52,12 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
   fillRef()
   val M = collection.mutable.Map
 
-  val emptyEm = new EmptyEntityManager
+  val emptyEm = new TestEntityManager
   val article1 = new Entity(emptyEm, new OneEntityId(EntityConfiguration.dataSource, article, 1), M("id" -> 1, "col1" -> 10, "col2" -> 12))
   val article2 = new Entity(emptyEm, new OneEntityId(EntityConfiguration.dataSource, article, 2), M("id" -> 2, "col1" -> 132, "col2" -> 122))
 
 
-  class TestedEntityManager extends EmptyEntityManager {
+  class TestedEntityManager extends TestEntityManager {
     override val model = EvaluateSpec.this.model
 
     override def get(id: EntityId) = id.description match {
@@ -218,12 +218,11 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     it("Insert") {
       var ok = false
       var e : Entity = null
-      val em = new EmptyEntityManager {
+      val em = new TestEntityManager {
         override def insert(description: Description, dataSource: DataSource) = {
           description should equal(article)
           ok = true
-          e = new Entity(this, new OneEntityId(dataSource, description, -1))
-          e
+          new Entity(this, new OneEntityId(dataSource, description, -1))
         }
       }
       run(em,
@@ -414,21 +413,4 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       ) should equal (30)
     }*/
   }
-}
-
-class EmptyEntityManager extends DefaultEntityManager {
-  override def beginTransaction() {}
-  override def select(select: eql.Select) : Seq[Entity] = Seq()
-  override def register(entity: Entity) {}
-  override def lazyLoad(entity: Entity, field : Field, data : Any) : Any = null
-  override def get(id: EntityId) : Option[Entity] = None
-  override def commit() {}
-  override def beforeUpdate(entity: Entity, key: String, data: Any) {}
-  override def beforeDelete(entity: Entity) {}
-  override def afterUpdate(entity: Entity, key: String, data: Any) {}
-  override def afterInsert(entity: Entity) {}
-  override def afterDelete(entity: Entity) {}
-}
-class Env(override val em : EntityManager) extends DefaultEnvironment {
-  override protected def createEntityManager = null
 }
