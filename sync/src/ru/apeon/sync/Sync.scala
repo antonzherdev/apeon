@@ -3,7 +3,6 @@ package ru.apeon.sync
 import ru.apeon.core.entity._
 import ru.apeon.core.eql
 import ru.apeon.core.script._
-import java.lang.Boolean
 
 object Sync {
   private def replaceRef(source : Entity, sourceAlias : String, dot : eql.Dot) : Option[Any] = dot.left match {
@@ -189,15 +188,20 @@ object Sync {
           destinationDescription.manies.filter(many => syncWhereDeclaration(env, many.entity).isDefined).foreach{
             many => source.id.description.fieldOption(many.name) match {
               case Some(f : ToMany) => if(f.entity == many.entity && f.toOne == many.toOne) {
-                d.update(many, source(f) match {
-                  case entities : Seq[Entity] =>
-                    entities.map{
-                      e => sync(env, e, many.entity, dataSource,
-                          options = SyncOptions(InsertOnly()),
-                          parent = Some(ParentSync(d, many.toOne, !inserted)))
+                val b = collection.immutable.Set.newBuilder[Entity]
+                if(a.isInstanceOf[AutoToManyAppend]) {
+                  b ++= d(many).asInstanceOf[Iterable[Entity]]
+                }
+                source(f) match {
+                  case entities : Iterable[Entity] =>
+                    entities.foreach{
+                      e => b += sync(env, e, many.entity, dataSource,
+                        options = SyncOptions(InsertOnly()),
+                        parent = Some(ParentSync(d, many.toOne, !inserted)))
                     }
-                  case null => null
-                })
+                  case null => {}
+                }
+                d.update(many, b.result())
               }
               case _ => {}
             }
