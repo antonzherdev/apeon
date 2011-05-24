@@ -4,5 +4,5 @@ import ru.apeon.comtec._
 datasource loc2
 
 query Test{
-   Material(723).sync<loc2>
+   Material(723).sync<loc2>(Sync.InsertOnly)
 }

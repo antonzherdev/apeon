@@ -68,7 +68,7 @@ object Loader extends Logging {
   def unload() {
     log.info("Unloading modules")
     listeners.foreach{listener =>
-      listener.unload()
+      listener.unload(model)
     }
     model.dataSources.foreach(_.unload())
     listeners = Seq()
@@ -90,7 +90,7 @@ object Loader extends Logging {
     listeners.foreach {
       listener =>
         log.info("Preloading %s".format(listener.getClass.getName))
-        listener.preLoad()
+        listener.preLoad(model)
         log.info("Preloaded %s".format(listener.getClass.getName))
     }
   }
@@ -99,7 +99,7 @@ object Loader extends Logging {
     listeners.foreach {
       listener =>
         log.info("Loading %s".format(listener.getClass.getName))
-        listener.load()
+        listener.load(model)
         log.info("Loaded %s".format(listener.getClass.getName))
     }
   }

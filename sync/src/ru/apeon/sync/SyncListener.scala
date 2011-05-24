@@ -1,18 +1,19 @@
 package ru.apeon.sync
 
 import ru.apeon.core.loader.Listener
-import ru.apeon.core.script.{ScriptDataTypeSeq, ScriptDataTypeEntity, ScriptDataTypeDescription}
+import ru.apeon.core.script.{ObjectModel, ScriptDataTypeSeq, ScriptDataTypeEntity, ScriptDataTypeDescription}
 
 class SyncListener extends Listener{
-  def unload() {
+  def unload(model : ObjectModel) {
 
   }
 
-  def preLoad() {
+  def preLoad(model : ObjectModel) {
     SyncListener.preLoad()
+    model.addObj(SyncObject)
   }
 
-  def load() {
+  def load(model : ObjectModel) {
 
   }
 }

@@ -6,15 +6,16 @@ import javax.naming.InitialContext
 import ru.apeon.core.entity._
 import akka.util.Logging
 import ru.apeon.core.loader.Listener
+import ru.apeon.core.script.ObjectModel
 
 class QuartzListener extends Listener{
   var scheduler : Scheduler = null
 
-  def preLoad() {
+  def preLoad(model : ObjectModel) {
 
   }
 
-  def load() {
+  def load(model : ObjectModel) {
     scheduler = StdSchedulerFactory.getDefaultScheduler
     scheduler.start()
 
@@ -38,13 +39,13 @@ class QuartzListener extends Listener{
     //    val trigger = TriggerUtils.makeMinutelyTrigger("Test")
   }
 
-  def unload() {
+  def unload(model : ObjectModel) {
     scheduler.shutdown()
   }
 }
 
 class QueryJob extends Job  with Logging  {
-  def execute(p: JobExecutionContext) = {
+  def execute(p: JobExecutionContext) {
     val name = p.getJobDetail.getJobDataMap.getString("queryName")
     log.info("Schedule " + name)
     try {

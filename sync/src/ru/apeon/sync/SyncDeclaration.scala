@@ -1,8 +1,8 @@
 package ru.apeon.sync
 
 import ru.apeon.core.eql
-import ru.apeon.core.script._
 import ru.apeon.core.entity.{ToMany, Entity, Description}
+import ru.apeon.core.script._
 
 object SyncDeclaration extends Declaration {
   def name = "sync"
@@ -21,6 +21,18 @@ object SyncDeclaration extends Declaration {
       source => value(env, parameters, dataSource, source)
     }
   }
+
+  def option(value : Int) : SyncOptions =
+    SyncOptions(
+      sync = if((value & SyncObject.InsertOnly) != 0) InsertOnly() else InsertUpdate(),
+      auto =
+              if((value & SyncObject.NoAutoUpdate) != 0) NoAutoUpdate() else AutoUpdate(
+                one = if((value & SyncObject.NoAutoUpdateToOne) != 0) NoAutoToOne() else AutoToOne(),
+                many = if((value & SyncObject.NoAutoUpdateToMany) != 0) NoAutoToMany() else {
+                  if((value & SyncObject.ToManyAppend) != 0) AutoToManyAppend() else AutoToManySet()
+                }
+              )
+    )
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression], source : Entity) = parameters match {
     case Some(Seq(
@@ -43,6 +55,33 @@ object SyncDeclaration extends Declaration {
       ParVal(func : BuiltInFunction, _)
     )) => Sync.sync(env, source, source.id.description, dataSource, None, Some(func), parent(env))
     case None => Sync.sync(env, source, source.id.description, dataSource, None, None, parent(env))
+    case Some(Seq(
+      ParVal(destinationDescription : Description, _),
+      ParVal(where : eql.Expression, _),
+      ParVal(opt : Int, _),
+      ParVal(func : BuiltInFunction, _)
+    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), Some(func), parent(env), option(opt))
+    case Some(Seq(
+      ParVal(destinationDescription : Description, _),
+      ParVal(where : eql.Expression, _),
+      ParVal(opt : Int, _)
+    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), None, parent(env), option(opt))
+    case Some(Seq(
+      ParVal(where : eql.Expression, _),
+      ParVal(opt : Int, _),
+      ParVal(func : BuiltInFunction, _)
+    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), Some(func), parent(env), option(opt))
+    case Some(Seq(
+      ParVal(where : eql.Expression, _),
+      ParVal(opt : Int, _)
+    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), None, parent(env), option(opt))
+    case Some(Seq(
+      ParVal(opt : Int, _),
+      ParVal(func : BuiltInFunction, _)
+    )) => Sync.sync(env, source, source.id.description, dataSource, None, Some(func), parent(env), option(opt))
+    case Some(Seq(
+      ParVal(opt : Int, _)
+    )) => Sync.sync(env, source, source.id.description, dataSource, None, None, parent(env), option(opt))
     case _ => throw ScriptException(env, "Error in parameters.")
   }
 
@@ -71,6 +110,14 @@ object SyncDeclaration extends Declaration {
     case Some(Seq(Par(where : ConstEql, _))) => true
     case Some(Seq(Par(bf : BuiltInFunction, _))) => true
     case None => true
+    case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _), Par(opt, _), Par(bf : BuiltInFunction, _))) =>
+      entity.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription] && opt.dataType(env) == ScriptDataTypeInteger()
+    case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _), Par(opt, _))) =>
+      entity.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription] && opt.dataType(env) == ScriptDataTypeInteger()
+    case Some(Seq(Par(where : ConstEql, _), Par(opt, _), Par(bf : BuiltInFunction, _))) => opt.dataType(env) == ScriptDataTypeInteger()
+    case Some(Seq(Par(where : ConstEql, _), Par(opt, _))) => opt.dataType(env) == ScriptDataTypeInteger()
+    case Some(Seq(Par(opt, _), Par(bf : BuiltInFunction, _))) => opt.dataType(env) == ScriptDataTypeInteger()
+    case Some(Seq(Par(opt, _)))=> opt.dataType(env) == ScriptDataTypeInteger()
     case _ => false
   }
 
@@ -81,6 +128,5 @@ object SyncDeclaration extends Declaration {
           parameters.get.head.expression.dataType(env)
         else env.dotType.get )
     )
-
-
 }
+
