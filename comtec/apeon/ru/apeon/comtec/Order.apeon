@@ -8,6 +8,12 @@ entity Order<comtec> extends StandardDocument {
     column name(nm) String
 
     one organization(id_post) Organization
-	
+    one type(id_type) OrderType
 	def toString : String = Format.str("Договор", id, number)
+}
+
+entity OrderType<comtec> extends StandardCatalog {
+    table dba.jdog_type
+
+    def toString : String = Format.str("Тип договора", id, name)
 }
