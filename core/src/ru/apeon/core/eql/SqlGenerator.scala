@@ -90,7 +90,7 @@ class SqlGenerator {
     e.joinedTables match {
       case Seq() => {
         ef.table = sql.FromTable(sqlTable(e.table), None)
-        ef.append(q.from, ef.table, discriminator(e, ef.table))
+        ef.append(q.from, ef.table, discriminator(ef, e, ef.table))
 
         val columns = q.columns.map{column =>
           sql.UpdateColumn(column.column.columnName(q.dataSource), genExpression(column.expression, ef))
@@ -198,7 +198,7 @@ class SqlGenerator {
     )
   }
 
-  def discriminator(entity : Description, table : sql.From) : Option[sql.Expression] = entity.discriminator match {
+  def discriminator(ef : EqlSqlFrom, entity : Description, table : sql.From) : Option[sql.Expression] = entity.discriminator match {
     case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(Some(table.name), column), sql.Expression.constant(value)))
     case DiscriminatorNull() => None
   }
@@ -219,7 +219,7 @@ class SqlGenerator {
   def genFrom(f : From, ef: EqlSqlFrom) : EqlSqlFrom = f match {
     case e : FromEntity =>{
       ef.table = genTable(ef, e.entity)
-      ef.append(e, ef.table, discriminator(e.entity, ef.table))
+      ef.append(e, ef.table, discriminator(ef, e.entity, ef.table))
     }
     case e : FromToMany => {
       val t = e.ref match {
@@ -230,7 +230,7 @@ class SqlGenerator {
       ef.table = genTable(ef, e.entity)
       ef.append(e, ef.table,
         Some(sql.And(
-          discriminator(e.entity, ef.table),
+          discriminator(ef, e.entity, ef.table),
           sql.Equal(
             sql.Ref(t, e.toMany.entity.primaryKeys.head.columnName(ef.dataSource)),
             sql.Ref(ef.table, e.toMany.toOne.columnName(ef.dataSource))
@@ -372,10 +372,7 @@ class SqlGenerator {
 
     def join(to : ToOne, ft : sql.From, l : sql.Ref) : sql.From = {
       joins += sql.LeftJoin(ft, sql.And(sql.Equal(l, sql.Ref(ft, to.entity.primaryKeys.head.columnName(dataSource))),
-        to.entity.discriminator match {
-          case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(ft, column), sql.Expression.constant(value)))
-          case DiscriminatorNull() => None
-        } ) )
+        discriminator(this, to.entity, ft)) )
       toOne += to -> ft
       ft
     }

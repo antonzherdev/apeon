@@ -90,8 +90,6 @@ object Sync {
     w
   }
 
-  //TODO: Возможность отключения автоматического прохода вообще, по ссылка toOne и по ссылкам toMany по отдельности
-  //TODO: Возможность синхронизации без update. Если такой записи нет, то insert, иначе ничего. Это необходимо для оптимизации.
   def sync(env : Environment, source : Entity, destinationDescription : Description,
            dataSource : Option[Expression], where : Option[eql.Expression] = None,
            func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
