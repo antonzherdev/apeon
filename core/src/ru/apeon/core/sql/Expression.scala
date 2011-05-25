@@ -47,6 +47,18 @@ case class Less(left : Expression, right : Expression) extends BinaryExpression 
 case class LessOrEqual(left : Expression, right : Expression) extends BinaryExpression {
   val alias = "<="
 }
+case class Plus(left : Expression, right : Expression) extends BinaryExpression {
+  val alias = "+"
+}
+case class Minus(left : Expression, right : Expression) extends BinaryExpression {
+  val alias = "-"
+}
+case class Mul(left : Expression, right : Expression) extends BinaryExpression {
+  val alias = "*"
+}
+case class Div(left : Expression, right : Expression) extends BinaryExpression {
+  val alias = "/"
+}
 
 
 class And(val left : Expression, val right : Expression) extends BinaryExpression {

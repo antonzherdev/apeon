@@ -47,7 +47,7 @@ class EqlParser(val model : ObjectModel,
   type Tokens = Lexer
   val lexical = new Tokens
 
-  lexical.delimiters ++= List(">=", ">", "<=", "<", "!=", ".", ",", "=", ":", "(", ")", "!", "<", ">")
+  lexical.delimiters ++= List(">=", ">", "<=", "<", "!=", ".", ",", "=", ":", "(", ")", "!", "<", ">", "+", "-", "/", "*")
   lexical.reserved += ("select", "from", "as", "where", "delete", "like", "and", "or", "null", "exists")
 
   def query : Parser[Statement] = (select | delete)
@@ -173,6 +173,12 @@ class EqlParser(val model : ObjectModel,
 
   def binaryOp(level:Int):Parser[((Expression,Expression)=>Expression)] = {
     level match {
+      case 5 =>
+        "*" ^^^ { (a:Expression, b:Expression) => new Mul(a, b) } |
+        "/" ^^^ { (a:Expression, b:Expression) => new Div(a, b) }
+      case 4 =>
+        "+" ^^^ { (a:Expression, b:Expression) => new Plus(a, b) } |
+        "-" ^^^ { (a:Expression, b:Expression) => new Minus(a, b) }
       case 3 =>
         "=" ^^^ { (a:Expression, b:Expression) => new Equal(a, b) } |
         "like" ^^^ {(a:Expression, b:Expression) => new Like(a, b)} |
@@ -189,7 +195,7 @@ class EqlParser(val model : ObjectModel,
     }
   }
   val minPrec = 1
-  val maxPrec = 3
+  val maxPrec = 5
   def binary(level : Int) : Parser[Expression] =
     if (level > maxPrec) term
     else binary(level + 1) * binaryOp(level)

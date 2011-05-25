@@ -3,7 +3,7 @@ package ru.apeon.core.eql
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.FunSuite
 import ru.apeon.core.entity._
-import ru.apeon.core.script.{Imports, Package, DefaultObjectModel, ScriptDataTypeString}
+import ru.apeon.core.script.{Imports, ScriptDataTypeString}
 
 /**
  * @author Anton Zherdev
@@ -86,6 +86,13 @@ class ParserSuite extends FunSuite with ShouldMatchers with EntityDefine{
     EqlParser.parseExpression("1 >= 0", model, imports) should equal(MoreOrEqual(ConstNumeric(1), ConstNumeric(0)))
     EqlParser.parseExpression("0 < 1", model, imports) should equal(Less(ConstNumeric(0), ConstNumeric(1)))
     EqlParser.parseExpression("0 <= 1", model, imports) should equal(LessOrEqual(ConstNumeric(0), ConstNumeric(1)))
+  }
+
+  test("+ - * /") {
+    EqlParser.parseExpression("1 + 0", model, imports) should equal(Plus(ConstNumeric(1), ConstNumeric(0)))
+    EqlParser.parseExpression("1 - 0", model, imports) should equal(Minus(ConstNumeric(1), ConstNumeric(0)))
+    EqlParser.parseExpression("0 * 1", model, imports) should equal(Mul(ConstNumeric(0), ConstNumeric(1)))
+    EqlParser.parseExpression("0 / 1", model, imports) should equal(Div(ConstNumeric(0), ConstNumeric(1)))
   }
 
   test("like") {

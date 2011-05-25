@@ -82,10 +82,6 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     val ft3 = sql.FromTable(sql.SqlTable("", "test3"), Some("t"))
     val ft3_join2 = sql.FromTable(sql.SqlTable("", "test2"), Some("t0"))
     val ft3_join = sql.FromTable(sql.SqlTable("", "test1"), Some("t1"))
-    val cols2_3 = Seq(sql.ColumnSeq(Seq(
-      sql.Column(sql.Ref(ft3_join, "id"), "id"),
-      sql.Column(sql.Ref(ft3_join, "col1"), "col1"),
-      sql.Column(sql.Ref(ft3_join, "col2"), "col2")), "col3"))
     fillRef()
     it("Simple") {
       eql.SqlGenerator(eql.Select(eft2, Seq(
@@ -371,6 +367,20 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     it("Not") {
       eql.SqlGenerator(eql.Select(eft1, where = Some(eql.Not(eql.ConstNumeric(5))))).where.get should be(
         sql.Not(sql.ConstNumeric(5))
+      )
+    }
+    it("+ - * /") {
+      eql.SqlGenerator(eql.Select(eft1, where = Some(eql.Plus(eql.ConstNumeric(1), eql.ConstNumeric(2))))).where.get should be(
+        sql.Plus(sql.ConstNumeric(1), sql.ConstNumeric(2))
+      )
+      eql.SqlGenerator(eql.Select(eft1, where = Some(eql.Minus(eql.ConstNumeric(1), eql.ConstNumeric(2))))).where.get should be(
+        sql.Minus(sql.ConstNumeric(1), sql.ConstNumeric(2))
+      )
+      eql.SqlGenerator(eql.Select(eft1, where = Some(eql.Mul(eql.ConstNumeric(1), eql.ConstNumeric(2))))).where.get should be(
+        sql.Mul(sql.ConstNumeric(1), sql.ConstNumeric(2))
+      )
+      eql.SqlGenerator(eql.Select(eft1, where = Some(eql.Div(eql.ConstNumeric(1), eql.ConstNumeric(2))))).where.get should be(
+        sql.Div(sql.ConstNumeric(1), sql.ConstNumeric(2))
       )
     }
   }

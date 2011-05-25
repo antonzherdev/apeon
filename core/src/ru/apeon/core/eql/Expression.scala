@@ -85,6 +85,27 @@ case class Or(left : Expression, right : Expression) extends BinaryBooleanExpres
   def build(left: Expression, right: Expression) = Or(left, right)
 }
 
+abstract class BinaryArExpression extends BinaryExpression {
+  def dataType(env: script.Environment) = left.dataType(env)
+}
+case class Plus(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "+"
+  def build(left: Expression, right: Expression) = Plus(left, right)
+}
+case class Minus(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "-"
+  def build(left: Expression, right: Expression) = Minus(left, right)
+}
+case class Mul(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "*"
+  def build(left: Expression, right: Expression) = Mul(left, right)
+}
+case class Div(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "/"
+  def build(left: Expression, right: Expression) = Div(left, right)
+}
+
+
 object Dot{
   def apply(left : Expression, right : Ref) : Dot = new Dot(left, right)
   def apply(left : Expression, right : String) : Dot = new Dot(left, Ref(right))

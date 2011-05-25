@@ -56,6 +56,12 @@ class SqlTextGenSuite extends FunSuite with ShouldMatchers {
     Less(ConstNumeric(5), ConstNumeric(6)).toString should be("5 < 6")
     LessOrEqual(ConstNumeric(5), ConstNumeric(6)).toString should be("5 <= 6")
   }
+  test("+ - / *") {
+    Plus(ConstNumeric(5), ConstNumeric(6)).toString should be("5 + 6")
+    Minus(ConstNumeric(5), ConstNumeric(6)).toString should be("5 - 6")
+    Div(ConstNumeric(5), ConstNumeric(6)).toString should be("5 / 6")
+    Mul(ConstNumeric(5), ConstNumeric(6)).toString should be("5 * 6")
+  }
 
   test("Column reference") {
     Ref(FromTable(SqlTable("", "tt"), None), "nn").toString should be("\"tt\".\"nn\"")
