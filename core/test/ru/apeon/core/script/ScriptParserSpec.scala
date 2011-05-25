@@ -78,6 +78,14 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
         script(ConstNull())
       )
     }
+    it("true/false") {
+      parser.parse("true") should equal (
+        script(ConstBoolean(true))
+      )
+      parser.parse("false") should equal (
+        script(ConstBoolean(false))
+      )
+    }
   }
 
   describe("Арифметика") {

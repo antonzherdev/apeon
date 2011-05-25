@@ -10,7 +10,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     lexical.reserved += (
             "def", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
-            "if", "else", "null", "import", "object", "join")
+            "if", "else", "null", "import", "object", "join", "true", "false")
   }
 
   def statementDef : Parser[Statement] =
@@ -276,7 +276,9 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     | varStatement
     )
 
-  def term : Parser[Expression] = string | numeric | ref | eqlConst | nullConst | ifExpr | builtInFunction | bracket | seq | not
+  def term : Parser[Expression] = string | numeric | eqlConst | nullConst |
+          ifExpr | builtInFunction | bracket | seq | not |
+          "true" ^^^ {ConstBoolean(true)} | "false" ^^^ {ConstBoolean(false)} | ref
 
   def expressionDef : Parser[Expression] = e500
 
