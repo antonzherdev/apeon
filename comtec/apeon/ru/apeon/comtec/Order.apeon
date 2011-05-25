@@ -6,6 +6,7 @@ entity Order<comtec> extends StandardDocument {
     column startDate(dat_workbeg) Date
     column endDate(dat_workend) Date
     column name(nm) String
+    column tp(tp1) String(1)
 
     one organization(id_post) Organization
     one type(id_type) OrderType

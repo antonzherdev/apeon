@@ -157,6 +157,8 @@ object Sync {
           f.statement.statements.map{
             case Set(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == aliases._2 =>
               Some(f)
+            case SetPlus(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == aliases._2 =>
+              Some(f)
             case st =>
               None
           }.filter(_.isDefined).map(_.get)
