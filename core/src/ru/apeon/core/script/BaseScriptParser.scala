@@ -6,7 +6,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
   def init(lexical: Lexer) {
     lexical.delimiters ++= List( "&&", "||",
       ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
-      "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]")
+      "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]", "!")
     lexical.reserved += (
             "def", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
@@ -78,6 +78,8 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
   def ifExpr : Parser[If] = ("if" ~> "(" ~> expression <~ ")") ~! statement ~ opt("else" ~> statement) ^^ {
     case e ~ t ~ f => If(e, t, f)
   }
+
+  def not : Parser[Not] = "!" ~> expression ^^ {e => Not(e)}
 
   private var entityName = collection.mutable.Stack[String]()
   private var dataSourceName = ""
@@ -274,7 +276,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     | varStatement
     )
 
-  def term : Parser[Expression] = string | numeric | ref | eqlConst | nullConst | ifExpr | builtInFunction | bracket | seq
+  def term : Parser[Expression] = string | numeric | ref | eqlConst | nullConst | ifExpr | builtInFunction | bracket | seq | not
 
   def expressionDef : Parser[Expression] = e500
 

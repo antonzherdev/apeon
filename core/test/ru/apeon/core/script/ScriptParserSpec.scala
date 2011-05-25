@@ -73,6 +73,11 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
         script(seq(1, 5, 7))
       }
     }
+    it("null") {
+      parser.parse("null") should equal (
+        script(ConstNull())
+      )
+    }
   }
 
   describe("Арифметика") {
@@ -105,23 +110,6 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
     it("Скобки") {
        parser.parse("(10 + 5)*6") should equal (
         script(Mul(Plus(ConstInt(10), ConstInt(5)), ConstInt(6)))
-      )
-    }
-  }
-
-  describe("Const") {
-    it("Строка") {
-      parser.parse("\"test\"") should equal (
-        script(ConstString("test"))
-      )
-    }
-    it("Целое") {
-      parser.parse("123") should equal (script(ConstInt(123)))
-      parser.parse("-123") should equal (script(ConstInt(-123)))
-    }
-    it("null") {
-      parser.parse("null") should equal (
-        script(ConstNull())
       )
     }
   }
@@ -249,6 +237,9 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
     it("||") {
       parser.parse("1 == 1 || 2 == 3") should equal (script(
         Or(Equal(ConstInt(1), ConstInt(1)), Equal(ConstInt(2), ConstInt(3)))))
+    }
+    it("!") {
+      parser.parse("!1") should equal(script(Not(ConstInt(1))))
     }
   }
 

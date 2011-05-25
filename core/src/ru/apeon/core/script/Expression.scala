@@ -226,3 +226,19 @@ case class Or(left : Expression, right : Expression) extends BooleanBinaryExpres
   val name = "||"
   def evaluate(env: Environment) = left.evaluate(env).asInstanceOf[Boolean] || right.evaluate(env).asInstanceOf[Boolean]
 }
+
+case class Not(expression : Expression) extends Expression {
+  def preFillRef(env: Environment, imports: Imports) = env.preFillRef(expression, imports)
+
+  def fillRef(env: Environment, imports: Imports) = env.fillRef(expression, imports)
+
+  def evaluate(env: Environment) = expression.evaluate(env) match {
+    case b : Boolean => !b
+    case null => true
+    case i : Int => i == 0
+    case s : String => s.isEmpty
+    case s : Iterable[_] => s.isEmpty
+    case _ => throw ScriptException(env, "Unknown data type for not.")
+  }
+  def dataType(env: Environment) = ScriptDataTypeBoolean()
+}

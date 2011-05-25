@@ -18,6 +18,10 @@ case class ConstInt(value : Int) extends Constant {
   def dataType(env: Environment) = ScriptDataTypeInteger()
 }
 
+case class ConstBoolean(value : Boolean) extends Constant {
+  def dataType(env: Environment) = ScriptDataTypeBoolean()
+}
+
 case class ConstDecimal(value : BigDecimal) extends Constant {
   def dataType(env: Environment) = ScriptDataTypeDecimal()
 }

@@ -217,17 +217,18 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
     it("Insert") {
       var ok = false
-      var e : Entity = null
+      var ee : Entity = null
       val em = new TestEntityManager {
         override def insert(description: Description, dataSource: DataSource) = {
           description should equal(article)
           ok = true
-          new Entity(this, new OneEntityId(dataSource, description, -1))
+          ee = new Entity(this, new OneEntityId(dataSource, description, -1))
+          ee
         }
       }
       run(em,
         Dot(Ref("Article"), Ref("insert"))
-      ) should equal (e)
+      ) should equal (ee)
       ok should equal (true)
     }
 
@@ -295,6 +296,10 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(Or(Equal(ConstInt(1), ConstInt(1)), Equal(ConstInt(2), ConstInt(2)))) should equal (true)
       run(Or(Equal(ConstInt(1), ConstInt(1)), Equal(ConstInt(2), ConstInt(3)))) should equal (true)
       run(Or(Equal(ConstInt(1), ConstInt(2)), Equal(ConstInt(2), ConstInt(3)))) should equal (false)
+    }
+    it("!") {
+      run(Not(ConstBoolean(false))) should equal(true)
+      run(Not(ConstBoolean(true))) should equal(false)
     }
   }
 
