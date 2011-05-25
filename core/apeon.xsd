@@ -9,6 +9,7 @@
             <xs:element name="datasource" type="DataSource" minOccurs="0" maxOccurs="unbounded"/>
 
             <xs:element name="module" type="Module" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="persistDirectory" type="xs:string" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
     </xs:complexType>
 

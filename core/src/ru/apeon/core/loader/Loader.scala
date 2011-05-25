@@ -13,7 +13,11 @@ object Loader extends Logging {
   var classLoader : URLClassLoader = _
   private var _apeonXml : NodeSeq = _
   private var _model : ObjectModel = new DefaultObjectModel
+  private var _persistDirectory : File = _
+
   def apeonXml = _apeonXml
+
+  def persistDirectory = _persistDirectory
 
   def model = _model
 
@@ -22,6 +26,12 @@ object Loader extends Logging {
     log.info("Loading modules")
     val tomcatFolder = System.getProperty("catalina.home")
     _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
+    _persistDirectory = new File(
+      (_apeonXml\"apeon"\"persistDirectory").lastOption.map{_.text}.getOrElse{
+        System.getProperty("user.home") + "/.apeon/"
+      }
+    )
+    if(!_persistDirectory.exists) _persistDirectory.mkdir()
 
     val apeonFolder = new File(tomcatFolder + "/apeon")
     EntityConfiguration.model = model
