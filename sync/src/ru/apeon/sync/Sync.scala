@@ -153,7 +153,19 @@ object Sync {
       case _ => true
     }) {
       options.auto match {case AutoUpdate(one, many) =>
-        destinationDescription.attributes.foreach{column =>
+        val changedFields : Seq[String] = func.map{f =>
+          f.statement.statements.map{
+            case Set(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == aliases._2 =>
+              Some(f)
+            case st =>
+              None
+          }.filter(_.isDefined).map(_.get)
+        }.getOrElse(Seq[String]())
+
+
+        destinationDescription.attributes.filterNot{
+          f => changedFields.contains(f.name)
+        }.foreach{column =>
           if(!column.isPrimaryKey) {
             source.id.description.fieldOption(column.name) match {
               case Some(a : Attribute) => {
@@ -169,7 +181,7 @@ object Sync {
 
         one match {case AutoToOne() =>
           destinationDescription.ones.filter{one =>
-            syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne)
+            syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne) && !changedFields.contains(one.name)
           }.foreach{
             one => source.id.description.fieldOption(one.name) match {
               case Some(f : ToOne) => if(f.entity == one.entity) {
@@ -183,7 +195,9 @@ object Sync {
           }
         }
         many match {case a : AutoToMany =>
-          destinationDescription.manies.filter(many => syncWhereDeclaration(env, many.entity).isDefined).foreach{
+          destinationDescription.manies.filter{
+            many => syncWhereDeclaration(env, many.entity).isDefined && !changedFields.contains(many.name)
+          }.foreach{
             many => source.id.description.fieldOption(many.name) match {
               case Some(f : ToMany) => if(f.entity == many.entity && f.toOne == many.toOne) {
                 val b = collection.immutable.Set.newBuilder[Entity]

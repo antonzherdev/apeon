@@ -137,7 +137,7 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
               "}") should equal (
         script(
           Dot(Dot(ConstEql("from ToSync as s where s.entityName = 'Invoice'"), Ref("select")),
-            ref("foreach", BuiltInFunction(Dot(Ref("ss"), Ref("delete")), Seq("ss")))
+            ref("foreach", bf("ss", Dot(Ref("ss"), Ref("delete"))))
           )
         ))
     }

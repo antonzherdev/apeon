@@ -137,7 +137,7 @@ case class Par(expression : Expression, name : Option[String] = None) {
   }
 }
 
-case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq()) extends Constant {
+case class BuiltInFunction(statement : StatementList, aliases : Seq[String] = Seq()) extends Constant {
   def dataType(env: Environment) = ScriptDataTypeBuiltInFunction()
 
   def value = this

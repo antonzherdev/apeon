@@ -135,7 +135,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(
         Var("sum", ConstInt(0)),
         Dot(ConstSeq(Seq(ConstInt(111), ConstInt(222))), ref("foreach",
-          BuiltInFunction(Set(Ref("sum"), Plus(Ref("sum"), Ref("r"))), Seq("r")))
+          bf("r", Set(Ref("sum"), Plus(Ref("sum"), Ref("r")))))
         ),
         Ref("sum")
       ) should equal (333)
@@ -143,7 +143,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
     it("filter") {
       val s = ConstSeq(Seq(5, 1, 4, 2))
-      val f = BuiltInFunction(More(Ref("_"), 3))
+      val f = bf(More(Ref("_"), 3))
       run(Dot(s, ref("filter", f))) should equal (Seq(5, 4))
       run(Dot(s, ref("filterNot", f))) should equal (Seq(1, 2))
     }

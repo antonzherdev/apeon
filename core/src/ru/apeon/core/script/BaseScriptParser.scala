@@ -61,10 +61,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
 
 
   def builtInFunction : Parser[BuiltInFunction] = "{" ~> opt(repsep(ident, ",") <~ "=>") ~! (statement*) <~ "}" ^^ {
-    case aliases ~ statements => BuiltInFunction(statements match {
-      case Seq(one) => one
-      case _ => Parentheses(statements)
-    }, aliases.getOrElse{Seq()})
+    case aliases ~ statements => BuiltInFunction(Parentheses(statements), aliases.getOrElse{Seq()})
   }
 
   def ref : Parser[Ref] = ident ~ (dataSourceRef?) ~ (parameters?) ~ (builtInFunction?) ^^ {

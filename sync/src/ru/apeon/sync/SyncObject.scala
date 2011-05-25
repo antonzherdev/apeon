@@ -21,9 +21,9 @@ object SyncObject extends ObjectBase {
   def extendsClass = None
   def declaredDeclarations = Seq(
     ConstDeclaration("InsertOnly", InsertOnly),
-    ConstDeclaration("NoAutoUpdate", NoAutoUpdate),
-    ConstDeclaration("NoAutoUpdateToOne", NoAutoUpdateToOne),
-    ConstDeclaration("NoAutoUpdateToMany", NoAutoUpdateToMany),
+    ConstDeclaration("NoAuto", NoAutoUpdate),
+    ConstDeclaration("NoAutoToOne", NoAutoUpdateToOne),
+    ConstDeclaration("NoAutoToMany", NoAutoUpdateToMany),
     ConstDeclaration("ToManyAppend", ToManyAppend),
     SyncDate
   )

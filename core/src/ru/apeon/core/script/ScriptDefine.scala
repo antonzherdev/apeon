@@ -1,5 +1,7 @@
 package ru.apeon.core.script
 
+import collection.immutable.Seq
+
 
 trait ScriptDefine {
   implicit def expressionToSeqPar(e: Expression) : Option[Seq[Par]] = Some(Seq(Par(e)))
@@ -9,7 +11,7 @@ trait ScriptDefine {
   implicit def parToSeqPar(par: Par) : Option[Seq[Par]] = Some(Seq(par))
 
   def ref(name : String, parameters : Expression*) = Ref(name, parameters.toSeq.map(Par(_)) match {
-    case Seq() => None
+    case a if a.isEmpty => None
     case s => Some(s)
   })
 
@@ -19,6 +21,8 @@ trait ScriptDefine {
   def seq(es : Expression*) = ConstSeq(es.toSeq)
 
   def Eql(s : String) = ConstEql(s)
+
+  def bf(name : String, s : Statement*) = BuiltInFunction(Parentheses(s.toSeq), Seq(name))
 
   def bf(s : Statement*) = BuiltInFunction(Parentheses(s.toSeq))
 
