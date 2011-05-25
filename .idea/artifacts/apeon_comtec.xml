@@ -1,8 +1,8 @@
 <component name="ArtifactManager">
   <artifact name="apeon-comtec">
-    <output-path>$PROJECT_DIR$/out/artifacts/</output-path>
+    <output-path>$PROJECT_DIR$/out-0.1/artifacts/</output-path>
     <root id="root">
-      <element id="archive" name="apeon-comtec.zip">
+      <element id="archive" name="apeon-comtec-0.1.zip">
         <element id="dir-copy" path="$PROJECT_DIR$/comtec/src" />
       </element>
     </root>

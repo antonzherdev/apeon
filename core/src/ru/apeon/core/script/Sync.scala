@@ -216,7 +216,10 @@ case class SyncEntity(source : Expression, sourceAlias : String,
         extends Sync with SyncExpressionStatement
 {
 
-  def sourceDataType(env: Environment) = source.dataType(env)
+  def sourceDataType(env: Environment) = source.dataType(env) match {
+    case ScriptDataTypeSeq(e) => e
+    case d => d
+  }
 
   def sync(env: Environment) = this
 
