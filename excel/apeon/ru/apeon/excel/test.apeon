@@ -1,0 +1,5 @@
+package ru.apeon.excel
+
+query Test{
+    Excel("C:/Test.xls").apply(0).apply("A1")
+}
