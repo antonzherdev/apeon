@@ -9,7 +9,7 @@ abstract class ScriptDataTypeBaseEntityDescription extends ScriptDataType {
   override def correspond(dataType: ScriptDataType) = dataType.isInstanceOf[ScriptDataTypeBaseEntityDescription]
 }
 
-case class ScriptDataTypeEntityDescriptionTemplate() extends ScriptDataType
+case class ScriptDataTypeEntityDescriptionTemplate() extends ScriptDataTypeBaseEntityDescription
 case class ScriptDataTypeEntityDescription(model : ObjectModel, description : Description) extends ScriptDataTypeBaseEntityDescription {
   private lazy val obj : Option[ObjectBase] = model.objOption(description.fullName)
   override lazy val declarations =

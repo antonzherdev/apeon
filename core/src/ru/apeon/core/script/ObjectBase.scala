@@ -60,6 +60,11 @@ trait ClassBase extends Declaration with Statement with InPackage {
   }
 
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = dataType(env)
+
+  def isInheritFrom(cl : ClassBase) : Boolean = if(cl == this) true else extendsClass match {
+    case Some(p) => p.isInheritFrom(cl)
+    case None => false
+  }
 }
 
 trait ObjectBase extends ClassBase  {

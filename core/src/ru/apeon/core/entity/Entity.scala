@@ -215,6 +215,8 @@ trait EntityId {
     (id.description.isInstanceOf(description) || description.isInstanceOf(id.description)) && equalId(id)
 
   def equalId(id : EntityId) : Boolean
+
+  def idFor(desc : Description) : EntityId
 }
 
 case class TemporaryEntityId(dataSource : DataSource, description : Description, id : Int) extends EntityId {
@@ -236,6 +238,8 @@ case class TemporaryEntityId(dataSource : DataSource, description : Description,
   }
 
   def data = Seq(id)
+
+  def idFor(desc: Description) = TemporaryEntityId(dataSource, desc, id)
 }
 
 case class OneEntityId(dataSource : DataSource, description : Description, id : Any) extends EntityId {
@@ -268,6 +272,8 @@ case class OneEntityId(dataSource : DataSource, description : Description, id : 
   }
 
   def data = Seq(id)
+
+  def idFor(desc: Description) = OneEntityId(dataSource, desc, id)
 }
 
 case class MultiEntityId(dataSource : DataSource, description : Description, ids : Seq[Any]) extends EntityId {
@@ -309,4 +315,6 @@ case class MultiEntityId(dataSource : DataSource, description : Description, ids
   }
 
   def data = ids
+
+  def idFor(desc: Description) = MultiEntityId(dataSource, desc, ids)
 }

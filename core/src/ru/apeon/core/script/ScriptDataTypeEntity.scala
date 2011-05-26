@@ -31,7 +31,7 @@ case class ScriptDataTypeObject(query : ObjectBase) extends ScriptDataType {
 case class ScriptDataTypeEntityByDescription(description : Description) extends ScriptDataTypeEntity
 
 object ScriptDataTypeEntityTypeDescription {
-  def declarations = Seq(copy0, copy1, delete)
+  def declarations = Seq(copy0, copy1, delete, fAsInstanceOf, fAsInstanceOfOption, fIsInstanceOf)
 
   def delete = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) {
@@ -59,6 +59,58 @@ object ScriptDataTypeEntityTypeDescription {
     def name = "copy"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(
       parameters.get.head.expression.dataType(env).asInstanceOf[ScriptDataTypeEntityDescription].description)
+    override def parameters = Seq(DefPar("entity", ScriptDataTypeEntityDescriptionTemplate()))
+  }
+
+  val fAsInstanceOfOption = new Declaration {
+    def name = "asInstanceOfOption"
+
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      ScriptDataTypeOption(ScriptDataTypeEntityByDescription(
+        parameters.get.head.expression.dataType(env).asInstanceOf[ScriptDataTypeEntityDescription].description
+      ))
+
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val s = env.ref.asInstanceOf[Entity]
+      val d = parameters.get.head.value.asInstanceOf[Description]
+      if(s.id.description.isInheritFrom(d)) {
+        Some(s)
+      } else {
+        if(d.isInheritFrom(s.id.description)) {
+          env.em.get(s.id.idFor(d))
+        }
+        else {
+          None
+        }
+      }
+    }
+    override def parameters = Seq(DefPar("entity", ScriptDataTypeEntityDescriptionTemplate()))
+  }
+
+  val fAsInstanceOf = new Declaration {
+    def name = "asInstanceOf"
+
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      ScriptDataTypeEntityByDescription(
+        parameters.get.head.expression.dataType(env).asInstanceOf[ScriptDataTypeEntityDescription].description
+      )
+
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      fAsInstanceOfOption.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].getOrElse {
+        throw ScriptException(env, "Entity %s can not be instance of %s.".format(env.ref, parameters.get.head))
+      }
+    }
+    override def parameters = Seq(DefPar("entity", ScriptDataTypeEntityDescriptionTemplate()))
+  }
+
+  val fIsInstanceOf = new Declaration {
+    def name = "isInstanceOf"
+
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
+
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      fAsInstanceOfOption.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].isDefined
+    }
     override def parameters = Seq(DefPar("entity", ScriptDataTypeEntityDescriptionTemplate()))
   }
 }
