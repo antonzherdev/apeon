@@ -90,51 +90,31 @@ object Sync {
     w
   }
 
-  def sync(env : Environment, source : Entity, destinationDescription : Description,
-           dataSource : Option[Expression], where : Option[eql.Expression] = None,
-           func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
-           options : SyncOptions = SyncOptions()) : Entity =
-  {
-    val aliases = func.map{ f =>
-      val pars = f.parameters
-      (pars(0).name, pars(1).name)
-    }.getOrElse(("s", "d"))
-
-    var w: eql.Expression = buildWhere(env, source, destinationDescription, where, aliases, dataSource)
-
-    var ds = env.dataSource(dataSource).getOrElse(destinationDescription.dataSource)
-    var d : Entity = null
-    var toOne : ToOne = null
-    var par : Entity = null
-    var inserted : Boolean = false
-    if(parent.isDefined) {
-      par = parent.get.entity
-      toOne = parent.get.toOne
-      ds = par.id.dataSource
-      if(par.id.isTemporary || !parent.get.checkUnique) {
-        env.em.transaction{}
-        d = env.em.insert(destinationDescription, ds)
-        inserted = true
-        d.update(toOne, par)
-        toOne = null
-      }
-      else {
-        w = eql.And(w,
-          eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(toOne.name)), par.id.const))
-      }
+  def dataSource(env: Environment, destinationDescription: Description, dataSource: Option[Expression], parent: Option[ParentSync]): DataSource = {
+    parent match {
+      case Some(par) => par.entity.id.dataSource
+      case None => env.dataSource(dataSource).getOrElse(destinationDescription.dataSource)
     }
+  }
 
-    if(d == null) {
+  def syncFind(env: Environment, source: Entity, destinationDescription: Description,
+               dataSourceExpression: Option[Expression],
+               where: Option[eql.Expression], parent: Option[ParentSync] = None,
+               aliases: (String, String) = ("s", "d") ) : Option[Entity] =
+  {
+    val ds = dataSource(env, destinationDescription, dataSourceExpression, parent)
+    var w: eql.Expression = buildWhere(env, source, destinationDescription, where, aliases, dataSourceExpression)
+    if (!parent.isDefined || (!parent.get.entity.id.isTemporary && parent.get.checkUnique)) {
+      if (parent.isDefined) {
+         w = eql.And(w, eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(parent.get.toOne.name)), parent.get.entity.id.const))
+      }
       val select = eql.Select(
         eql.FromEntity(destinationDescription, Some(aliases._2), eql.DataSourceExpressionDataSource(ds)),
         where = Some(w))
-      d = env.em.select(select) match {
-        case Seq() => {
-          inserted = true
-          env.em.insert(destinationDescription, ds)
-        }
-        case Seq(e) => e
-        case many @ _ =>
+      env.em.select(select) match {
+        case Seq() => None
+        case Seq(e) => Some(e)
+        case many@_ =>
           throw ScriptException(env,
             """Many entities to sync.
           Source datasource = %s
@@ -143,13 +123,33 @@ object Sync {
           Destination datasource = %s
           Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, many))
       }
+    } else {
+      None
     }
-    if(toOne != null) {
-      d.update(toOne, par)
+  }
+
+  def sync(env : Environment, source : Entity, destinationDescription : Description,
+           dataSourceExpression : Option[Expression], where : Option[eql.Expression] = None,
+           func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
+           options : SyncOptions = SyncOptions()) : Entity =
+  {
+    val aliases = func.map{ f =>
+      val pars = f.parameters
+      (pars(0).name, pars(1).name)
+    }.getOrElse(("s", "d"))
+
+    val found = syncFind(env, source, destinationDescription, dataSourceExpression, where, parent, aliases)
+    val d = found.getOrElse{
+      val ds: DataSource = dataSource(env, destinationDescription, dataSourceExpression, parent)
+      env.em.insert(destinationDescription, ds)
+    }
+
+    if(parent.isDefined) {
+      d.update(parent.get.toOne, parent.get.entity)
     }
 
     if(options.sync match {
-      case InsertOnly() => inserted
+      case InsertOnly() => found.isDefined
       case _ => true
     }) {
       options.auto match {case AutoUpdate(one, many) =>
@@ -188,7 +188,7 @@ object Sync {
             one => source.id.description.fieldOption(one.name) match {
               case Some(f : ToOne) => if(f.entity == one.entity) {
                 d.update(one, source(f) match {
-                  case e : Entity => sync(env, e, one.entity, dataSource, options = SyncOptions(InsertOnly()))
+                  case e : Entity => sync(env, e, one.entity, dataSourceExpression, options = SyncOptions(InsertOnly()))
                   case null => null
                 })
               }
@@ -209,9 +209,9 @@ object Sync {
                 source(f) match {
                   case entities : Iterable[Entity] =>
                     entities.foreach{
-                      e => b += sync(env, e, many.entity, dataSource,
+                      e => b += sync(env, e, many.entity, dataSourceExpression,
                         options = SyncOptions(InsertOnly()),
-                        parent = Some(ParentSync(d, many.toOne, !inserted)))
+                        parent = Some(ParentSync(d, many.toOne, found.isDefined)))
                     }
                   case null => {}
                 }

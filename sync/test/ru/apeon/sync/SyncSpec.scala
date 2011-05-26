@@ -47,7 +47,6 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTes
    it("Добавление") {
       var ok1 = false
       var ok2 = false
-      var ok3 = false
       run(
         new TestEntityManager() {
           override def get(id: EntityId) = Some(new Entity(this, id, M("id" -> 1, "col1" -> 2, "col2" -> 11)))
@@ -61,13 +60,8 @@ class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTes
                 data should equal(2)
                 ok1 = true
               case "col2" =>
-                if(ok3) {
-                  data should equal(16)
-                  ok2 = true
-                } else {
-                  data should equal(11)
-                  ok3 = true
-                }
+                data should equal(16)
+                ok2 = true
               case _ => throw new RuntimeException("Error")
             }
           }

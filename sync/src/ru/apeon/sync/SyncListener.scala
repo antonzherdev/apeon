@@ -21,6 +21,7 @@ class SyncListener extends Listener{
 object SyncListener {
   def preLoad() {
     ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeEntity], SyncDeclaration)
+    ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeEntity], SyncFindDeclaration)
     ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeSeq], SyncDeclaration)
   }
 }
