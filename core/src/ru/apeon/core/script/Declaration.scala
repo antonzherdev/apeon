@@ -298,3 +298,8 @@ case class Val(name : String, init : Expression, dataType : Option[ScriptDataTyp
  */
 case class Var(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration
 
+object This extends Declaration {
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref
+  def name = "this"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = env.thisType.get
+}

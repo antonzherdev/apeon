@@ -8,7 +8,7 @@ import org.scalatest.{Spec}
 import ru.apeon.core.entity._
 
 class SyncWhereSuite extends Spec with ShouldMatchers with ScriptTest with EntityDefine{
-  SyncListener.preLoad()
+  SyncListener.preLoad(model)
 
   def syncWhere(e : Statement) : Def = Def("syncWhere", e)
   def syncWhere(s : String) : Def = syncWhere(Eql(s))

@@ -8,7 +8,7 @@ import ru.apeon.core.eql.Select
 import ru.apeon.core.eql
 
 class SyncFindSuite extends FunSuite with ShouldMatchers with EntityDefine with ScriptTest{
-  SyncListener.preLoad()
+  SyncListener.preLoad(model)
 
   test("Test") {
     withModel {

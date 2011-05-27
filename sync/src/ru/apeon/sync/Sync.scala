@@ -156,10 +156,10 @@ object Sync {
       options.auto match {case AutoUpdate(one, many) =>
         val changedFields : Seq[String] = func.map{f =>
           f.statement.statements.map{
-            case Set(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == aliases._2 =>
+            case SetBase(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == aliases._2 =>
               Some(f)
-            case SetPlus(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == aliases._2 =>
-              Some(f)
+            case Ref("syncSkip", Some(Seq(Par(expr, _))) , None) =>
+              Some(expr.evaluate(env).toString)
             case st =>
               None
           }.filter(_.isDefined).map(_.get)
@@ -223,11 +223,10 @@ object Sync {
           }
         }
       }
+      if(func.isDefined) {
+        func.get.run(env, source , d)
+      }
     }
-    if(func.isDefined) {
-      func.get.run(env, source , d)
-    }
-
     d
   }
 }

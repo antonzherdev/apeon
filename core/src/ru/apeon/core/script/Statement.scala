@@ -191,6 +191,10 @@ abstract class SetBase extends Expression {
   override def toString = "%s %s %s".format(left, name, right)
 }
 
+object SetBase{
+  def unapply(sb : SetBase): Option[(Expression, Expression)] = Some(sb.left, sb.right)
+}
+
 case class Set(left : Expression, right : Expression) extends SetBase {
   def evaluate(env: Environment, ref: Ref) = env.update(ref.declaration, right.evaluate(env))
 

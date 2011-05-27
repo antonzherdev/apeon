@@ -20,6 +20,7 @@ object SyncDeclaration extends Declaration {
     case sources : Traversable[Entity] => sources.map{
       source => value(env, parameters, dataSource, source)
     }
+    case null => null
   }
 
   def option(value : Int) : SyncOptions =

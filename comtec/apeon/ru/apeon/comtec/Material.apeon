@@ -52,6 +52,11 @@ entity MaterialGroup<comtec> {
 
     many child MaterialGroup.parent
     many materials Material.group
+
+    def syncProc(d : MaterialGroup) = {
+        skip("materials")
+        skip("child")
+    }
 }
 
 

@@ -9,7 +9,7 @@ import script._
 import org.scalatest.{Spec}
 
 class SyncSpec extends Spec with ShouldMatchers with EntityDefine with ScriptTest {
-  SyncListener.preLoad()
+  SyncListener.preLoad(model)
   val M = collection.mutable.Map
 
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())

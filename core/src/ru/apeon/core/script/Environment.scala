@@ -165,16 +165,20 @@ Variants:
       dotType.get.declaration(this, name, parameters)
     }
     else {
-      var ret : Option[DeclarationThis] = declarationsMap.getOrElse(name,Seq()).find(_.correspond(this, parameters)).map(r => DeclarationThis(None, r))
-      if(!ret.isDefined) {
-        if(thisType.isDefined) {
-          ret = thisType.get.declaration(this, name, parameters)
-        }
+      if(name == "this") {
+        Some(DeclarationThis(None, This))
+      } else {
+        var ret : Option[DeclarationThis] = declarationsMap.getOrElse(name,Seq()).find(_.correspond(this, parameters)).map(r => DeclarationThis(None, r))
         if(!ret.isDefined) {
-          ret = globalDeclarationOption(name, parameters, imports)
+          if(thisType.isDefined) {
+            ret = thisType.get.declaration(this, name, parameters)
+          }
+          if(!ret.isDefined) {
+            ret = globalDeclarationOption(name, parameters, imports)
+          }
         }
+        ret
       }
-      ret
     }
   }
 

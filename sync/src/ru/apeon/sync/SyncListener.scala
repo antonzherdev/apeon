@@ -9,8 +9,7 @@ class SyncListener extends Listener{
   }
 
   def preLoad(model : ObjectModel) {
-    SyncListener.preLoad()
-    model.addObj(SyncObject)
+    SyncListener.preLoad(model)
   }
 
   def load(model : ObjectModel) {
@@ -19,9 +18,11 @@ class SyncListener extends Listener{
 }
 
 object SyncListener {
-  def preLoad() {
+  def preLoad(model : ObjectModel) {
     ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeEntity], SyncDeclaration)
     ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeEntity], SyncFindDeclaration)
     ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeSeq], SyncDeclaration)
+    model.addObj(SyncObject)
+    model.addObj(SkipObject)
   }
 }
