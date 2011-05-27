@@ -51,10 +51,15 @@ entity OrganizationGroup<comtec> {
     one parent(belong_id) OrganizationGroup
 
     many child OrganizationGroup.parent
-    many materials Organization.group
+    many organizations Organization.group
 	
 	def toString : String = Format.str("Группа организаций", id, name)
 	def syncWhere = ["name", "parent.name"]
+
+	def syncProc(d : OrganizationGroup) = {
+        syncSkip("organizations")
+        syncSkip("child")
+    }
 }
 
 entity Place<comtec> extends Partner {
