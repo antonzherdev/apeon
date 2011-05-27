@@ -8,6 +8,7 @@ object Sync {
   private def replaceRef(source : Entity, sourceAlias : String, dot : eql.Dot) : Option[Any] = dot.left match {
     case parent : eql.Dot => replaceRef(source, sourceAlias, parent) match {
       case Some(e : Entity) => Some(e(dot.right.name))
+      case Some(null) => Some(null)
       case _ => None
     }
     case r : eql.Ref => if(r.name == sourceAlias) Some(source(dot.right.name)) else None
@@ -149,7 +150,7 @@ object Sync {
     }
 
     if(options.sync match {
-      case InsertOnly() => found.isDefined
+      case InsertOnly() => found.isEmpty
       case _ => true
     }) {
       options.auto match {case AutoUpdate(one, many) =>

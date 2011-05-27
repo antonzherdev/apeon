@@ -15,7 +15,6 @@ import java.util.Properties;
 public class ComtecJdbc implements Driver, /*Referenceable, */Serializable, DataSource {
     SybDataSource ds = new SybDataSource();
     static {
-        System.out.println("!!init");
         ComtecJdbc driverInst = new ComtecJdbc();
         try {
             DriverManager.registerDriver(driverInst);
@@ -24,7 +23,6 @@ public class ComtecJdbc implements Driver, /*Referenceable, */Serializable, Data
         }
     }
     public ComtecJdbc() {
-        System.out.println("!!!!!created");
     }
 
     public boolean acceptsURL(String url) throws SQLException {
@@ -56,7 +54,6 @@ public class ComtecJdbc implements Driver, /*Referenceable, */Serializable, Data
     }
 
     private Connection prep(Connection connection) throws SQLException {
-        System.out.println("!!!!!prep!!!!");
         Statement statement = connection.createStatement();
         statement.execute("SET TEMPORARY OPTION CONNECTION_AUTHENTICATION='Company=Comtec Ltd;Application=Comtec for Business;Signature=000fa55157edb8e14d818eb4fe3db41447146f1571g50d0fe1fd35884b6336b6950a87abd70376da7e6'");
         statement.close();
