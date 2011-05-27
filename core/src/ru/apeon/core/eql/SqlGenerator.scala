@@ -46,7 +46,7 @@ class SqlGenerator {
     }
 
   def genMainInsert(q : Insert) = {
-    var columns = q.columns.filter{
+    var columns = q.columns.filterNot(_.column.isNullFor(q.dataSource)).filter{
       _.column.tableName(q.dataSource).getOrElse(q.from.entity.table.name) == q.from.entity.table.name
     }.map{column =>
       sql.InsertColumn(column.column.columnName(q.dataSource), genExpression(column.expression, new EqlSqlFrom(q.dataSource)))
@@ -72,7 +72,7 @@ class SqlGenerator {
       genMainInsert(q) +:
       q.from.entity.joinedTables.map{join =>
         var columns =
-          sql.InsertColumn(join.column, sql.Parameter("l_identity")) +: q.columns.filter{
+          sql.InsertColumn(join.column, sql.Parameter("l_identity")) +: q.columns.filterNot(_.column.isNullFor(q.dataSource)).filter{
             _.column.tableName(q.dataSource).getOrElse(q.from.entity.table.name) ==join.table.name
           }.map{column =>
             sql.InsertColumn(column.column.columnName(q.dataSource), genExpression(column.expression, new EqlSqlFrom(q.dataSource)))
@@ -87,12 +87,12 @@ class SqlGenerator {
   def gen(q : Update) : Seq[sql.Update] = {
     val ef = new EqlSqlFrom(q.dataSource)
     val e = q.from.entity
-    e.joinedTables match {
+    (e.joinedTables match {
       case Seq() => {
         ef.table = sql.FromTable(sqlTable(e.table), None)
         ef.append(q.from, ef.table, discriminator(ef, e, ef.table))
 
-        val columns = q.columns.map{column =>
+        val columns = q.columns.filterNot(_.column.isNullFor(q.dataSource)).map{column =>
           sql.UpdateColumn(column.column.columnName(q.dataSource), genExpression(column.expression, ef))
         }
 
@@ -113,7 +113,7 @@ class SqlGenerator {
           efIn.table = sql.FromTable(sqlTable(join.table), None)
           efIn.append(q.from, efIn.table, None)
 
-          val columns = q.columns.filter(_.column.tableName(q.dataSource).getOrElse(e.table.name) == join.table.name).map{column =>
+          val columns = q.columns.filterNot(_.column.isNullFor(q.dataSource)).filter(_.column.tableName(q.dataSource).getOrElse(e.table.name) == join.table.name).map{column =>
             sql.UpdateColumn(column.column.columnName(q.dataSource), genExpression(column.expression, efIn))
           }
 
@@ -122,9 +122,9 @@ class SqlGenerator {
             sql.Ref("t", e.primaryKeys.head.name))
 
           sql.Update(efIn.gen.asInstanceOf[sql.FromTable], columns, Some(sql.Exists(ef.gen,sql.And(allWhere, Some(eq)))))
-        }.filterNot(_.columns.isEmpty)
+        }
       }
-    }
+    }).filterNot(_.columns.isEmpty)
   }
 
 
@@ -310,10 +310,17 @@ class SqlGenerator {
         }
       }
       else {
-        sql.Ref(getFrom(ef, left, right), p.columnName(ef.dataSource))
+        p.source(ef.dataSource) match {
+          case NullFieldSource() => sql.ConstNull()
+          case FieldSource(columnName, _) => sql.Ref(getFrom(ef, left, right), columnName)
+        }
       }
     }
-    case o : ToOne => sql.Ref(getFrom(ef, left, right), o.columnName(ef.dataSource))
+    case o : ToOne => o.source(ef.dataSource) match {
+      case NullFieldSource() => sql.ConstNull()
+      case FieldSource(columnName, _) => sql.Ref(getFrom(ef, left, right), columnName)
+    }
+
     case d : SqlGeneration => d.generateSql(genExpression(left.get, ef), right.parameters.map{
       par => genExpression(par, ef)
     })

@@ -116,9 +116,9 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
   def attribute : Parser[Attribute] =
     ("column" ~> ident) ~! (dbName?) ~ attributeDataType ~ primaryKey ~ (default?)  ^^ {
       case name ~ dbName ~ dataType ~ pk ~ default => {
-        val names = dbName.getOrElse(Map())
+        val names : Map[String, FieldSource]= dbName.getOrElse(Map("" -> FieldSource(name)))
         Attribute(parser.pack.get, name,
-          FieldSources(names.getOrElse("", FieldSource(name)), names.filterNot(_._1.isEmpty)),
+          FieldSources(names.getOrElse("", NullFieldSource()), names.filterNot(_._1.isEmpty)),
           dataType, isPrimaryKey = pk, default = default
         )
       }

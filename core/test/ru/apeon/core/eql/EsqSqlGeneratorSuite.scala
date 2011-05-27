@@ -10,7 +10,7 @@ import script._
  * @author Anton Zherdev
  */
 
-class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
+class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EqlDefine {
   override def createDataSource = new DataSource(pack, "ds") {
     override def store = EntityConfiguration.store
   }
@@ -482,22 +482,55 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EntityDefine {
     }
   }
 
+  def zero: sql.Expression = {
+    sql.Expression.constant(0)
+  }
+
   describe("Datasources") {
-    clearModel()
-
     val ds1 = DataSource(pack, "ds1")
-    model.addDataSource(ds1)
     val ds2 = DataSource(pack, "ds2")
-    model.addDataSource(ds2)
+    def initModel(){withModel{
+      model.addDataSource(ds1)
+      model.addDataSource(ds2)
 
-    val col = Attribute(pack, "col", FieldSources(FieldSource("def"), Map("ds2" -> FieldSource("ds2"))), AttributeDataTypeInteger())
-    val e = desc("E").ds("ds1").decl(col).b
-    fillRef()
+      val col = Attribute(pack, "col", FieldSources(FieldSource("def"), Map("ds2" -> FieldSource("ds2"))), int)
+      val col2 = Attribute(pack, "col2", FieldSources(NullFieldSource(), Map("ds2" -> FieldSource("col2"))), int)
+      desc("E").ds("ds1").decl(col, col2).b
+    }
+    }
+
     it("Select") {
-      eql.SqlGenerator(eql.Select(eql.From(e), where = Some(eql.Dot("E", "col")))).where.get should equal(sql.Ref("t", "def"))
+      initModel()
+      eql.SqlGenerator(from("E").where("E" ~ "col")).where.get should equal(sql.Ref("t", "def"))
 
-      eql.SqlGenerator(eql.Select(eql.FromEntity(e, None, DataSourceExpressionDataSource(ds2)),
-        where = Some(eql.Dot("E", "col")))).where.get should equal(sql.Ref("t", "ds2"))
+      eql.SqlGenerator(from("E", ds2).where("E" ~ "col")).where.get should equal(sql.Ref("t", "ds2"))
+    }
+    it("Null Select") {
+      initModel()
+      eql.SqlGenerator(from("E", ds2).col("E" ~ "col2", "c")).columns should equal(
+        Seq(sql.Column(sql.Ref("t", "col2"), "c")))
+
+      eql.SqlGenerator(from("E").col("E" ~ "col2", "c")).columns should equal(
+        Seq(sql.Column(sql.ConstNull(), "c")))
+    }
+    it("Update") {
+      initModel()
+      eql.SqlGenerator(update("E", ds2).set("col", 0).set("col2", 0)).head.columns should equal(
+        Seq(sql.UpdateColumn("ds2", zero), sql.UpdateColumn("col2", zero)))
+
+      eql.SqlGenerator(update("E").set("col", 0).set("col2", 0)).head.columns should equal(
+        Seq(sql.UpdateColumn("def", zero)))
+
+      eql.SqlGenerator(update("E").set("col2", 0)) should equal(
+        Seq())
+    }
+    it("Insert") {
+      initModel()
+      eql.SqlGenerator(insert("E", ds2).set("col", 0).set("col2", 0)).head.asInstanceOf[sql.Insert].columns should equal(
+        Seq(sql.InsertColumn("ds2", zero), sql.InsertColumn("col2", zero)))
+
+      eql.SqlGenerator(insert("E").set("col", 0).set("col2", 0)).head.asInstanceOf[sql.Insert].columns should equal(
+        Seq(sql.InsertColumn("def", zero)))
     }
   }
 

@@ -168,22 +168,30 @@ abstract class Field extends DeclarationStatement {
 abstract class FieldWithSource extends Field {
   def isPrimaryKey : Boolean
 
+  def source(dataSource : DataSource) : BaseFieldSource = sources(dataSource)
   /**
    * Имя таблицы для мультиапдейтных сущностей
    */
-  def tableName(dataSource : DataSource) : Option[String] = sources(dataSource).tableName
-  def columnName(dataSource : DataSource) : String = sources(dataSource).columnName
+  def tableName(dataSource : DataSource) : Option[String] = sources(dataSource).asInstanceOf[FieldSource].tableName
+  def columnName(dataSource : DataSource) : String = sources(dataSource).asInstanceOf[FieldSource].columnName
 
   val default : Option[Default]
 
   val sources : FieldSources
+
+  def isNullFor(dataSource : DataSource) : Boolean = sources(dataSource) match {
+    case NullFieldSource() => true
+    case _ => false
+  }
 }
 
-case class FieldSource(columnName : String, tableName : Option[String] = None)
-case class FieldSources(default : FieldSource, sources : Map[String, FieldSource] = Map()) {
-  def apply(dataSource : DataSource) : FieldSource = apply(dataSource.name)
+abstract class BaseFieldSource
+case class FieldSource(columnName : String, tableName : Option[String] = None) extends BaseFieldSource
+case class NullFieldSource() extends BaseFieldSource
+case class FieldSources(default : BaseFieldSource, sources : Map[String, FieldSource] = Map()) {
+  def apply(dataSource : DataSource) : BaseFieldSource = apply(dataSource.name)
 
-  def apply(dataSourceName : String) : FieldSource = sources.getOrElse(dataSourceName, default)
+  def apply(dataSourceName : String) : BaseFieldSource = sources.getOrElse(dataSourceName, default)
 }
 
 case class Attribute(pack : Package, name : String, sources :  FieldSources,

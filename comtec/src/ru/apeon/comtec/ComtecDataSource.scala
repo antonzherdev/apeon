@@ -25,5 +25,13 @@ class ComtecDataSource(dataSource : DataSource) extends DataSourceImplLookup(dat
             }
           }
       }
+
+//      override def getConnection = {
+//        val con = super.getConnection
+//        val stm = con.createStatement()
+//        stm.execute("SET TEMPORARY OPTION CONNECTION_AUTHENTICATION='Company=Comtec Ltd;Application=Comtec for Business;Signature=000fa55157edb8e14d818eb4fe3db41447146f1571g50d0fe1fd35884b6336b6950a87abd70376da7e6'")
+//        stm.close()
+//        con
+//      }
     }
 }

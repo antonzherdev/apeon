@@ -31,6 +31,7 @@ trait SqlReadOnly {
     connectionCounter -= 1
     if(connectionCounter <= 0) {
       connection.commit()
+      closeConnection()
       connection = null
       connectionCounter = 0
     }
@@ -39,7 +40,7 @@ trait SqlReadOnly {
   def rollback() {
     checkTransaction()
     connection.rollback()
-    connection.close()
+    closeConnection()
     connection = null
     connectionCounter = 0
   }
