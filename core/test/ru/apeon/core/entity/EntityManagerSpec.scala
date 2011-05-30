@@ -38,7 +38,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
 
   abstract class PS extends PersistentStore {
     def name = "test"
-
+    def nativeOne(query: String) = null
     def update(update: Update, parameters: Map[String, Any]) {
       throw new RuntimeException("Unover")
     }

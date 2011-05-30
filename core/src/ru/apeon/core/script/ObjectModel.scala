@@ -40,6 +40,7 @@ trait ObjectModel {
     addObj(DateObject)
     addObj(LogObject)
     addObj(EntityManagerObject)
+    addObj(NativeObject)
   }
 }
 

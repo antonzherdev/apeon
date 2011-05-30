@@ -24,6 +24,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
   override def dataSource = new DataSource(pack, "ds") {
     override def store = new PersistentStore {
+      def nativeOne(query: String) = null
       def name = null
       def update(update: Update, parameters: Map[String, Any]) = null
       def rollback() {}

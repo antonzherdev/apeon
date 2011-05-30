@@ -5,12 +5,14 @@ import ru.apeon.core._
 import collection.Map
 import akka.util.{Logger, Logging}
 import eql._
-import java.sql.Connection
+import java.sql.{ResultSet, Connection}
 
 trait ReadOnlyPersistentStore {
   def load(){}
   def unload(){}
   def name : String
+
+  def nativeOne(query : String) : Option[Any]
 
   /**
    * Выполнить запрос
@@ -66,6 +68,17 @@ abstract class SqlPersistentStoreBase
       SqlPersistentStoreBase.this.closeConnection(connection)
     }
   }
+
+
+  def nativeOne(query: String) = _eql.transaction{
+    val stm : java.sql.Statement = _eql.connection.createStatement
+    readOnlyLog.debug(query)
+    val rs : ResultSet = stm.executeQuery(query)
+    if(!rs.next)
+      None
+    else
+      Some(rs.getObject(1))
+   }
 
   def closeConnection(connection : Connection) {
     connection.close()
