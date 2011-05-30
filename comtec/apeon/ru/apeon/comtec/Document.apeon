@@ -6,7 +6,7 @@ entity StandardDocument<comtec> {
     column number(nu) String(17)
     column locked(data_lock) String(1)
 
-    def syncWhere = ["Date", "number"]
+    def syncWhere = ["date", "number"]
 }
 
 entity StandardSubDocument<comtec> {

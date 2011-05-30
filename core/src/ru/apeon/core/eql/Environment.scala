@@ -10,7 +10,7 @@ trait Environment{
     fromOption(alias).getOrElse(
       throw new RuntimeException("Alias \"%s\" not found.".format(alias))
     )
-  def from : From
+  def from : Option[From]
   def push(from : From)
   def pop()
 
@@ -43,7 +43,7 @@ class DefaultEnvironment(val model : ObjectModel) extends Environment {
     froms.pop()
   }
 
-  def from = froms.last
+  def from = froms.lastOption
 
   def setDot(v: Option[Dot]) {
     dot = v

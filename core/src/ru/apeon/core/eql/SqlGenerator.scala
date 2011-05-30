@@ -30,7 +30,7 @@ class SqlGenerator {
   def sqlTable(t : entity.Table) : sql.SqlTable = sql.SqlTable(t.schema, t.name)
 
   def default(q : Insert, table : Table) =
-    q.from.entity.columnsWithColumn.filter{col =>
+    q.from.entity.fieldsWithSource.filter{col =>
       q.columns.find(_.column == col).isEmpty &&
               col.default.isDefined &&
               col.tableName(q.dataSource).getOrElse(q.from.entity.table.name) == table.name
@@ -204,16 +204,36 @@ class SqlGenerator {
   }
 
   def genTable(ef: EqlSqlFrom, e : Description) : sql.From = {
-    val mainAlias = ef.alias
-    var ret : sql.From = sql.FromTable(sqlTable(e.table), Some(mainAlias))
-    e.joinedTables.foreach{join =>
-      val a = ef.alias
-      ret = ret.setLastJoin(
-        sql.InnerJoin(sql.FromTable(sqlTable(join.table), Some(a)),
-          sql.Equal(sql.Ref(a, join.column), sql.Ref(mainAlias, e.primaryKeys.head.columnName(ef.dataSource)))
-        ))
+    e.joinedTables match {
+      case Seq() => sql.FromTable(sqlTable(e.table), Some(ef.alias))
+      case tables => {
+        val names = collection.mutable.Map.empty[String, String]
+        val eef = new EqlSqlFrom(ef.dataSource)
+        val mainTableName = eef.alias
+        var ret : sql.From = sql.FromTable(sqlTable(e.table), Some(mainTableName))
+        names += ((e.table.name, mainTableName))
+        e.joinedTables.foreach{join =>
+          val a = eef.alias
+          names += ((join.table.name, a))
+          ret = ret.setLastJoin(
+            sql.InnerJoin(sql.FromTable(sqlTable(join.table), Some(a)),
+              sql.Equal(sql.Ref(a, join.column), sql.Ref(mainTableName, e.primaryKeys.head.columnName(ef.dataSource)))
+            ))
+        }
+        sql.FromSelect(
+          sql.Select(ret,
+            e.fieldsWithSource.map{field => field.source(ef.dataSource) match {
+              case FieldSource(column, table) =>
+                sql.Column(sql.Ref(table.map(name => names(name)).getOrElse("t"), column), field.name)
+              case NullFieldSource() =>
+                sql.Column(sql.ConstNull(), field.name)
+            }}
+          ),
+          ef.alias
+        )
+      }
     }
-    ret
+
   }
 
   def genFrom(f : From, ef: EqlSqlFrom) : EqlSqlFrom = f match {
@@ -224,7 +244,7 @@ class SqlGenerator {
     case e : FromToMany => {
       val t = e.ref match {
         case d : Dot => genFromTable(ef.parent.get, d.left, e.toMany.toOne.tableName(ef.dataSource))
-        case r : Ref => ef.parent.get.get(r.defaultFrom, e.toMany.toOne.tableName(ef.dataSource) )
+        case r : Ref => ef.parent.get.get(r.defaultFrom.get, e.toMany.toOne.tableName(ef.dataSource) )
       }
 
       ef.table = genTable(ef, e.entity)
@@ -259,12 +279,25 @@ class SqlGenerator {
     ef.join(toOne, genTable(ef, toOne.entity), sql.Ref(joinTo, toOne.columnName(ef.dataSource)))
   }
 
+  def columnName(ef: EqlSqlFrom, ft: sql.From, p: FieldWithSource): String = {
+    ft match {
+      case fs: sql.FromSelect => p.name
+      case _ => p.columnName(ef.dataSource)
+    }
+  }
+
   def genToOne(col : eql.Column, from : sql.From, toOne : ToOne, ef: EqlSqlFrom) : sql.SelectColumn = {
     val ft = joinToOne(toOne, ef, from)
 
     sql.ColumnSeq(toOne.entity.fields.filter{!_.isInstanceOf[ToMany]}.map { col : Field => col match {
-      case p : Attribute => sql.Column(sql.Ref(ef.find(ft, p.tableName(ef.dataSource)), p.columnName(ef.dataSource)), Some(p.name))
-      case o : ToOne => sql.Column(sql.Ref(ef.find(ft, o.tableName(ef.dataSource)), o.columnName(ef.dataSource)), Some(o.name))
+      case p : Attribute => p.source(ef.dataSource) match {
+        case NullFieldSource() => sql.Column(sql.ConstNull(), Some(p.name))
+        case _ => sql.Column(sql.Ref(ft, columnName(ef, ft, p)), Some(p.name))
+      }
+      case o : ToOne => o.source(ef.dataSource) match {
+        case NullFieldSource() => sql.Column(sql.ConstNull(), Some(o.name))
+        case _ => sql.Column(sql.Ref(ft, columnName(ef, ft, o)), Some(o.name))
+      }
       case _ => throw new SqlGeneratorError("Select to many column")
     }}, toOne.name)
   }
@@ -272,7 +305,7 @@ class SqlGenerator {
 
   def genFromTable(ef : EqlSqlFrom, ft : eql.Expression, tableName : Option[String]) : sql.From = ft match {
     case ref : Dot => ref.right.declaration match {
-      case toOne : ToOne => ef.find(joinToOne(toOne, ef, genFromTable(ef, ref.left, toOne.tableName(ef.dataSource))), tableName)
+      case toOne : ToOne => joinToOne(toOne, ef, genFromTable(ef, ref.left, toOne.tableName(ef.dataSource)))
       case _ => throw SqlGeneratorError("Not to one")
     }
     case ref : Ref =>
@@ -281,7 +314,7 @@ class SqlGenerator {
       }
       else {
         ref.declaration match {
-          case toOne : ToOne => ef.find(joinToOne(toOne, ef, ef.get(ref.defaultFrom, toOne.tableName(ef.dataSource))), tableName)
+          case toOne : ToOne => joinToOne(toOne, ef, ef.get(ref.defaultFrom.get, toOne.tableName(ef.dataSource)))
           case _ => throw SqlGeneratorError("Not to one")
         }
       }
@@ -297,8 +330,13 @@ class SqlGenerator {
     val tableName = right.declaration.asInstanceOf[FieldWithSource].tableName(ef.dataSource)
     val table: sql.From = left.map {
       l => genFromTable(ef, l, tableName)
-    }.getOrElse(ef.get(right.defaultFrom, tableName))
+    }.getOrElse(ef.get(right.defaultFrom.get, tableName))
     table
+  }
+
+  private def buildRef(ef: EqlSqlFrom, left: Option[Expression], right: Ref, p: FieldWithSource): sql.Ref = {
+    val ft = getFrom(ef, left, right)
+    sql.Ref(ft, columnName(ef, ft, p))
   }
 
   def genRef(ef: EqlSqlFrom, left : Option[Expression], right : Ref) : sql.Expression = right.declaration match {
@@ -306,19 +344,19 @@ class SqlGenerator {
       if(p.isPrimaryKey) {
         left match {
           case Some(dot : Dot) => genRef(ef, Some(dot.left), dot.right)
-          case _ =>  sql.Ref(getFrom(ef, left, right), p.columnName(ef.dataSource))
+          case _ =>  buildRef(ef, left, right, p)
         }
       }
       else {
         p.source(ef.dataSource) match {
           case NullFieldSource() => sql.ConstNull()
-          case FieldSource(columnName, _) => sql.Ref(getFrom(ef, left, right), columnName)
+          case FieldSource(_, _) => buildRef(ef, left, right, p)
         }
       }
     }
     case o : ToOne => o.source(ef.dataSource) match {
       case NullFieldSource() => sql.ConstNull()
-      case FieldSource(columnName, _) => sql.Ref(getFrom(ef, left, right), columnName)
+      case FieldSource(_, _) => buildRef(ef, left, right, o)
     }
 
     case d : SqlGeneration => d.generateSql(genExpression(left.get, ef), right.parameters.map{
@@ -392,14 +430,8 @@ class SqlGenerator {
       toOne.getOrElse(ref, f)
     }
 
-    def find(f : sql.From, tableName : Option[String] ) : sql.From  = tableName match {
-      case None => f
-      case Some(name) =>
-        f.froms.find(_.asInstanceOf[sql.FromTable].table.name == name).get
-    }
-
     def get(ft : eql.From, tableName : Option[String]) : sql.From = {
-      find(tables.get(ft).getOrElse{parent.get.get(ft, tableName)}, tableName)
+      tables.get(ft).getOrElse{parent.get.get(ft, tableName)}
     }
 
     def prefix : String = parent match {

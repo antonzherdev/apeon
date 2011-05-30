@@ -30,8 +30,8 @@ case class Select(from : From,
   def dataSource = from.dataSource
 
   protected def fillRef(env: Environment) {
-    env.push(from)
     from.fillRef(env)
+    env.push(from)
     columns.foreach(_.expression.fillRef(env))
     if(where.isDefined)
       where.get.fillRef(env)
@@ -181,7 +181,7 @@ case class Insert(from : FromEntity, columns : Seq[InsertColumn]) extends Statem
 case class InsertColumn(columnName : String,  expression : Expression) {
   var column : FieldWithSource = null
   def fillRef(env: Environment) {
-    column = env.from.field(columnName).asInstanceOf[FieldWithSource]
+    column = env.from.get.field(columnName).asInstanceOf[FieldWithSource]
     expression.fillRef(env)
   }
 
@@ -204,7 +204,7 @@ case class Update(from : FromEntity, columns : Seq[UpdateColumn], where : Option
 case class UpdateColumn(columnName : String, expression : Expression) {
   var column : FieldWithSource = null
   def fillRef(env: Environment) {
-    column = env.from.field(columnName).asInstanceOf[FieldWithSource]
+    column = env.from.get.field(columnName).asInstanceOf[FieldWithSource]
     expression.fillRef(env)
   }
 }

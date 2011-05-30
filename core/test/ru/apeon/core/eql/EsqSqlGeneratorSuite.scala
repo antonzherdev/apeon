@@ -388,29 +388,44 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EqlDefine {
   describe("Joined Entity") {
     clearModel()
 
-    val a1 = Attribute(pack, "a1", "a1", AttributeDataTypeInteger())
-    val a2 = Attribute(pack, "a2", ("m", "a2"), AttributeDataTypeInteger())
-    val a3 = Attribute(pack, "a3", ("s", "a3"), AttributeDataTypeInteger())
+    val a1 = Attribute(pack, "a1", "col1", AttributeDataTypeInteger())
+    val a2 = Attribute(pack, "a2", ("m", "col2"), AttributeDataTypeInteger())
+    val a3 = Attribute(pack, "a3", ("s", "col3"), AttributeDataTypeInteger())
     val sid = Attribute(pack, "sid", ("s", "id"), AttributeDataTypeInteger(), isPrimaryKey = true)
     val e = desc("E").table("", "m").decl(Id, a1, a2, a3, sid).join("", "s", "ref").b
     fillRef()
 
     def sel(column : String) = eql.SqlGenerator(eql.Select(eql.From(e), Seq(eql.Column(eql.Ref(column), "a"))))
-    val from = sql.From("m", "t",
-      sql.InnerJoin(sql.From("s", "t0"), sql.Equal(sql.Ref("t0", "ref"), sql.Ref("t", "id"))))
+    def from: sql.FromTable = {
+      sql.From("m", "t",
+        sql.InnerJoin(sql.From("s", "t0"), sql.Equal(sql.Ref("t0", "ref"), sql.Ref("t", "id"))))
+    }
+    def f(alias : String): sql.FromSelect = {
+      sql.FromSelect(sql.Select(
+        from,
+        columns = Seq(
+          sql.Column(sql.Ref("t", "id"), "id"),
+          sql.Column(sql.Ref("t", "col1"), "a1"),
+          sql.Column(sql.Ref("t", "col2"), "a2"),
+          sql.Column(sql.Ref("t0", "col3"), "a3"),
+          sql.Column(sql.Ref("t0", "id"), "sid")
+        )
+      ), alias)
+    }
+
     it("Колонка без указания таблицы") {
       sel("a1") should equal (
-        sql.Select(from, Seq(sql.Column(sql.Ref("t", "a1"), Some("a"))))
+        sql.Select(f("t"), Seq(sql.Column(sql.Ref("t", "a1"), Some("a"))))
       )
     }
     it("Колонка с указанием основноей таблицы") {
       sel("a2") should equal (
-        sql.Select(from, Seq(sql.Column(sql.Ref("t", "a2"), Some("a"))))
+        sql.Select(f("t"), Seq(sql.Column(sql.Ref("t", "a2"), Some("a"))))
       )
     }
     it("Колонка с указанием второй таблицы") {
       sel("a3") should equal (
-        sql.Select(from, Seq(sql.Column(sql.Ref("t0", "a3"), Some("a"))))
+        sql.Select(f("t"), Seq(sql.Column(sql.Ref("t", "a3"), Some("a"))))
       )
     }
 
@@ -421,11 +436,10 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EqlDefine {
       eql.SqlGenerator(eql.Select(eql.From(o), Seq(eql.Column(eql.Dot(eql.Dot("O", "o1"), "a3"),"a")))) should equal (
         sql.Select(
           sql.From("o", "t",
-            sql.LeftJoin(sql.From("m", "t0",
-              sql.InnerJoin(sql.From("s", "t1"), sql.Equal(sql.Ref("t1", "ref"), sql.Ref("t0", "id")))),
+            sql.LeftJoin(f("t0"),
               sql.Equal(sql.Ref("t", "o1"), sql.Ref("t0", "id"))
             )
-          ), Seq(sql.Column(sql.Ref("t1", "a3"), "a")))
+          ), Seq(sql.Column(sql.Ref("t0", "a3"), "a")))
       )
     }
 
@@ -435,11 +449,11 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EqlDefine {
           eql.UpdateColumn("a1", eql.Const(10)),
           eql.UpdateColumn("a3", eql.Const(15))))) should equal (
         Seq(
-          sql.Update(sql.From("m"), Seq(sql.UpdateColumn("a1", sql.ConstNumeric(10))),
-            Some(sql.Exists(from, Some(sql.Equal(sql.Ref("m", "id"), sql.Ref("t", "id")))))
+          sql.Update(sql.From("m"), Seq(sql.UpdateColumn("col1", sql.ConstNumeric(10))),
+            Some(sql.Exists(f("t"), Some(sql.Equal(sql.Ref("m", "id"), sql.Ref("t", "id")))))
           ),
-          sql.Update(sql.From("s"), Seq(sql.UpdateColumn("a3", sql.ConstNumeric(15))),
-            Some(sql.Exists(from, Some(sql.Equal(sql.Ref("s", "ref"), sql.Ref("t", "id")))))
+          sql.Update(sql.From("s"), Seq(sql.UpdateColumn("col3", sql.ConstNumeric(15))),
+            Some(sql.Exists(f("t"), Some(sql.Equal(sql.Ref("s", "ref"), sql.Ref("t", "id")))))
           )
         ))
     }
@@ -449,8 +463,8 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EqlDefine {
         Seq(
           eql.UpdateColumn("a3", eql.Const(15))))) should equal (
         Seq(
-          sql.Update(sql.From("s"), Seq(sql.UpdateColumn("a3", sql.ConstNumeric(15))),
-            Some(sql.Exists(from, Some(sql.Equal(sql.Ref("s", "ref"), sql.Ref("t", "id")))))
+          sql.Update(sql.From("s"), Seq(sql.UpdateColumn("col3", sql.ConstNumeric(15))),
+            Some(sql.Exists(f("t"), Some(sql.Equal(sql.Ref("s", "ref"), sql.Ref("t", "id")))))
           )
         ))
     }
@@ -461,10 +475,10 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EqlDefine {
         eql.InsertColumn("a3", eql.Const(15))
       ))) should equal (
         Seq(
-          sql.Insert(sql.SqlTable("", "m"), Seq(sql.InsertColumn("a1", sql.ConstNumeric(5)))),
+          sql.Insert(sql.SqlTable("", "m"), Seq(sql.InsertColumn("col1", sql.ConstNumeric(5)))),
           sql.Insert(sql.SqlTable("", "s"), Seq(
             sql.InsertColumn("ref", sql.Parameter("l_identity")),
-            sql.InsertColumn("a3", sql.ConstNumeric(15))))
+            sql.InsertColumn("col3", sql.ConstNumeric(15))))
         )
       )
     }
@@ -477,7 +491,7 @@ class EsqSqlGeneratorSuite extends Spec with ShouldMatchers with EqlDefine {
           sql.Insert(sql.SqlTable("", "m"), Seq(sql.InsertColumn("id", sql.ConstNull()))),
           sql.Insert(sql.SqlTable("", "s"), Seq(
             sql.InsertColumn("ref", sql.Parameter("l_identity")),
-            sql.InsertColumn("a3", sql.ConstNumeric(15))))
+            sql.InsertColumn("col3", sql.ConstNumeric(15))))
         ))
     }
   }

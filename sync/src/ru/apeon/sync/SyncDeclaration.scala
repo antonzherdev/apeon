@@ -122,12 +122,17 @@ object SyncDeclaration extends Declaration {
     case _ => false
   }
 
+  def tp(env : Environment) : ScriptDataType = env.dotType.get match {
+      case ScriptDataTypeSeq(tp) => tp
+      case tp => tp
+    }
+
   override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) =
-    Seq(BuiltInParameterDef("s", env.dotType.get),
+    Seq(BuiltInParameterDef("s", tp(env)),
       BuiltInParameterDef("d",
         if(parameters.isDefined && !parameters.get.isEmpty && parameters.get.head.expression.isInstanceOf[Ref])
-          parameters.get.head.expression.dataType(env)
-        else env.dotType.get )
+          ScriptDataTypeEntityByDescription(parameters.get.head.expression.dataType(env).asInstanceOf[ScriptDataTypeEntityDescription].description)
+        else tp(env))
     )
 }
 

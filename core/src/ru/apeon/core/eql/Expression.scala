@@ -1,10 +1,10 @@
 package ru.apeon.core.eql
 
 import java.util.Date
-import java.lang.String
 import ru.apeon.core.entity._
 import ru.apeon.core._
 import script.{Imports}
+import java.lang.{RuntimeException, String}
 
 abstract class Expression {
   def fillRef(env : Environment) {
@@ -179,7 +179,7 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
     def dataType(env: script.Environment) = declaration.dataType(env, None)
   }
   protected[eql] var data : RefData = NoData()
-  private var _defaultFrom : From = _
+  private var _defaultFrom : Option[From] = _
 
   def this(from : From) {
     this(from.name)
@@ -194,7 +194,9 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
   override def fillRef(env: Environment) {
     data = env.dot match {
       case None => env.fromOption(name) match {
-        case None => DeclarationData(env.from.field(name))
+        case None => DeclarationData(env.from.getOrElse{
+          throw new RuntimeException("Field or entity \"%s\" not found".format(name))
+        }.field(name))
         case Some(from) => FromData(from)
       }
       case Some(dot) => {

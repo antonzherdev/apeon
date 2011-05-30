@@ -55,24 +55,50 @@ class DefaultSqlDialect extends SqlDialect with TextGen {
 
   def lastIdentityExpression(table : SqlTable) = "@@identity"
 
+  def genSelect(s: Select) {
+    line {
+      append("select")
+    }
+    s.columns match {
+      case Seq() => append(" *")
+      case _ => indent {
+        append(s.columns, ",")
+      }
+    }
+    line {
+      append("from")
+    }
+    indent {
+      line {
+        append(s.from)
+      }
+    }
+
+    if (s.where.isDefined) {
+      line {
+        append("where")
+      }
+      indent {
+        line {
+          append(s.where)
+        }
+      }
+    }
+    if (!s.orderBy.isEmpty) {
+      line {
+        append("order by")
+      }
+      indent {
+        line {
+          append(s.orderBy, ", ")
+        }
+      }
+    }
+  }
+
   protected def appendFunction = {
     case s : Select => {
-      line{append("select")}
-      s.columns match {
-        case Seq() => append(" *")
-        case _ => indent{append(s.columns, ",")}
-      }
-      line{append("from")}
-      indent{line{ append(s.from) }}
-
-      if(s.where.isDefined) {
-        line{append("where")}
-        indent{line{ append(s.where) } }
-      }
-      if(!s.orderBy.isEmpty) {
-        line{append("order by")}
-        indent{line{append(s.orderBy, ", ")}}
-      }
+      genSelect(s)
       append(';')
     }
     case c : Column => appendSelectColumn(c)
@@ -382,6 +408,18 @@ class DefaultSqlDialect extends SqlDialect with TextGen {
           append(" as ")
           appendEscape()
           append(f.alias.get)
+          appendEscape()
+        }
+      }
+      case f : FromSelect => {
+        append("(")
+        indent{
+          genSelect(f.select)
+        }
+        line{
+          append(") as ")
+          appendEscape()
+          append(f.name)
           appendEscape()
         }
       }

@@ -33,7 +33,7 @@ case class Description(module : Module,
   def manies : Seq[ToMany] =
     fields.filter{_.isInstanceOf[ToMany]}.asInstanceOf[Seq[ToMany]]
 
-  def columnsWithColumn : Seq[FieldWithSource] =
+  def fieldsWithSource : Seq[FieldWithSource] =
     fields.filter{_.isInstanceOf[FieldWithSource]}.asInstanceOf[Seq[FieldWithSource]]
 
   /**

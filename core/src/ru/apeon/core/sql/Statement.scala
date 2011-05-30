@@ -85,6 +85,10 @@ case class FromTable(table : SqlTable, alias : Option[String] = None, join : Opt
   def setJoin(join: Option[Join]) = FromTable(table, alias, join)
 }
 
+case class FromSelect(select : Select, name : String, join : Option[Join] = None) extends From {
+  def setJoin(join: Option[Join]) = FromSelect(select, name, join)
+}
+
 abstract class Join {
   val table : From
   def setJoin(join : Option[Join]) : Join = setTable(table.setJoin(join))

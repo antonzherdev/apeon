@@ -54,7 +54,9 @@ abstract class StatementList extends Statement {
  * Фигурные скобочки.
  * Список опираторов
  */
-case class Parentheses(statements : Seq[Statement] = Seq()) extends StatementList
+case class Parentheses(statements : Seq[Statement] = Seq()) extends StatementList {
+  override def toString = "{\n\t" + statements.mkString("\n").replace("\n", "\t\n") + "\n}"
+}
 
 
 /**
