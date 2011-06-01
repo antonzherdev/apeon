@@ -166,7 +166,7 @@ Variants:
     }
     else {
       if(name == "this") {
-        Some(DeclarationThis(None, This))
+        Some(DeclarationThis(None, This(thisType.get)))
       } else {
         var ret : Option[DeclarationThis] = declarationsMap.getOrElse(name,Seq()).find(_.correspond(this, parameters)).map(r => DeclarationThis(None, r))
         if(!ret.isDefined) {

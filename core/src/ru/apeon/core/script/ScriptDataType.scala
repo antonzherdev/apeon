@@ -40,6 +40,8 @@ object ScriptDataTypeDescription {
     addDeclaration(classOf[ScriptDataTypeString], ScriptDataTypeStringDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeEqlSelectBase], ScriptDataTypeEqlSelectBaseDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeEqlStatement], ScriptDataTypeEqlStatementDescription.declarations : _*)
+
+    addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration)
   }
   load()
 }
@@ -64,3 +66,9 @@ case class ScriptDataTypeInteger() extends ScriptDataTypeSimple("int") {
 }
 
 case class ScriptDataTypeBuiltInFunction() extends ScriptDataType
+
+object ToStringDeclaration extends Declaration {
+  def name = "toString"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeString()
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref.toString
+}
