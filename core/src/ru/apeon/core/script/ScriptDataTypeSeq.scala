@@ -1,9 +1,21 @@
 package ru.apeon.core.script
 
-case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataType
+
+abstract class ScriptDataTypeIterable extends ScriptDataType{
+  def dataType : ScriptDataType
+}
+
+case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataTypeIterable {
+
+}
+case class ScriptDataTypeMap(keyDataType : ScriptDataType, valueDataType : ScriptDataType) extends ScriptDataTypeIterable {
+  val dataType = ScriptDataTypeKeyValue(Map("key" -> keyDataType, "value" -> valueDataType))
+}
 
 object ScriptDataTypeSeqDescription {
-  def declarations = Seq(foreach, filter, filterNot, find, isEmpty, size)
+  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy)
+  def map = iterable
+  def seq = iterable
 
   def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeSeq]
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeSeq].dataType
@@ -18,7 +30,7 @@ object ScriptDataTypeSeqDescription {
     override def parameters = Seq(DefPar("f", ScriptDataTypeBuiltInFunction()))
   }
 
-  def foreach = new OneBuiltInDeclaration{
+  val foreach = new OneBuiltInDeclaration{
     def name = "foreach"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeUnit()
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) {
@@ -28,14 +40,14 @@ object ScriptDataTypeSeqDescription {
     }
   }
 
-  def filter = new OneBuiltInDeclaration{
+  val filter = new OneBuiltInDeclaration{
     def name = "filter"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = items.filter{item =>
       f.run(env, item).asInstanceOf[Boolean]}
   }
 
-  def filterNot = new OneBuiltInDeclaration{
+  val filterNot = new OneBuiltInDeclaration{
     def name = "filterNot"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = items.filterNot{item =>
@@ -43,7 +55,7 @@ object ScriptDataTypeSeqDescription {
   }
 
 
-  def find = new OneBuiltInDeclaration{
+  val find = new OneBuiltInDeclaration{
     def name = "find"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       ScriptDataTypeOption(tp(env))
@@ -52,17 +64,25 @@ object ScriptDataTypeSeqDescription {
     }
   }
 
-  def isEmpty = new Declaration {
+  val isEmpty = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[Seq[_]].isEmpty
     def name = "isEmpty"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
   }
 
-  def size = new Declaration {
+  val size = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[Seq[_]].size
     def name = "size"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
+  }
+
+  val groupBy = new OneBuiltInDeclaration {
+    def name = "groupBy"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      ScriptDataTypeMap(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env), t(env))
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
+      items.groupBy(item => f.run(env, item))
   }
 }

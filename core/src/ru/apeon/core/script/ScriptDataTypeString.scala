@@ -9,7 +9,7 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
 }
 
 object ScriptDataTypeStringDescription {
-  def declarations = Seq(format, toInt, toDec0, toDec1, replace)
+  def declarations = Seq(format, toInt, toDec0, toDec1, replace, length)
 
   def format = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
@@ -60,5 +60,14 @@ object ScriptDataTypeStringDescription {
     override def parameters = Seq(DefPar("target", ScriptDataTypeString()), DefPar("replacement", ScriptDataTypeString()))
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
       sql.Call("replace", Seq(ref, parameters(0), parameters(1)))
+  }
+
+  def length = new Declaration with SqlGeneration{
+    def name = "length"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[String].length()
+    def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
+      sql.Call("length", Seq(ref))
   }
 }

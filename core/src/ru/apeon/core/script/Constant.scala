@@ -38,7 +38,11 @@ case class ConstDate(value : Date) extends Constant {
 case class ConstSeq(expressions : Seq[Expression]) extends Expression{
   def evaluate(env: Environment) = expressions.map(_.evaluate(env))
 
-  def dataType(env: Environment) = ScriptDataTypeSeq(ScriptDataTypeAny())
+  def dataType(env: Environment) = expressions match {
+    case Seq() => ScriptDataTypeSeq(ScriptDataTypeAny())
+    case s => ScriptDataTypeSeq(expressions.head.dataType(env))
+  }
+
 
   def fillRef(env: Environment, imports: Imports) {
     expressions.foreach(exp => env.fillRef(exp, imports))

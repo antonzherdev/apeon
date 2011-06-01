@@ -36,7 +36,10 @@ object ScriptDataTypeDescription {
     addDeclaration(classOf[ScriptDataTypeEntity], ScriptDataTypeEntityTypeDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeEntityDescription], ScriptDataTypeEntityDescriptionTypeDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeOption], ScriptDataTypeOptionDescription.declarations : _*)
-    addDeclaration(classOf[ScriptDataTypeSeq], ScriptDataTypeSeqDescription.declarations : _*)
+
+    addDeclaration(classOf[ScriptDataTypeSeq], ScriptDataTypeSeqDescription.seq : _*)
+    addDeclaration(classOf[ScriptDataTypeMap], ScriptDataTypeSeqDescription.map : _*)
+
     addDeclaration(classOf[ScriptDataTypeString], ScriptDataTypeStringDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeEqlSelectBase], ScriptDataTypeEqlSelectBaseDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeEqlStatement], ScriptDataTypeEqlStatementDescription.declarations : _*)
