@@ -59,6 +59,12 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
       parser.parse("\"Test\"") should equal (
         script(ConstString("Test"))
       )
+      parser.parse("\"Te\\nst\"") should equal (
+        script(ConstString("Te\nst"))
+      )
+      parser.parse("\"Te\\\"st\"") should equal (
+        script(ConstString("Te\"st"))
+      )
     }
     it("Число с зяпятой") {
       parser.parse("1.5") should equal (

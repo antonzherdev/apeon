@@ -144,10 +144,39 @@ abstract class ScriptParserDecorator extends ScriptParserComponent{
 case class ParserException(msg : String) extends RuntimeException(msg)
 
 class Lexer extends StdLexical with ApeonTokens {
+  def mkString(chars: List[Char]): String = {
+    val b = new StringBuilder
+    var lastSymbol = '\0'
+    for(char <- chars) {
+      if(lastSymbol == '\\') {
+        b.append(char match {
+          case 'n' => '\n'
+          case 't' => '\t'
+          case s => s
+        })
+        lastSymbol = '\0'
+      } else {
+        if(char != '\\') {
+          b.append(char)
+        }
+        lastSymbol = char
+      }
+    }
+    b.result()
+  }
+
   override def token =
     ( '`' ~ rep(chrExcept('`', EofCh)) ~ '`' ^^ {case '`' ~ chars ~ '`' => EqlConstLit(chars mkString "")}
     |'`' ~> failure("unclosed eql literal")
-    | super.token
+    | identChar ~ rep( identChar | digit )              ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
+    | digit ~ rep( digit )                              ^^ { case first ~ rest => NumericLit(first :: rest mkString "") }
+    | '\'' ~ rep( str('\'') ) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(mkString(chars)) }
+    | '\"' ~ rep( str('\"') ) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(mkString(chars)) }
+    | EofCh                                             ^^^ EOF
+    | '\'' ~> failure("unclosed string literal")
+    | '\"' ~> failure("unclosed string literal")
+    | delim
+    | failure("illegal character")
     )
 
   override def whitespace: Parser[Any] = rep(
@@ -165,6 +194,15 @@ class Lexer extends StdLexical with ApeonTokens {
     prevSymbol = ch
     ret
   })
+
+  def str(par : Char) = elem("String", ch => {
+    val ret = if(prevSymbol != '\\') {
+      ch != par && ch != EofCh
+    } else true
+    prevSymbol = ch
+    ret
+  })
+
 }
 
 trait ApeonTokens extends Tokens {

@@ -44,7 +44,7 @@ trait Declaration{
   def builtInParameters(env : Environment, parameters: Option[Seq[Par]], parameterNumber : Int, parameter : Par) : Seq[BuiltInParameterDef] =
     throw ScriptException(env, "Not supported")
 
-  def declarationString : String = toString
+  def declarationString : String = name + "(" + parameters.mkString(", ") + ")"
 
   def equalsSignature(declaration : Declaration) : Boolean =
     this.name == declaration.name && this.parameters.sameElements(declaration.parameters)
@@ -61,7 +61,7 @@ trait DeclarationStatement extends Statement with Declaration {
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = dataType(env)
 }
 
-case class DeclarationThis(thisType : Option[ScriptDataType], declaration : Declaration)
+case class DeclarationThis(thisType : Option[ScriptDataType], declaration : Declaration, thisDeclaration : Option[Declaration] = None)
 
 /**
  * Ссылка на задекларированную переменную
@@ -77,11 +77,16 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
 
   def evaluate(env: Environment) =
     env.withDotType(_declaration.thisType) {
-      declaration.value(env,
-        env.withDotRef(None) {
-          parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
-        },
-        dataSource)
+      val pars = env.withDotRef(None) {
+        parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
+      }
+      if(_declaration.thisDeclaration.isDefined) {
+        env.withDotRef(Some(_declaration.thisDeclaration.get.value(env))) {
+          declaration.value(env, pars, dataSource)
+        }
+      } else {
+        declaration.value(env, pars, dataSource)
+      }
     }
 
 

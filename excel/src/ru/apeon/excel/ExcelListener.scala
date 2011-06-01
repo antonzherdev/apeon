@@ -11,6 +11,7 @@ class ExcelListener extends Listener{
     model.addObj(Excel)
     ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeExcelFile], ScriptDataTypeExcelFileDescription.declarations : _*)
     ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeExcelSheet], ScriptDataTypeExcelSheetDescription.declarations : _*)
+    ScriptDataTypeDescription.addDeclaration(classOf[ScriptDataTypeExcelRow], ScriptDataTypeExcelRowDescription.declarations : _*)
   }
 
   def load(model: ObjectModel) {

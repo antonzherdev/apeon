@@ -64,6 +64,8 @@ entity OrganizationGroup<comtec> {
 
 entity Place<comtec> extends Partner {
     table dba.voc_names
+
+    column address String(1024) //Адрес
 }
 
 entity Storage<comtec> extends Place {

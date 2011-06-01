@@ -2,6 +2,7 @@ package ru.apeon.core.script
 
 import collection.mutable.Stack
 import ru.apeon.core.entity._
+import collection.Seq
 
 trait Environment{
   def fileName : Option[String]
@@ -168,13 +169,22 @@ Variants:
       if(name == "this") {
         Some(DeclarationThis(None, This(thisType.get)))
       } else {
-        var ret : Option[DeclarationThis] = declarationsMap.getOrElse(name,Seq()).find(_.correspond(this, parameters)).map(r => DeclarationThis(None, r))
+        val declarations: Seq[Declaration] = declarationsMap.getOrElse(name, Seq())
+        var ret : Option[DeclarationThis] = declarations.find(_.correspond(this, parameters)).map(r => DeclarationThis(None, r))
         if(!ret.isDefined) {
-          if(thisType.isDefined) {
-            ret = thisType.get.declaration(this, name, parameters)
-          }
+          ret = declarations.find(_.parameters.isEmpty).map{ declaration =>
+            declaration.dataType(this, None).declaration(this, "apply", parameters) match {
+              case Some(DeclarationThis(tt, dec, _)) => Some(DeclarationThis(tt, dec, Some(declaration)))
+              case None => None
+            }
+          }.filter(_.isDefined).map(_.get)
           if(!ret.isDefined) {
-            ret = globalDeclarationOption(name, parameters, imports)
+            if(thisType.isDefined) {
+              ret = thisType.get.declaration(this, name, parameters)
+            }
+            if(!ret.isDefined) {
+              ret = globalDeclarationOption(name, parameters, imports)
+            }
           }
         }
         ret
