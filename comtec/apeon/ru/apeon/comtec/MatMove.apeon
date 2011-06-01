@@ -26,8 +26,12 @@ entity MatMove<comtec> extends StandardDocument{
     column byWhom(kogo) String(37)     //Через кого
     column who(komy) String(37)  //Кому
     column locked(data_lock) String(1)
-	
+
+	one invoiceForPayment(id_jscet) InvoiceForPayment
+
 	def toString : String = Format.doc("Движение материалов", id, date, number)
+
+    one deliveryAddress(id_address) PartnerAddress //Адрес доставки
 
     many materials(id_jmat) extends StandardSubDocument{
         table dba.mat

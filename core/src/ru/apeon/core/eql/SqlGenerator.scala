@@ -276,7 +276,7 @@ class SqlGenerator {
     }}
 
   def joinToOne(toOne : ToOne, ef: EqlSqlFrom, joinTo: sql.From) : sql.From = ef.getOrElse(toOne) {
-    ef.join(toOne, genTable(ef, toOne.entity), sql.Ref(joinTo, toOne.columnName(ef.dataSource)))
+    ef.join(toOne, genTable(ef, toOne.entity), sql.Ref(joinTo, columnName(ef, joinTo, toOne)))
   }
 
   def columnName(ef: EqlSqlFrom, ft: sql.From, p: FieldWithSource): String = {
@@ -420,7 +420,7 @@ class SqlGenerator {
     }
 
     def join(to : ToOne, ft : sql.From, l : sql.Ref) : sql.From = {
-      joins += sql.LeftJoin(ft, sql.And(sql.Equal(l, sql.Ref(ft, to.entity.primaryKeys.head.columnName(dataSource))),
+      joins += sql.LeftJoin(ft, sql.And(sql.Equal(l, sql.Ref(ft, columnName(this, ft, to.entity.primaryKeys.head))),
         discriminator(this, to.entity, ft)) )
       toOne += to -> ft
       ft

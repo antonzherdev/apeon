@@ -15,7 +15,6 @@ entity InvoiceForPayment<comtec> extends StandardDocument{
     one customerBankAccount(id_d_bank) BankAccount //Расчетный счет клиента
 
     one consignee(id_d_cargo) Organization /*Грузополучатель*/
-    one consigneeAddress(id_address) PartnerAddress /*Адрес грузополучателя*/
 
     one text(id_text) InvoiceText
 
