@@ -84,6 +84,10 @@ final class ScriptParserParser extends StdTokenParsers with ApeonTokens
 
   def expression : Parser[Expression] = component.expressionDef.asInstanceOf[Parser[Expression]]
 
+  def word(w : String) : Parser[String] =
+    elem("identifier", { ch =>
+      ch .isInstanceOf[lexical.Identifier] && ch.asInstanceOf[lexical.Identifier].chars == w
+    }) ^^ (_.chars)
 }
 
 abstract class ScriptParserComponent {
@@ -107,6 +111,8 @@ abstract class ScriptParserComponent {
   def opt[T](p: => Parser[T]): Parser[Option[T]] =
     parser.opt(p)
   def ident: Parser[String] = parser.ident
+
+  def word(w : String) : Parser[String] = parser.word(w)
 
   type ~[a, b] = parser.~[a, b]
   lazy val ~ = parser.~

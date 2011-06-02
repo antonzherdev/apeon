@@ -41,5 +41,7 @@ object Excel extends ObjectBase{
       }
     case Cell.CELL_TYPE_BOOLEAN =>
       cell.getBooleanCellValue
+    case Cell.CELL_TYPE_BLANK =>
+      null
   }
 }

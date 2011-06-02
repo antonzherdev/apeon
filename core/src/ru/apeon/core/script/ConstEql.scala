@@ -59,10 +59,11 @@ abstract class ScriptDataTypeEqlSelectBase extends ScriptDataType {
 }
 
 object ScriptDataTypeEqlSelectBaseDescription {
-  def declarations = Seq(fSelect, fGet)
+  def declarations = Seq(fSelect, fGet, fFind)
 
-  def fSelect : FSelect = new FSelect
-  def fGet : FGet = new FGet
+  val fSelect : FSelect = new FSelect
+  val fGet : FGet = new FGet
+  val fFind : FFind = new FFind
 
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeEqlSelectBase]
   def rowDataType(env : Environment) = tp(env).rowDataType
@@ -81,6 +82,16 @@ object ScriptDataTypeEqlSelectBaseDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
       case Seq(ret) => ret
       case Seq() => throw ScriptException(env, "Not found")
+      case _ => throw ScriptException(env, "Have found many but get one")
+    }
+  }
+
+  class FFind extends Declaration{
+    def name = "find"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeOption(rowDataType(env))
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
+      case Seq(ret) => Some(ret)
+      case Seq() => None
       case _ => throw ScriptException(env, "Have found many but get one")
     }
   }

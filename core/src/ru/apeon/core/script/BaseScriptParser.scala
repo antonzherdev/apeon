@@ -8,7 +8,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
       "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]", "!")
     lexical.reserved += (
-            "def", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
+            "def", "as", "to", "where", "by", "entity", "column", "primary", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
             "if", "else", "null", "import", "object", "join", "true", "false")
   }
@@ -194,7 +194,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     case width ~ scale => (width.toInt, scale.getOrElse("0").toInt)
   }
 
-  def primaryKey : Parser[Boolean] = opt("primary" ~> "key") ^^ {case v => v.isDefined}
+  def primaryKey : Parser[Boolean] = opt("primary" ~> word("key")) ^^ {case v => v.isDefined}
 
   def table : Parser[Table] = opt(ident <~ ".") ~ repsep(ident, ".") ^^ {
     case schema ~ table => Table(schema.getOrElse(""), table.mkString("."))

@@ -1,15 +1,32 @@
 package ru.apeon.core.script
 
 
-abstract class ScriptDataTypeIterable extends ScriptDataType{
+abstract class ScriptDataTypeCollection extends ScriptDataType{
   def dataType : ScriptDataType
 }
 
-case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataTypeIterable {
+case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataTypeCollection {
 
 }
-case class ScriptDataTypeMap(keyDataType : ScriptDataType, valueDataType : ScriptDataType) extends ScriptDataTypeIterable {
-  val dataType = ScriptDataTypeKeyValue(Map("key" -> keyDataType, "value" -> valueDataType))
+case class ScriptDataTypeMap(keyDataType : ScriptDataType, valueDataType : ScriptDataType) extends ScriptDataTypeCollection {
+  val dataType = ScriptDataTypeMapItem(keyDataType, valueDataType)
+}
+
+case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : ScriptDataType) extends ScriptDataType {
+  override lazy val declarations : Seq[Declaration] = Seq(
+    new Declaration {
+      def name = "key"
+      def dataType(env: Environment, parameters: Option[Seq[Par]]) = keyDataType
+      def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+        env.ref.asInstanceOf[Tuple2[_, _]]._1
+    },
+    new Declaration {
+      def name = "value"
+      def dataType(env: Environment, parameters: Option[Seq[Par]]) = valueDataType
+      def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+        env.ref.asInstanceOf[Tuple2[_, _]]._2
+    }
+  )
 }
 
 object ScriptDataTypeSeqDescription {
@@ -17,8 +34,8 @@ object ScriptDataTypeSeqDescription {
   def map = iterable
   def seq = iterable
 
-  def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeSeq]
-  def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeSeq].dataType
+  def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeCollection]
+  def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeCollection].dataType
 
   abstract class OneBuiltInDeclaration extends Declaration {
     override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) =
