@@ -64,11 +64,14 @@ trait Environment{
   }
   protected def setSet(set : Option[SetBase], entity : Option[Entity])
 
+  val cache : collection.mutable.Map[Any, Any] = collection.mutable.Map.empty[Any, Any]
+
   def start() {
     em.beginTransaction()
   }
   def end() {
     em.commit()
+    cache.clear()
   }
   def em : EntityManager
   def model : ObjectModel
@@ -147,15 +150,16 @@ trait Environment{
   def declarations(name : String) : Seq[Declaration] = declarationsMap(name)
   def declaration(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : DeclarationThis =
     declarationOption(name, parameters, imports).getOrElse{
-      if(dotType.isDefined) {
+      val tp = dotType.orElse{thisType}
+      if(tp.isDefined) {
         throw ScriptException(this,
 """Could not find ref %s%s in "%s".
 DataTypes: %s%s
 Variants:
 %s""".format(
-          name, parameters.map("(" + _.mkString(", ") + ")").getOrElse(""), dotType.get.toString,
+          name, parameters.map("(" + _.mkString(", ") + ")").getOrElse(""), tp.get.toString,
           name, parameters.map(pars => "(" + pars.map(par => par.dataTypeString(this)).mkString(", ") + ")").getOrElse(""),
-          dotType.get.declarations.filter(_.name == name).map(_.declarationString).mkString("\n")
+          tp.get.declarations.filter(_.name == name).map(_.declarationString).mkString("\n")
         ))
       }
       throw ScriptException(this, "Could not find ref \"%s\"".format(name))

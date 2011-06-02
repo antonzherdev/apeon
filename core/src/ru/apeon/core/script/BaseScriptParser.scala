@@ -10,7 +10,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     lexical.reserved += (
             "def", "as", "to", "where", "by", "entity", "column", "primary", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
-            "if", "else", "null", "import", "object", "join", "true", "false")
+            "if", "else", "null", "import", "object", "join", "true", "false", "cached")
   }
 
   def statementDef : Parser[Statement] =
@@ -37,8 +37,10 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     }
 
   def defStatement : Parser[Def] =
-    ("def" ~> ident) ~! (defParameters?) ~ (dataTypeSpec?) ~ ("=" ~> statement) ^^
-            {case name ~ parameters ~ result ~ statement => Def(name, statement, parameters.getOrElse{Seq()}, result)}
+    opt("cached") ~ ("def" ~> ident) ~! (defParameters?) ~ (dataTypeSpec?) ~ ("=" ~> statement) ^^ {
+      case cached ~ name ~ parameters ~ result ~ statement =>
+              Def(name, statement, parameters.getOrElse{Seq()}, result, cached.isDefined)
+    }
   def defParameters : Parser[Seq[DefPar]] = "(" ~> repsep(defParameter, ",") <~ ")"
   def defParameter : Parser[DefPar] = ident ~ dataTypeSpec ^^ {case name ~ dataType => DefPar(name, dataType)}
 
@@ -216,7 +218,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     case name ~ statements => {
       val span = statements.span(_.isInstanceOf[Def])
       if(span._1.find{
-        case Def("apply", _, Seq(), _) => true
+        case Def("apply", _, Seq(), _, _) => true
         case _ => false}.isDefined)
       {
         Query(parser.model, parser.module, parser.pack.get, name, statements.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]] )

@@ -419,4 +419,37 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       ) should equal (30)
     }*/
   }
+
+  describe("Функции с кэширование") {
+    it("Test") {
+      var ok1 = false
+      var ok2 = false
+      run(
+        new TestedEntityManager{
+          override def get(id: EntityId) = id.data match {
+            case Seq(1) => {
+              ok1 should equal(false)
+              ok1 = true
+              e(id)
+            }
+            case Seq(2) => {
+              ok2 should equal(false)
+              ok2 = true
+              e(id)
+            }
+          }
+        },
+        Def("t",
+          statement = ref("Article", ref("id")),
+          parameters = Seq(DefPar("id", ScriptDataTypeInteger())),
+          cached = true
+        ),
+        ref("t", 1),
+        ref("t", 1),
+        ref("t", 2)
+      )
+      ok1 should equal(true)
+      ok2 should equal(true)
+    }
+  }
 }

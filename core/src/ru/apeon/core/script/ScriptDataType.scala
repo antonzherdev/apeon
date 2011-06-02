@@ -45,6 +45,8 @@ object ScriptDataTypeDescription {
     addDeclaration(classOf[ScriptDataTypeEqlStatement], ScriptDataTypeEqlStatementDescription.declarations : _*)
 
     addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration)
+    addDeclaration(classOf[ScriptDataTypeAny], ToStringDeclaration)
+    addDeclaration(classOf[ScriptDataTypeBoolean], ToStringDeclaration)
   }
   load()
 }

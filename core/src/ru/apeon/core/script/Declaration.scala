@@ -191,7 +191,7 @@ case class BuiltInFunction(statement : StatementList, aliases : Seq[String] = Se
  * @param statement выражение
  */
 case class Def(name : String, statement : Statement, override val parameters : Seq[DefPar] = Seq(),
-               resultType : Option[ScriptDataType] = None)
+               resultType : Option[ScriptDataType] = None, cached : Boolean = false)
         extends DeclarationStatement
 {
   def dataType(env : Environment) = resultType match {
@@ -203,18 +203,19 @@ case class Def(name : String, statement : Statement, override val parameters : S
     env.addDeclaration(this)
   }
 
-  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.atomic{
-    if(parameters.isDefined) {
+  private def eval(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Any = env.atomic{
+    if (parameters.isDefined) {
       val i = parameters.get.iterator
 
-      this.parameters.foreach{parameter =>
-        env.addDeclaration(parameter)
-        env.update(parameter, i.next().value)
+      this.parameters.foreach {
+        parameter =>
+          env.addDeclaration(parameter)
+          env.update(parameter, i.next().value)
       }
     }
     env.withThisRef(env.dotRef) {
       env.withDotRef(None) {
-        if(dataSource.isDefined) {
+        if (dataSource.isDefined) {
           env.withDataSource(env.dataSource(dataSource)) {
             statement.evaluate(env)
           }
@@ -223,6 +224,14 @@ case class Def(name : String, statement : Statement, override val parameters : S
         }
       }
     }
+  }
+
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) =
+  if(cached){
+    env.cache.getOrElseUpdate((this, parameters.getOrElse{Seq()}.map{_.value}).hashCode(),
+      eval(env, parameters, dataSource))
+  } else {
+    eval(env, parameters, dataSource)
   }
 
   override def fillRef(env: Environment, imports: Imports) {

@@ -20,6 +20,12 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
         script(Def(name = "articleSync", statement = Parentheses()))
       )
     }
+
+    it("Кэшированная функция") {
+      parser.parse("cached def articleSync = {}") should equal (
+        script(Def(name = "articleSync", statement = Parentheses(), cached = true))
+      )
+    }
   }
 
   describe("Переменные") {

@@ -86,7 +86,7 @@ case class Description(module : Module,
 
   override def fillRef(env: Environment, imports: Imports) {
     _toString = declarations.find{
-      case Def("toString", _, Seq(), _) => true
+      case Def("toString", _, Seq(), _, _) => true
       case _ => false
     }.asInstanceOf[Option[Def]]
     super.fillRef(env, imports)
