@@ -35,10 +35,10 @@ trait EntityDefine {
 
   def fillRef() {
     val e = new DefaultEnvironment(model)
-    /*model.packs.foreach(_.evaluate(e))
+   /* model.packs.foreach(_.evaluate(e))
     model.objs.foreach(_.evaluate(e))
     model.entityDescriptions.foreach(_.evaluate(e))
-    model.dataSources.foreach(_.evaluate(e))       */
+    model.dataSources.foreach(_.evaluate(e))*/
 
     model.packs.foreach(pack => pack.preFillRef(e, Imports(pack)))
     model.objs.foreach(o => o.preFillRef(e, Imports(o.pack)))
@@ -75,10 +75,12 @@ trait EntityDefine {
     private var extendsEntityName : Option[String] = None
     private var declaredJoinedTables = Buffer[JoinedTable]()
 
-    def b = {
-      val ret = new Description(module, pack, name, defaultDataSourceName, table.getOrElse(Table("", name)),
+    def r = new Description(module, pack, name, defaultDataSourceName, table.getOrElse(Table("", name)),
         declaredDeclarations, discriminator, extendsEntityName, declaredJoinedTables)
-      model.addEntityDescription(ret)
+
+    def b = {
+      val ret = r
+      ret.evaluate(new DefaultEnvironment(model))
       ret
     }
 

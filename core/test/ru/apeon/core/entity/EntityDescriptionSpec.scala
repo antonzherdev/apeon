@@ -34,7 +34,7 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
   describe("Расширение сущностей") {
     it("Добавление колонок") {
       clearModel()
-      val e = desc("Test").decl(Id).b
+      desc("Test").decl(Id).b
 
       val t = Attribute(pack, "t", "t", AttributeDataTypeInteger())
       val t2 = Attribute(pack, "t2", "t2", AttributeDataTypeInteger())
@@ -50,6 +50,27 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
       val r = model.entityDescription("ru.apeon.core.Test")
       r.fields should equal(
         Seq(Id, t, t2))
+    }
+  }
+
+  describe("Расширение вложенных сущностей") {
+    it("Добавление колонок") {
+      val ee = ExtendEntity(CoreModule, "Test.inner", Seq(att("test", int)))
+      clearModel()
+      desc("Test").decl(Id,
+        ToManyBuiltIn(pack, "inner", desc("Test.inner").decl(id).r)
+      ).b
+
+      val env: DefaultEnvironment = new DefaultEnvironment(model)
+      ee.evaluate(env)
+      ee.preFillRef(env, Imports(pack))
+      ee.fillRef(env, Imports(pack))
+      fillRef()
+
+
+      val r = model.entityDescription("ru.apeon.core.Test.inner")
+      r.fields should equal(
+        Seq(id, att("test", int)))
     }
   }
 }

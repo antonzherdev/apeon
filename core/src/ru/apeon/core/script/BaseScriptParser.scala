@@ -259,7 +259,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       case s ~ Some(d) => ConstDecimal(BigDecimal(-(s + "." + d).toDouble))
     })
   def seq = "[" ~> repsep(expression, ",") <~ "]" ^^ {s => ConstSeq(s)}
-  def extendEntity = "extend" ~> "entity" ~> ident ~ ("{" ~> (extendEntityStatement*) <~ "}") ^^ {
+  def extendEntity = "extend" ~> "entity" ~> entityRef ~ ("{" ~> (extendEntityStatement*) <~ "}") ^^ {
     case name ~ statements => ExtendEntity(parser.module, name, statements)
   }
 

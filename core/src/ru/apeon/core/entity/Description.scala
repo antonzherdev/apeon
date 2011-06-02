@@ -58,7 +58,7 @@ case class Description(module : Module,
   }
 
 
-  override protected def declarationsLoad = extendedDeclarations ++ super.declarationsLoad
+  override protected def declarationsLoad = super.declarationsLoad ++ extendedDeclarations
 
   lazy val fields : Seq[Field] = declarations.filter(_.isInstanceOf[Field]).asInstanceOf[Seq[Field]]
   lazy val joinedTables : Seq[JoinedTable] = declaredJoinedTables ++ extendsClass.map{_.joinedTables}.getOrElse(Seq())
@@ -239,9 +239,9 @@ case class ToManyRef(pack : Package, name : String, entityName : String, toOneNa
 case class ToManyBuiltIn(pack : Package, name : String, entity : Description) extends ToMany {
   def toOne : ToOne = entity.field("parent").asInstanceOf[ToOne]
 
-//  override def evaluate(env: Environment) {
-//    env.evaluate(entity)
-//  }
+  override def evaluate(env: Environment) {
+    env.evaluate(entity)
+  }
   override def preFillRef(env: Environment, imports: Imports) {
     env.preFillRef(entity, imports)
   }

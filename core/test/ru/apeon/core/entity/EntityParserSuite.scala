@@ -67,7 +67,7 @@ class EntityParserSuite extends FunSuite with ShouldMatchers with EntityDefine {
       }
       """)should equal(script(
     desc("Article").decl(
-          Attribute(pack, "name", FieldSources(FieldSource("name"), Map("ds" -> FieldSource("nam"))), AttributeDataTypeString())
+          Attribute(pack, "name", FieldSources(NullFieldSource(), Map("ds" -> FieldSource("nam"))), AttributeDataTypeString())
           ).b
     ))
   }
@@ -303,15 +303,25 @@ entity Article<ds>{
 
   test("extend entity") {
     ScriptParser.parse(model, CoreModule, pack,
-    """extend entity Material{
-    column e Int
-    }"""
+      """extend entity Material{
+      column e Int
+      }"""
     ) should equal (
       script(ExtendEntity(CoreModule, "Material",
         Seq(Attribute(pack, "e", "e", AttributeDataTypeInteger()))
       ))
     )
+    ScriptParser.parse(model, CoreModule, pack,
+      """extend entity MatMove.materials{
+      column e Int
+      }"""
+    ) should equal (
+      script(ExtendEntity(CoreModule, "MatMove.materials",
+        Seq(Attribute(pack, "e", "e", AttributeDataTypeInteger()))
+      ))
+    )
   }
+
 
   test("import") {
     ScriptParser.parse(model, CoreModule, pack, "import ru.apeon.test1.E1") should equal(script(Import("ru.apeon.test1.E1")))
