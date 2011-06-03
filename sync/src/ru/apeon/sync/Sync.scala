@@ -247,8 +247,12 @@ object Sync {
       if(func.isDefined) {
         func.get.run(env, source , d)
       } else if(syncProc.isDefined) {
-        env.withThisRef(Some(source)) {
+        val oldThisRef = env.thisRef
+        env.setThisRef(Some(source))
+        try {
           syncProc.get.value(env, Some(Seq(ParVal(d, None))), None)
+        } finally {
+          env.setThisRef(oldThisRef)
         }
       }
 

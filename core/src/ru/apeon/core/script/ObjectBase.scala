@@ -29,14 +29,16 @@ trait ClassBase extends Declaration with Statement with InPackage {
   }
 
   def fillRef(env: Environment, imports: Imports) {
-    env.withThisType(elementDataType(env)) {
-      declaredDeclarations.foreach {
-        dec =>
-          env.atomic {
-            env.fillRef(dec, imports)
-          }
-      }
+    val old = env.thisType
+    env.setThisType(Some(elementDataType(env)))
+
+    declaredDeclarations.foreach {
+      dec =>
+        env.atomic {
+          env.fillRef(dec, imports)
+        }
     }
+    env.setThisType(old)
   }
 
   def evaluate(env: Environment) = {
@@ -54,8 +56,12 @@ trait ClassBase extends Declaration with Statement with InPackage {
    */
   def evaluateDef(model : ObjectModel, function : Def, obj : Any) : Any = {
     val env = new DefaultEnvironment(model)
-    env.withThisRef(Some(obj)) {
+    val oldThisRef = env.thisRef
+    env.setThisRef(Some(obj))
+    try {
       Script.evaluate(env, Seq(function.statement))
+    } finally {
+      env.setThisRef(oldThisRef)
     }
   }
 

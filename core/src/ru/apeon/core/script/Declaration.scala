@@ -70,48 +70,62 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
   private var _declaration : DeclarationThis = _
   def declaration : Declaration = _declaration.declaration
 
-  def dataType(env : Environment) =
-    env.withDotType(_declaration.thisType) {
-      declaration.dataType(env, parameters)
-    }
+  def dataType(env : Environment) = {
+    val old = env.dotType
+    env.setDotType(_declaration.thisType)
+    val ret = declaration.dataType(env, parameters)
+    env.setDotType(old)
+    ret
+  }
 
-  def evaluate(env: Environment) =
-    env.withDotType(_declaration.thisType) {
-      val pars = env.withDotRef(None) {
-        parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
-      }
+  def evaluate(env: Environment) = {
+    val old = env.dotType
+    env.setDotType(_declaration.thisType)
+    try {
+      val oldRef = env.dotRef
+      env.setDotRef(None)
+      val pars = parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
+      env.setDotRef(oldRef)
+
       if(_declaration.thisDeclaration.isDefined) {
-        env.withDotRef(Some(_declaration.thisDeclaration.get.value(env))) {
-          declaration.value(env, pars, dataSource)
-        }
+        env.setDotRef(Some(_declaration.thisDeclaration.get.value(env)))
+        val ret = declaration.value(env, pars, dataSource)
+        env.setDotRef(oldRef)
+        ret
       } else {
         declaration.value(env, pars, dataSource)
       }
     }
+    finally {
+      env.setDotType(old)
+    }
+  }
 
 
   def fillRef(env : Environment, imports : Imports) {
     if(dataSource.isDefined) {
-      env.withDotType(None) {
-        env.fillRef(dataSource.get, imports)
-      }
+      val old = env.dotType
+      env.setDotType(None)
+      env.fillRef(dataSource.get, imports)
+      env.setDotType(old)
     }
     if(parameters.isDefined && (!parameters.get.isEmpty)) {
-      env.withDotType(None) {
-        parameters.foreach(_.foreach(par => env.fillRef(par.expression, imports)))
-      }
+      val old = env.dotType
+      env.setDotType(None)
+      parameters.foreach(_.foreach(par => env.fillRef(par.expression, imports)))
+      env.setDotType(old)
     }
     _declaration = env.declaration(name, parameters, Some(imports))
     if(parameters.isDefined) {
       var number = 0
       parameters.get.foreach{par =>
         if(par.expression.isInstanceOf[BuiltInFunction]) {
-          val bps = env.withDotType(_declaration.thisType) {
-            declaration.builtInParameters(env, parameters, number, par)
-          }
-          env.withDotType(None) {
-            par.expression.asInstanceOf[BuiltInFunction].fillRef(env, imports, bps)
-          }
+          val old = env.dotType
+          env.setDotType(_declaration.thisType)
+          val bps = declaration.builtInParameters(env, parameters, number, par)
+          env.setDotType(None)
+          par.expression.asInstanceOf[BuiltInFunction].fillRef(env, imports, bps)
+          env.setDotType(old)
         }
         number += 1
       }
@@ -213,17 +227,22 @@ case class Def(name : String, statement : Statement, override val parameters : S
           env.update(parameter, i.next().value)
       }
     }
-    env.withThisRef(env.dotRef) {
-      env.withDotRef(None) {
-        if (dataSource.isDefined) {
-          val oldDS = env.currentDataSource
-          env.setCurrentDataSource(env.dataSource(dataSource))
-          statement.evaluate(env)
-          env.setCurrentDataSource(oldDS)
-        } else {
-          statement.evaluate(env)
-        }
+    val oldThisRef = env.thisRef
+    env.setThisRef(env.dotRef)
+    val oldDotRef = env.dotRef
+    env.setDotRef(None)
+    try{
+      if (dataSource.isDefined) {
+        val oldDS = env.currentDataSource
+        env.setCurrentDataSource(env.dataSource(dataSource))
+        statement.evaluate(env)
+        env.setCurrentDataSource(oldDS)
+      } else {
+        statement.evaluate(env)
       }
+    } finally {
+      env.setThisRef(oldThisRef)
+      env.setDotRef(oldDotRef)
     }
   }
 

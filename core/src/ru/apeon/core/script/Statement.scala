@@ -135,14 +135,24 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
 case class Dot(left : Expression, right : Ref) extends Expression{
   def dataType(env : Environment) = right.dataType(env)
 
-  def evaluate(env: Environment) = env.withDotRef(Some(left.evaluate(env))){
-    right.evaluate(env)
+  def evaluate(env: Environment) = {
+    val oldDotRef = env.dotRef
+    env.setDotRef(Some(left.evaluate(env)))
+    try {
+      right.evaluate(env)
+    } finally {
+      env.setDotRef(oldDotRef)
+    }
   }
 
   def fillRef(env : Environment, imports : Imports) {
     env.fillRef(left, imports)
-    env.withDotType(Some(left.dataType(env))) {
+    val old = env.dotType
+    env.setDotType(Some(left.dataType(env)))
+    try {
       env.fillRef(right, imports)
+    } finally {
+      env.setDotType(None)
     }
   }
 
@@ -160,14 +170,26 @@ abstract class SetBase extends Expression {
   def name : String
 
   def evaluate(env: Environment) = left match {
-    case ref @ Ref(name, None, None) => env.withSet(Some(this), None){
-      evaluate(env, ref)
+    case ref @ Ref(name, None, None) => {
+      val oldSet = env.currentSet
+      val oldEntity = env.leftEntity
+      env.setSet(Some(this), None)
+      try {
+        evaluate(env, ref)
+      } finally {
+        env.setSet(oldSet, oldEntity)
+      }
     }
     case Dot(expr, ref) => expr.dataType(env) match {
       case ScriptDataTypeEntity(entity) => expr.evaluate(env) match {
         case e : Entity => {
-          env.withSet(Some(this), Some(e)) {
+          val oldSet = env.currentSet
+          val oldEntity = env.leftEntity
+          env.setSet(Some(this), Some(e))
+          try {
             evaluate(env, e, ref)
+          }  finally {
+            env.setSet(oldSet, oldEntity)
           }
         }
         case _ => throw ScriptException(env, "Return is not entity")

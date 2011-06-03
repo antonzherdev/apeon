@@ -54,15 +54,8 @@ trait Environment{
    */
   def currentSet : Option[SetBase]
   def leftEntity : Option[Entity]
-  def withSet[A](set : Option[SetBase], entity : Option[Entity])(f : => A) = {
-    val oldSet = currentSet
-    val oldEntity = leftEntity
-    setSet(set, entity)
-    val ret = f
-    setSet(oldSet, oldEntity)
-    ret
-  }
-  protected def setSet(set : Option[SetBase], entity : Option[Entity])
+
+  def setSet(set : Option[SetBase], entity : Option[Entity])
 
   val cache : collection.mutable.Map[Any, Any] = collection.mutable.Map.empty[Any, Any]
 
@@ -94,47 +87,22 @@ trait Environment{
   def setCurrentDataSource(dataSource : Option[DataSource])
 
   def thisType : Option[ScriptDataType]
-  protected def setThisType(tc : Option[ScriptDataType])
-  def withThisType[A](tc : ScriptDataType)( f : => A) : A = {
-    val old = thisType
-    setThisType(Some(tc))
-    val ret = f
-    setThisType(old)
-    ret
-  }
+  def setThisType(tc : Option[ScriptDataType])
 
   def dotType : Option[ScriptDataType]
-  def withDotType[A](tc : Option[ScriptDataType])( f : => A) : A = {
-    val old = dotType
-    setDotType(tc)
-    val ret = f
-    setDotType(old)
-    ret
-  }
-  protected def setDotType(tc : Option[ScriptDataType])
+
+  def setDotType(tc : Option[ScriptDataType])
 
   def refOption = if(dotRef.isDefined) dotRef else thisRef
   def ref = refOption.get
 
   def dotRef : Option[Any]
-  def withDotRef[A](tc : Option[Any])(f : => A) : A = {
-    val old = dotRef
-    setDotRef(tc)
-    val ret = f
-    setDotRef(old)
-    ret
-  }
-  protected def setDotRef(tc : Option[Any])
+
+  def setDotRef(tc : Option[Any])
 
   def thisRef : Option[Any]
-  def withThisRef[A](tc : Option[Any])(f : => A) : A = {
-    val old = thisRef
-    setThisRef(tc)
-    val ret = f
-    setThisRef(old)
-    ret
-  }
-  protected def setThisRef(tc : Option[Any])
+
+  def setThisRef(tc : Option[Any])
 
   def push()
   def pop()
@@ -258,7 +226,7 @@ class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model, va
 
 
   var thisType : Option[ScriptDataType] = None
-  protected def setThisType(tc: Option[ScriptDataType]) {
+  def setThisType(tc: Option[ScriptDataType]) {
     thisType = tc
   }
 
@@ -273,7 +241,7 @@ class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model, va
   }
 
   var currentDataSource : Option[DataSource] = None
-  protected def setCurrentDataSource(dataSource: Option[DataSource]) {
+  def setCurrentDataSource(dataSource: Option[DataSource]) {
     currentDataSource = dataSource
   }
 
