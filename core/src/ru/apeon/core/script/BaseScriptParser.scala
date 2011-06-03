@@ -6,7 +6,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
   def init(lexical: Lexer) {
     lexical.delimiters ++= List( "&&", "||",
       ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
-      "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]", "!")
+      "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]", "!", "->")
     lexical.reserved += (
             "def", "as", "to", "where", "by", "entity", "column", "primary", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
@@ -292,7 +292,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
 
   def e300 : Parser[Expression] = e200 ~ opt(
     (("*" | "/") ~! e300) |
-            (("=" | "+=" | "-=" | "*=" | "/=") ~! expression)
+            (("=" | "+=" | "-=" | "*=" | "/=" | "->") ~! expression)
   ) ^^ {
     case left ~ Some(r) => r._1 match {
       case "*" => Mul(left, r._2)
@@ -302,6 +302,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       case "-=" => SetMinus(left, r._2)
       case "*=" => SetMul(left, r._2)
       case "/=" => SetDiv(left, r._2)
+      case "->" => MapItem(left, r._2)
     }
     case left ~ None => left
   }

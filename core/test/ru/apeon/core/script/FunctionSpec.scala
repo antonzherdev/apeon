@@ -78,5 +78,19 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
         ref("_") ~ ref("length")
       ))) should equal(Seq(1, 3, 2, 2))
     }
+
+  }
+
+  describe("Карты") {
+    it("toMap") {
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap")) should equal (Map(1 -> "A", 2 -> "B"))
+    }
+    it("get") {
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("get", 1)) should equal (Some("A"))
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("get", 3)) should equal (None)
+    }
+    it("apply") {
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("apply", 1)) should equal ("A")
+    }
   }
 }

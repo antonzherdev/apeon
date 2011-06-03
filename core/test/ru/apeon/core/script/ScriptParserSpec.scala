@@ -218,6 +218,12 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
     }
   }
 
+  describe("->") {
+    it("->") {
+      parser.parse("1 -> \"a\"") should equal (script(MapItem(1, "a")))
+    }
+  }
+
   describe("If") {
     it("without Else") {
       parser.parse("if(1) 2") should equal (

@@ -89,15 +89,9 @@ trait Environment{
     }
     case None => currentDataSource
   }
-  def withDataSource[A](dataSource : Option[DataSource])( f : => A) : A = {
-    val old = this.currentDataSource
-    setCurrentDataSource(dataSource)
-    val ret = f
-    setCurrentDataSource(old)
-    ret
-  }
-  protected def currentDataSource : Option[DataSource]
-  protected def setCurrentDataSource(dataSource : Option[DataSource])
+
+  def currentDataSource : Option[DataSource]
+  def setCurrentDataSource(dataSource : Option[DataSource])
 
   def thisType : Option[ScriptDataType]
   protected def setThisType(tc : Option[ScriptDataType])

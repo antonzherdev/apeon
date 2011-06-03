@@ -5,9 +5,8 @@ abstract class ScriptDataTypeCollection extends ScriptDataType{
   def dataType : ScriptDataType
 }
 
-case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataTypeCollection {
+case class ScriptDataTypeSeq(dataType : ScriptDataType) extends ScriptDataTypeCollection
 
-}
 case class ScriptDataTypeMap(keyDataType : ScriptDataType, valueDataType : ScriptDataType) extends ScriptDataTypeCollection {
   val dataType = ScriptDataTypeMapItem(keyDataType, valueDataType)
 }
@@ -18,20 +17,20 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
       def name = "key"
       def dataType(env: Environment, parameters: Option[Seq[Par]]) = keyDataType
       def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-        env.ref.asInstanceOf[Tuple2[_, _]]._1
+        env.ref.asInstanceOf[(_, _)]._1
     },
     new Declaration {
       def name = "value"
       def dataType(env: Environment, parameters: Option[Seq[Par]]) = valueDataType
       def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-        env.ref.asInstanceOf[Tuple2[_, _]]._2
+        env.ref.asInstanceOf[(_, _)]._2
     }
   )
 }
 
 object ScriptDataTypeSeqDescription {
-  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc)
-  def map = iterable
+  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap)
+  def map = iterable ++ Seq(mapGet, mapApply)
   def seq = iterable
 
   def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeCollection]
@@ -83,14 +82,14 @@ object ScriptDataTypeSeqDescription {
 
   val isEmpty = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Seq[_]].isEmpty
+      env.ref.asInstanceOf[Traversable[_]].isEmpty
     def name = "isEmpty"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
   }
 
   val size = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Seq[_]].size
+      env.ref.asInstanceOf[Traversable[_]].size
     def name = "size"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
   }
@@ -110,4 +109,38 @@ object ScriptDataTypeSeqDescription {
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
       items.map(item => f.run(env, item))
   }
+
+  val toMap = new Declaration {
+    def name = "toMap"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = env.dotType match {
+      case Some(ScriptDataTypeSeq(item : ScriptDataTypeMapItem)) => ScriptDataTypeMap(item.keyDataType, item.valueDataType)
+      case s => throw ScriptException(env, "Unsupported collection data type %s".format(s))
+    }
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Traversable[(_, _)]].toMap
+  }
+
+  val mapGet = new Declaration {
+    def name = "get"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      ScriptDataTypeOption(env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType)
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Map[Any, Any]].get(parameters.get.head.value)
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _))) => true
+      case _ => false
+    }
+  }
+  val mapApply = new Declaration {
+    def name = "apply"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Map[Any, Any]].apply(parameters.get.head.value)
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _))) => true
+      case _ => false
+    }
+  }
+
 }

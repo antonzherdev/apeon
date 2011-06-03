@@ -216,9 +216,10 @@ case class Def(name : String, statement : Statement, override val parameters : S
     env.withThisRef(env.dotRef) {
       env.withDotRef(None) {
         if (dataSource.isDefined) {
-          env.withDataSource(env.dataSource(dataSource)) {
-            statement.evaluate(env)
-          }
+          val oldDS = env.currentDataSource
+          env.setCurrentDataSource(env.dataSource(dataSource))
+          statement.evaluate(env)
+          env.setCurrentDataSource(oldDS)
         } else {
           statement.evaluate(env)
         }

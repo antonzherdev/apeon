@@ -228,9 +228,13 @@ case class Or(left : Expression, right : Expression) extends BooleanBinaryExpres
 }
 
 case class Not(expression : Expression) extends Expression {
-  def preFillRef(env: Environment, imports: Imports) = env.preFillRef(expression, imports)
+  def preFillRef(env: Environment, imports: Imports) {
+    env.preFillRef(expression, imports)
+  }
 
-  def fillRef(env: Environment, imports: Imports) = env.fillRef(expression, imports)
+  def fillRef(env: Environment, imports: Imports) {
+    env.fillRef(expression, imports)
+  }
 
   def evaluate(env: Environment) = expression.evaluate(env) match {
     case b : Boolean => !b
@@ -241,4 +245,17 @@ case class Not(expression : Expression) extends Expression {
     case _ => throw ScriptException(env, "Unknown data type for not.")
   }
   def dataType(env: Environment) = ScriptDataTypeBoolean()
+}
+
+case class MapItem(key : Expression, value : Expression) extends Expression {
+  def preFillRef(env: Environment, imports: Imports) {
+    env.preFillRef(key, imports)
+    env.preFillRef(value, imports)
+  }
+  def fillRef(env: Environment, imports: Imports) {
+    env.fillRef(key, imports)
+    env.fillRef(value, imports)
+  }
+  def evaluate(env: Environment) = (key.evaluate(env), value.evaluate(env))
+  def dataType(env: Environment) = ScriptDataTypeMapItem(key.dataType(env), value.dataType(env))
 }
