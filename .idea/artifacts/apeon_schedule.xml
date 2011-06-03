@@ -1,14 +1,10 @@
 <component name="ArtifactManager">
   <artifact name="apeon-schedule">
-    <output-path>$PROJECT_DIR$/out/artifacts/apeon-schedule</output-path>
+    <output-path>$PROJECT_DIR$/out/artifacts/</output-path>
     <root id="root">
-      <element id="directory" name="classes">
-        <element id="module-output" name="schedule" />
+      <element id="archive" name="apeon-schedule-0.2.zip">
+        <element id="dir-copy" path="$PROJECT_DIR$/out/artifacts/apeon-schedule" />
       </element>
-      <element id="directory" name="lib">
-        <element id="library" level="module" name="quartz" module-name="schedule" />
-      </element>
-      <element id="file-copy" path="$PROJECT_DIR$/schedule/module.xml" />
     </root>
   </artifact>
 </component>

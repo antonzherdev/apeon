@@ -1,16 +1,9 @@
 <component name="ArtifactManager">
   <artifact name="apeon-excel">
-    <output-path>$PROJECT_DIR$/out/artifacts/apeon-excel</output-path>
+    <output-path>$PROJECT_DIR$/out/artifacts/</output-path>
     <root id="root">
-      <element id="file-copy" path="$PROJECT_DIR$/excel/module.xml" />
-      <element id="directory" name="apeon">
-        <element id="dir-copy" path="$PROJECT_DIR$/excel/apeon" />
-      </element>
-      <element id="directory" name="classes">
-        <element id="module-output" name="excel" />
-      </element>
-      <element id="directory" name="lib">
-        <element id="library" level="project" name="poi" />
+      <element id="archive" name="apeon-excel-0.2.zip">
+        <element id="dir-copy" path="$PROJECT_DIR$/out/artifacts/apeon-excel" />
       </element>
     </root>
   </artifact>

@@ -1,5 +1,5 @@
 <component name="ArtifactManager">
-  <artifact type="exploded-war" name="apeon-core-debug">
+  <artifact type="exploded-war" build-on-make="true" name="apeon-core-debug">
     <output-path>$PROJECT_DIR$/out/artifacts/apeon_core_debug</output-path>
     <root id="root">
       <element id="directory" name="WEB-INF">

@@ -1,0 +1,17 @@
+<component name="ArtifactManager">
+  <artifact build-on-make="true" name="apeon-excel-debug">
+    <output-path>$PROJECT_DIR$/out/artifacts/apeon-excel</output-path>
+    <root id="root">
+      <element id="file-copy" path="$PROJECT_DIR$/excel/module.xml" />
+      <element id="directory" name="apeon">
+        <element id="dir-copy" path="$PROJECT_DIR$/excel/apeon" />
+      </element>
+      <element id="directory" name="classes">
+        <element id="module-output" name="excel" />
+      </element>
+      <element id="directory" name="lib">
+        <element id="library" level="project" name="poi" />
+      </element>
+    </root>
+  </artifact>
+</component>

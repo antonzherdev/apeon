@@ -5,7 +5,6 @@
       <module fileurl="file://$PROJECT_DIR$/1c/1c.iml" filepath="$PROJECT_DIR$/1c/1c.iml" />
       <module fileurl="file://$PROJECT_DIR$/comtec/comtec.iml" filepath="$PROJECT_DIR$/comtec/comtec.iml" />
       <module fileurl="file://$PROJECT_DIR$/synch/comtec.iml" filepath="$PROJECT_DIR$/synch/comtec.iml" />
-      <module fileurl="file://$PROJECT_DIR$/comtec-calc/comtec-calc.iml" filepath="$PROJECT_DIR$/comtec-calc/comtec-calc.iml" />
       <module fileurl="file://$PROJECT_DIR$/comtec-jdbc/comtec-jdbc.iml" filepath="$PROJECT_DIR$/comtec-jdbc/comtec-jdbc.iml" />
       <module fileurl="file://$PROJECT_DIR$/core/core.iml" filepath="$PROJECT_DIR$/core/core.iml" />
       <module fileurl="file://$PROJECT_DIR$/cloud2/core.iml" filepath="$PROJECT_DIR$/cloud2/core.iml" />

@@ -2,14 +2,8 @@
   <artifact name="apeon-comtec">
     <output-path>$PROJECT_DIR$/out/artifacts/</output-path>
     <root id="root">
-      <element id="directory" name="apeon-comtec">
-        <element id="directory" name="apeon">
-          <element id="dir-copy" path="$PROJECT_DIR$/comtec/apeon" />
-        </element>
-        <element id="directory" name="classes">
-          <element id="module-output" name="comtec" />
-        </element>
-        <element id="file-copy" path="$PROJECT_DIR$/comtec/module.xml" />
+      <element id="archive" name="apeon-comtec-0.2.zip">
+        <element id="dir-copy" path="$PROJECT_DIR$/out/artifacts/apeon-comtec" />
       </element>
     </root>
   </artifact>
