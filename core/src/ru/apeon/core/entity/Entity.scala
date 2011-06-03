@@ -151,7 +151,7 @@ class Entity(val manager : EntityManager,
         val pkI = pks.iterator
         val idI = id.asInstanceOf[Seq[Any]].iterator
         while(pkI.hasNext) {
-          _data.update(pkI.next.name, idI.next)
+          _data.update(pkI.next().name, idI.next())
         }
       }
     }

@@ -4,6 +4,7 @@ import ru.apeon.core.eql._
 import collection.mutable.Buffer
 import akka.util.Logging
 import ru.apeon.core.script.{ObjectModel}
+import org.aspectj.weaver.ast.Var
 
 trait EntityManager {
   def model : ObjectModel
@@ -134,7 +135,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   def commit() {
     try{
       if(log.logger.isDebugEnabled) {
-        val sb = new StringBuilder
+        /*val sb = new StringBuilder
         sb.append("Commit")
         if(!insertedEntities.isEmpty) {
           sb.append("\nInserted:\n")
@@ -148,9 +149,12 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
           sb.append("\nDeleted:\n")
           sb.append(deletedEntities.mkString("\n"))
         }
-        log.debug(sb.toString())
+        log.debug(sb.toString())*/
+        log.debug("Commit")
       }
 
+      var i = 0
+      var size = insertedEntities.size
       insertedEntities.foreach{e =>
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
@@ -158,8 +162,12 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
         }
         touchedEntities.remove(e)
         e.id.dataSource.insert(this, e)
+        i += 1
+        log.debug("%d of %d".format(i, size))
       }
 
+      i = 0
+      size = touchedEntities.size
       touchedEntities.foreach{kv =>
         val e = kv._1
         val columns = kv._2
@@ -168,14 +176,21 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
           touchedStories.add(e.id.store)
         }
         e.id.dataSource.update(this, e, columns.map(column => e.id.description.field(column).asInstanceOf[FieldWithSource]))
+        i += 1
+        log.debug("%d of %d".format(i, size))
       }
 
+
+      i = 0
+      size = deletedEntities.size
       deletedEntities.foreach{e =>
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
         }
         e.id.dataSource.delete(this, e)
+        i += 1
+        log.debug("%d of %d".format(i, size))
       }
 
       transactionCounter -= 1

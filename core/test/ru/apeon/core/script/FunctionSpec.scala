@@ -27,6 +27,10 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     it("replace") {
       run(Dot("abcba", Ref("replace", Some(Seq(Par("b"), Par("d"))) ))) should equal ("adcda")
     }
+    it("sub") {
+      run(ConstString("abcba") ~ ref("sub", 2)) should equal ("cba")
+      run(ConstString("abcba") ~ ref("sub", 2, 4)) should equal ("cb")
+    }
   }
 
   describe("Числовые функции") {

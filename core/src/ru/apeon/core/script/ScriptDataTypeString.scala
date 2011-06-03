@@ -9,7 +9,7 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
 }
 
 object ScriptDataTypeStringDescription {
-  def declarations = Seq(format, toInt, toDec0, toDec1, replace, length)
+  def declarations = Seq(format, toInt, toDec0, toDec1, replace, length, substr1, substr2)
 
   def format = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
@@ -70,4 +70,25 @@ object ScriptDataTypeStringDescription {
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
       sql.Call("length", Seq(ref))
   }
+
+  def substr1 = new Declaration with SqlGeneration{
+    def name = "sub"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeString()
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[String].substring(parameters.get.head.value.asInstanceOf[Int])
+    def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
+      sql.Call("subString", Seq(ref, parameters(0)))
+    override def parameters = Seq(DefPar("start", ScriptDataTypeInteger()))
+  }
+
+  def substr2 = new Declaration with SqlGeneration{
+    def name = "sub"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeString()
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[String].substring(parameters.get.head.value.asInstanceOf[Int], parameters.get.apply(1).value.asInstanceOf[Int])
+    def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
+      sql.Call("subString", Seq(ref, parameters(0), parameters(1)))
+    override def parameters = Seq(DefPar("start", ScriptDataTypeInteger()), DefPar("end", ScriptDataTypeInteger()))
+  }
+
 }
