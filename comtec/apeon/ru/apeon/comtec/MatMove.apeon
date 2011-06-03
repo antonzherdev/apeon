@@ -21,6 +21,8 @@ entity MatMove<comtec> extends StandardDocument{
     column rate(curr) Dec(14, 6)
     column rateDate(datv) Date
 
+    column inventoryStartDate(dat_top) Date
+
     column ground(osn) String(127)        //Основание
     column remark(rem) String       //Примечание
     column byWhom(kogo) String(37)     //Через кого

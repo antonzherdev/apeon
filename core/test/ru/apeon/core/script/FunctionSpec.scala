@@ -35,6 +35,12 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(ConstString("abcba") ~ ref("pos", "b")) should equal (1)
       run(ConstString("abcba") ~ ref("pos", "b", 2)) should equal (3)
     }
+    it("toDate") {
+      val cal = Calendar.getInstance
+      cal.clear()
+      cal.set(2011, 0, 1, 0, 0, 0)
+      run(ConstString("Jan 1, 2011") ~ ref("toDate", "MMM d, yyyy")) should equal (cal.getTime)
+    }
   }
 
   describe("Числовые функции") {

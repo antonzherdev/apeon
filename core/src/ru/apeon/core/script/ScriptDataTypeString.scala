@@ -3,13 +3,15 @@ package ru.apeon.core.script
 import ru.apeon.core._
 import eql.SqlGeneration
 import java.math.MathContext
+import java.text.{DateFormatSymbols, SimpleDateFormat}
+import java.util.Locale
 
 case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
   override def valueOf(str: String) = str
 }
 
 object ScriptDataTypeStringDescription {
-  def declarations = Seq(format, toInt, toDec0, toDec1, replace, length, substr1, substr2, pos1, pos2)
+  def declarations = Seq(format, toInt, toDec0, toDec1, replace, length, substr1, substr2, pos1, pos2, toDate)
 
   def format = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
@@ -108,5 +110,16 @@ object ScriptDataTypeStringDescription {
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
       sql.Call("locate", Seq(ref, parameters(0), parameters(1)))
     override def parameters = Seq(DefPar("str", ScriptDataTypeString()), DefPar("start", ScriptDataTypeInteger()))
+  }
+
+  def toDate = new Declaration with SqlGeneration{
+    def name = "toDate"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDate()
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      new SimpleDateFormat(parameters.get.head.value.toString,
+        DateFormatSymbols.getInstance(Locale.ENGLISH)).parse(env.ref.asInstanceOf[String])
+    def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
+      sql.Call("date", Seq(ref))
+    override def parameters = Seq(DefPar("format", ScriptDataTypeString()))
   }
 }
