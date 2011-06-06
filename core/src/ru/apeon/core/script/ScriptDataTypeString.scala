@@ -79,7 +79,7 @@ object ScriptDataTypeStringDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[String].substring(parameters.get.head.value.asInstanceOf[Int])
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
-      sql.Call("subString", Seq(ref, parameters(0)))
+      sql.Call("subString", Seq(ref, sql.Plus(parameters(0), sql.Expression.constant((1)))))
     override def parameters = Seq(DefPar("start", ScriptDataTypeInteger()))
   }
 
@@ -89,7 +89,7 @@ object ScriptDataTypeStringDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[String].substring(parameters.get.head.value.asInstanceOf[Int], parameters.get.apply(1).value.asInstanceOf[Int])
     def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
-      sql.Call("subString", Seq(ref, parameters(0), parameters(1)))
+      sql.Call("subString", Seq(ref, sql.Plus(parameters(0), sql.Expression.constant(1)), sql.Minus(parameters(1), parameters(0))))
     override def parameters = Seq(DefPar("start", ScriptDataTypeInteger()), DefPar("end", ScriptDataTypeInteger()))
   }
 
