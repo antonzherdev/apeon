@@ -17,7 +17,12 @@ object ScriptDataTypeDateDescription {
     AddFunction("addSeconds", Calendar.SECOND),
     AddFunction("addMinutes", Calendar.MINUTE),
     AddFunction("addHours", Calendar.HOUR),
-    daysTo
+    daysTo,
+    Diff("diff", 0),
+    Diff("diffSeconds", 1000),
+    Diff("diffMinutes", 60000),
+    Diff("diffHours", 360000),
+    Diff("diffDays", 86400000)
   )
 
   case class AddFunction(name : String, field : Int) extends Declaration {
@@ -32,7 +37,7 @@ object ScriptDataTypeDateDescription {
     override def parameters = Seq(DefPar("value", ScriptDataTypeInteger()))
   }
 
-  def daysTo = new Declaration {
+  val daysTo = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       var start = env.ref.asInstanceOf[Date]
       val end = parameters.get.apply(0).value.asInstanceOf[Date]
@@ -50,5 +55,22 @@ object ScriptDataTypeDateDescription {
     def name = "daysTo"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(ScriptDataTypeDate())
     override def parameters = Seq(DefPar("to", ScriptDataTypeDate()))
+  }
+
+  case class Diff(name : String, del : Int) extends Declaration {
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val cal1 = Calendar.getInstance()
+      val cal2 = Calendar.getInstance()
+      cal1.setTime(env.ref.asInstanceOf[Date])
+      cal2.setTime(parameters.get.head.value.asInstanceOf[Date])
+      var diff : Int = (cal2.getTimeInMillis - cal1.getTimeInMillis).toInt
+      if(del != 0) {
+        diff /= del
+      }
+      diff
+    }
+
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
+    override def parameters = Seq(DefPar("end", ScriptDataTypeDate()))
   }
 }

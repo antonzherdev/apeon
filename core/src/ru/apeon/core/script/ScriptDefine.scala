@@ -1,6 +1,7 @@
 package ru.apeon.core.script
 
 import collection.immutable.Seq
+import java.util.Date
 
 
 trait ScriptDefine {
@@ -9,6 +10,7 @@ trait ScriptDefine {
   implicit def stringToConst(s: String) : ConstString = ConstString(s)
   implicit def intToConst(i: Int) : ConstInt = ConstInt(i)
   implicit def parToSeqPar(par: Par) : Option[Seq[Par]] = Some(Seq(par))
+  implicit def dateToConst(s: Date) : ConstDate = ConstDate(s)
 
   def ref(name : String, parameters : Expression*) = Ref(name, parameters.toSeq.map(Par(_)) match {
     case a if a.isEmpty => None

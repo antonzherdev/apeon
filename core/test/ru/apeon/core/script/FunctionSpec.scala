@@ -72,6 +72,15 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(Dot(ConstDate(start), Ref("daysTo", Some(Seq(Par(ConstDate(end)))))))should equal (
         Seq(start, m1, m2, end))
     }
+    it("diffDays") {
+      val cal = Calendar.getInstance
+      cal.set(2010, 01, 01)
+      val start = cal.getTime
+      cal.set(2010, 01, 04)
+      val end = cal.getTime
+
+      run(ConstDate(start) ~ ref("diffDays", end)) should equal (3)
+    }
   }
 
   describe("Коллекции") {
