@@ -74,12 +74,12 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     }
     it("diffDays") {
       val cal = Calendar.getInstance
-      cal.set(2010, 01, 01)
+      cal.set(2011, 0, 1)
       val start = cal.getTime
-      cal.set(2010, 01, 04)
+      cal.set(2011, 0, 31)
       val end = cal.getTime
 
-      run(ConstDate(start) ~ ref("diffDays", end)) should equal (3)
+      run(ConstDate(start) ~ ref("diffDays", end)) should equal (30)
     }
   }
 

@@ -63,11 +63,11 @@ object ScriptDataTypeDateDescription {
       val cal2 = Calendar.getInstance()
       cal1.setTime(env.ref.asInstanceOf[Date])
       cal2.setTime(parameters.get.head.value.asInstanceOf[Date])
-      var diff : Int = (cal2.getTimeInMillis - cal1.getTimeInMillis).toInt
+      var diff : Long = cal2.getTimeInMillis - cal1.getTimeInMillis
       if(del != 0) {
         diff /= del
       }
-      diff
+      diff.toInt
     }
 
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
