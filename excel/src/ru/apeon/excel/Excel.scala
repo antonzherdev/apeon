@@ -2,9 +2,10 @@ package ru.apeon.excel
 
 import ru.apeon.core.script._
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
-import java.io.FileInputStream
 import org.apache.poi.ss.usermodel.{DateUtil, Cell}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.commons.fileupload.util.Streams
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, FileInputStream}
 
 object Excel extends ObjectBase{
   def name = "Excel"
@@ -12,7 +13,7 @@ object Excel extends ObjectBase{
   def module = CoreModule
   def extendsClass = None
 
-  def declaredDeclarations = Seq(apply)
+  def declaredDeclarations = Seq(apply, applyStream)
 
   val apply = new DeclarationStatement {
     def name = "apply"
@@ -29,6 +30,27 @@ object Excel extends ObjectBase{
     }
 
     override def parameters = Seq(DefPar("fileName", ScriptDataTypeString()))
+  }
+
+  val applyStream = new DeclarationStatement {
+    def name = "apply"
+
+    def dataType(env: Environment) = ScriptDataTypeExcelFile()
+
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val stream = parameters.get.head.value.asInstanceOf[InputStream]
+      val baos = new ByteArrayOutputStream
+      Streams.copy(stream, baos, true)
+      val bites = baos.toByteArray
+      try {
+        new HSSFWorkbook(new ByteArrayInputStream(bites))
+      }
+      catch {
+        case _ => new XSSFWorkbook(new ByteArrayInputStream(bites))
+      }
+    }
+
+    override def parameters = Seq(DefPar("stream", ScriptDataTypeInputStream()))
   }
 
   def toAny(cell : Cell) : Any = cell.getCellType match {

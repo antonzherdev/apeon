@@ -6,7 +6,10 @@ import java.text.SimpleDateFormat
 case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
   val valueOfFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-  override def valueOf(str: String) = valueOfFormat.parse(str)
+  override def valueOf = {
+    case d : Date => d
+    case s : String => valueOfFormat.parse(s)
+  }
 }
 
 object ScriptDataTypeDateDescription {

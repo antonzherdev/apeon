@@ -10,7 +10,7 @@
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="scala" />
-          <element id="library" level="project" name="spring-security" />
+          <element id="library" level="project" name="spring" />
           <element id="library" level="project" name="slf4j" />
           <element id="library" level="project" name="log4j" />
           <element id="library" level="project" name="akka" />

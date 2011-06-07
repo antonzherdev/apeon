@@ -5,9 +5,13 @@ import eql.SqlGeneration
 import java.math.MathContext
 import java.text.{DateFormatSymbols, SimpleDateFormat}
 import java.util.Locale
+import java.io.InputStream
+import org.apache.commons.fileupload.util.Streams
 
 case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
-  override def valueOf(str: String) = str
+  override def valueOf = {
+    case i : InputStream => Streams.asString(i, "UTF-8")
+    case v => v.toString}
 }
 
 object ScriptDataTypeStringDescription {

@@ -1,5 +1,5 @@
 <component name="libraryTable">
-  <library name="spring-security">
+  <library name="spring">
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/lib/spring-security/class/spring-security-core-3.0.0.RELEASE.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/spring-security/class/commons-logging-1.1.1.jar!/" />
@@ -26,11 +26,13 @@
       <root url="jar://$PROJECT_DIR$/lib/spring-security/class/aopalliance-1.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/spring-security/class/hsqldb-1.8.0.10.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/spring-security/class/hessian-3.0.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/spring-security/class/commons-fileupload-1.2.2.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="jar://$PROJECT_DIR$/lib/spring-security/src/spring-secuity-core-src.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/spring-security/src/spring-security-web-src.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/spring-security/src/commons-fileupload-1.2.2-src.jar!/" />
     </SOURCES>
   </library>
 </component>

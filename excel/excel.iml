@@ -20,6 +20,7 @@
     <orderEntry type="library" name="scala" level="project" />
     <orderEntry type="library" name="scalatest" level="project" />
     <orderEntry type="library" name="akka" level="project" />
+    <orderEntry type="library" name="spring" level="project" />
   </component>
 </module>
 

@@ -15,7 +15,10 @@ abstract class ScriptDataType {
   def preFillRef(env : Environment, imports : Imports) {}
   def fillRef(env: Environment, imports: Imports) {}
 
-  def valueOf(str : String) : Any = throw new ScriptException("Unsupported conversation from string to \"%s\".".format(getClass))
+  def valueOf : PartialFunction[Any, Any] = new PartialFunction[Any, Any] {
+    def isDefinedAt(x: Any) = false
+    def apply(v1: Any) = throw new MatchError
+  }
 
   def correspond(dataType : ScriptDataType) : Boolean = dataType == this
 }
@@ -54,7 +57,7 @@ object ScriptDataTypeDescription {
 case class ScriptDataTypeDataSource() extends ScriptDataType
 
 case class ScriptDataTypeAny() extends ScriptDataType {
-  override def valueOf(str: String) = str
+  override def valueOf = {case v => v}
 }
 case class ScriptDataTypeUnit() extends ScriptDataType
 case class ScriptDataTypeNull() extends ScriptDataType
@@ -67,7 +70,10 @@ case class ScriptDataTypePackage(pack : Package) extends ScriptDataType {
 abstract class ScriptDataTypeSimple(val name : String) extends ScriptDataType
 case class ScriptDataTypeBoolean() extends ScriptDataTypeSimple("boolean")
 case class ScriptDataTypeInteger() extends ScriptDataTypeSimple("int") {
-  override def valueOf(str: String) = str.toInt
+  override def valueOf = {
+    case v : String => v.toInt
+    case i : Int => i
+  }
 }
 
 case class ScriptDataTypeBuiltInFunction() extends ScriptDataType

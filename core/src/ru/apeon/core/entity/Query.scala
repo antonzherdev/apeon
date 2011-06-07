@@ -6,8 +6,7 @@ import ru.apeon.core.script._
 case class Query(model : ObjectModel, module : Module, pack : Package, name : String, declaredDeclarations : Seq[DeclarationStatement],
                  extendsClass : Option[ClassBase] = None) extends ObjectBase
 {
-  def execute(parameters: Map[String, String] = Map()) = {
-
+  def execute(parameters: Map[String, Any] = Map()) = {
     val apply = declarations.find{
       case dec : Def =>
         dec.name == "apply" && parameters.size == dec.parameters.size && parameters.forall{
@@ -23,7 +22,7 @@ case class Query(model : ObjectModel, module : Module, pack : Package, name : St
       } match {
         case Seq() => None
         case s => Some(s)
-      })
+      }, None)
     }
     e.end()
     ret

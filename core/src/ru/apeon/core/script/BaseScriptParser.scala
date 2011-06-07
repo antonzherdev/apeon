@@ -52,6 +52,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     case "Int" => ScriptDataTypeInteger()
     case "Integer" => ScriptDataTypeInteger()
     case "String" => ScriptDataTypeString()
+    case "InputStream" => ScriptDataTypeInputStream()
     case entity => ScriptDataTypeEntityByName(entity)
   }
   def dataTypeSpec : Parser[ScriptDataType] = ":" ~> dataType

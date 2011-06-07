@@ -3,7 +3,10 @@ package ru.apeon.core.script
 import java.math.{MathContext}
 
 case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("dec") {
-  override def valueOf(str: String) = BigDecimal(str)
+  override def valueOf = {
+    case b : BigDecimal => b
+    case s : String => BigDecimal(s)
+  }
 }
 
 object ScriptDataTypeDecimalDescription {
