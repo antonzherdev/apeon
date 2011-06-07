@@ -16,14 +16,13 @@ case class Query(model : ObjectModel, module : Module, pack : Package, name : St
     }.get.asInstanceOf[Def]
     val e = new DefaultEnvironment(model)
     e.start()
-    val ret = e.atomic{
-      apply.value(e, apply.parameters.map {
-        par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
-      } match {
-        case Seq() => None
-        case s => Some(s)
-      }, None)
-    }
+    val ret = apply.value(e, apply.parameters.map {
+      par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
+    } match {
+      case Seq() => None
+      case s => Some(s)
+    }, None)
+
     e.end()
     ret
   }
