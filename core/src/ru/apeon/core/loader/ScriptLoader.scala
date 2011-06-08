@@ -8,14 +8,18 @@ import ru.apeon.core.script._
 
 object ScriptLoader extends Logging {
   def load(model : ObjectModel, modules : Seq[Module]) {
-    val files = modules.par.map{module => (module, new File(module.path + "/apeon"))}.
+    val decorators = modules.map(_.parserDecorators).reduce(_ ++ _).map{className =>
+      Loader.loadClass(className)
+    }
+
+    val files = modules/*.par*/.map{module => (module, new File(module.path + "/apeon"))}.
       filter(_._2.isDirectory).
       map(module => allFiles(module._2).map(file => (module._1, file))).
       foldLeft(Seq[(Module, File)]()){_ ++ _}
 
-    val scripts = files.par.map{file =>
+    val scripts = files/*.par*/.map{file =>
       log.info("Parsing file " + file._2.getAbsolutePath)
-      val script = parse(model, file._1, file._2)
+      val script = parse(model, file._1, file._2, decorators)
       log.info("Parsed file " + file._2.getAbsolutePath)
       script
     }
@@ -51,8 +55,8 @@ object ScriptLoader extends Logging {
     }
   }
 
-  def parse(model : ObjectModel, module : Module, file : File) : Script = try {
-    ScriptParser.parse(model, module, text(file), Some(file.getAbsolutePath))
+  def parse(model : ObjectModel, module : Module, file : File, decorators : Seq[Class[_]]) : Script = try {
+    ScriptParser.parse(model, module, text(file), Some(file.getAbsolutePath), decorators)
   }
   catch {
     case pe : ParserException => throw ParserException("Parse error in file %s\n%s".format(file.getAbsolutePath, pe.msg))

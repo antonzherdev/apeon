@@ -140,6 +140,9 @@ object Sync {
     }.getOrElse(("s", "d"))
 
     val found = syncFind(env, source, destinationDescription, dataSourceExpression, where, parent, aliases)
+    if(found.isEmpty && UpdateOnly() == options.sync) {
+      return null
+    }
     val d = found.getOrElse{
       val ds: DataSource = dataSource(env, destinationDescription, dataSourceExpression, parent)
       env.em.insert(destinationDescription, ds)
@@ -175,73 +178,76 @@ object Sync {
       val oldDS = env.currentDataSource
       env.setCurrentDataSource(Some(d.id.dataSource))
 
-      options.auto match {case AutoUpdate(one, many) =>
-        val changedFields : Seq[String] = statements.map{
-          case SetBase(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == funcDestinationAlias =>
-            Some(f)
-          case Ref("syncSkip", Some(Seq(Par(expr, _))) , None) =>
-            Some(expr.evaluate(env).toString)
-          case st =>
-            None
-        }.filter(_.isDefined).map(_.get)
+      options.auto match {
+        case AutoUpdate(one, many) => {
+          val changedFields : Seq[String] = statements.map{
+            case SetBase(Dot(Ref(a, None, None), Ref(f, None, None)), _) if a == funcDestinationAlias =>
+              Some(f)
+            case Ref("syncSkip", Some(Seq(Par(expr, _))) , None) =>
+              Some(expr.evaluate(env).toString)
+            case st =>
+              None
+          }.filter(_.isDefined).map(_.get)
 
 
-        destinationDescription.attributes.filterNot{
-          f => changedFields.contains(f.name)
-        }.foreach{column =>
-          if(!column.isPrimaryKey) {
-            source.id.description.fieldOption(column.name) match {
-              case Some(a : Attribute) => {
-                if(a.dataType == column.dataType) {
-                  d.update(column, source(a))
+          destinationDescription.attributes.filterNot{
+            f => changedFields.contains(f.name)
+          }.foreach{column =>
+            if(!column.isPrimaryKey) {
+              source.id.description.fieldOption(column.name) match {
+                case Some(a : Attribute) => {
+                  if(a.dataType.getClass == column.dataType.getClass) {
+                    d.update(column, source(a))
+                  }
                 }
+                case _ => {}
               }
-              case _ => {}
+            }
+          }
+          env.em.transaction{}
+
+          one match {case AutoToOne() =>
+            destinationDescription.ones.filter{one =>
+              syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne) && !changedFields.contains(one.name)
+            }.foreach{
+              one => source.id.description.fieldOption(one.name) match {
+                case Some(f : ToOne) => if(f.entity == one.entity) {
+                  d.update(one, source(f) match {
+                    case e : Entity => sync(env, e, one.entity, dataSourceExpression, options = SyncOptions(InsertOnly()))
+                    case null => null
+                  })
+                }
+                case _ => {}
+              }
+            }
+          }
+          many match {case a : AutoToMany =>
+            destinationDescription.manies.filter{
+              many => syncWhereDeclaration(env, many.entity).isDefined && !changedFields.contains(many.name)
+            }.foreach{
+              many => source.id.description.fieldOption(many.name) match {
+                case Some(f : ToMany) => if(f.entity == many.entity && f.toOne == many.toOne) {
+                  val b = collection.immutable.Set.newBuilder[Entity]
+                  if(a.isInstanceOf[AutoToManyAppend]) {
+                    b ++= d(many).asInstanceOf[Iterable[Entity]]
+                  }
+                  source(f) match {
+                    case entities : Iterable[Entity] =>
+                      entities.foreach{
+                        e => b += sync(env, e, many.entity, dataSourceExpression,
+                          options = SyncOptions(InsertOnly()),
+                          parent = Some(ParentSync(d, many.toOne, found.isDefined)))
+                      }
+                    case null => {}
+                  }
+                  d.update(many, b.result())
+                }
+                case _ => {}
+              }
             }
           }
         }
-        env.em.transaction{}
-
-        one match {case AutoToOne() =>
-          destinationDescription.ones.filter{one =>
-            syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne) && !changedFields.contains(one.name)
-          }.foreach{
-            one => source.id.description.fieldOption(one.name) match {
-              case Some(f : ToOne) => if(f.entity == one.entity) {
-                d.update(one, source(f) match {
-                  case e : Entity => sync(env, e, one.entity, dataSourceExpression, options = SyncOptions(InsertOnly()))
-                  case null => null
-                })
-              }
-              case _ => {}
-            }
-          }
-        }
-        many match {case a : AutoToMany =>
-          destinationDescription.manies.filter{
-            many => syncWhereDeclaration(env, many.entity).isDefined && !changedFields.contains(many.name)
-          }.foreach{
-            many => source.id.description.fieldOption(many.name) match {
-              case Some(f : ToMany) => if(f.entity == many.entity && f.toOne == many.toOne) {
-                val b = collection.immutable.Set.newBuilder[Entity]
-                if(a.isInstanceOf[AutoToManyAppend]) {
-                  b ++= d(many).asInstanceOf[Iterable[Entity]]
-                }
-                source(f) match {
-                  case entities : Iterable[Entity] =>
-                    entities.foreach{
-                      e => b += sync(env, e, many.entity, dataSourceExpression,
-                        options = SyncOptions(InsertOnly()),
-                        parent = Some(ParentSync(d, many.toOne, found.isDefined)))
-                    }
-                  case null => {}
-                }
-                d.update(many, b.result())
-              }
-              case _ => {}
-            }
-          }
-        }
+        case NoAutoUpdate() => {}
       }
 
       if(func.isDefined) {

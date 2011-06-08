@@ -5,6 +5,7 @@ case class SyncOptions(sync : SyncMode = InsertUpdate(), auto : AutoMode = AutoU
 abstract class SyncMode
 case class InsertOnly() extends SyncMode
 case class InsertUpdate() extends SyncMode
+case class UpdateOnly() extends SyncMode
 
 abstract class AutoMode
 case class NoAutoUpdate() extends AutoMode

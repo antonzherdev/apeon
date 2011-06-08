@@ -25,7 +25,11 @@ object SyncDeclaration extends Declaration {
 
   def option(value : Int) : SyncOptions =
     SyncOptions(
-      sync = if((value & SyncObject.InsertOnly) != 0) InsertOnly() else InsertUpdate(),
+      sync = if((value & SyncObject.InsertOnly) != 0) {
+        InsertOnly()
+      } else {
+        if((value & SyncObject.UpdateOnly) != 0) UpdateOnly() else InsertUpdate()
+      },
       auto =
               if((value & SyncObject.NoAutoUpdate) != 0) NoAutoUpdate() else AutoUpdate(
                 one = if((value & SyncObject.NoAutoUpdateToOne) != 0) NoAutoToOne() else AutoToOne(),

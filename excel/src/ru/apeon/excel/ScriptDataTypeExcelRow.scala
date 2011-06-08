@@ -25,6 +25,6 @@ object ScriptDataTypeExcelRowDescription {
     def name = "number"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Row].getRowNum
+      env.ref.asInstanceOf[Row].getRowNum + 1
   }
 }

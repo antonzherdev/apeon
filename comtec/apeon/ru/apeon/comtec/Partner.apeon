@@ -72,6 +72,7 @@ entity Storage<comtec> extends Place {
     table dba.voc_names
     join dba.storage(id)
 
+    column address String
     column belong(belong_id) Int default 2
 }
 

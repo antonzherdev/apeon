@@ -6,12 +6,15 @@ import util.parsing.input.CharArrayReader.EofCh
 import util.parsing.combinator.token.Tokens
 
 object ScriptParser{
-  def parse(model : ObjectModel, module : Module, code: String, fileName : Option[String] = None) : Script = {
+  def parse(model : ObjectModel, module : Module, code: String, fileName : Option[String] = None, decorators : Seq[Class[_]] = Seq()) : Script = {
     val data = new ScriptParserParser
     data._model = model
     data._module = module
     data._fileName = fileName
     data._component = new BaseScriptParser(data)
+    data._component = decorators.foldLeft(data._component){case (ret, cls) =>
+      cls.getConstructor(classOf[ScriptParserComponent]).newInstance(ret).asInstanceOf[ScriptParserComponent]
+    }
     data.parse(code)
   }
 
@@ -129,6 +132,8 @@ abstract class ScriptParserComponent {
   def dataSourceRef : Parser[Expression]
   def ref : Parser[Ref]
   def eqlConstString: Parser[String]
+
+  def objectStatement : Parser[DeclarationStatement]
 }
 
 abstract class ScriptParserDecorator extends ScriptParserComponent{
@@ -144,6 +149,7 @@ abstract class ScriptParserDecorator extends ScriptParserComponent{
   def dataSourceRef = decorated.dataSourceRef.asInstanceOf[Parser[Expression]]
   def ref = decorated.ref.asInstanceOf[Parser[Ref]]
   def eqlConstString = decorated.eqlConstString.asInstanceOf[Parser[String]]
+  def objectStatement = decorated.objectStatement.asInstanceOf[Parser[DeclarationStatement]]
 }
 
 

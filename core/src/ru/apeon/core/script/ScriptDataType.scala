@@ -47,6 +47,8 @@ object ScriptDataTypeDescription {
     addDeclaration(classOf[ScriptDataTypeEqlSelectBase], ScriptDataTypeEqlSelectBaseDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeEqlStatement], ScriptDataTypeEqlStatementDescription.declarations : _*)
 
+    addDeclaration(classOf[ScriptDataTypeInputStream], ScriptDataTypeInputStreamDescription.declarations : _*)
+
     addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration)
     addDeclaration(classOf[ScriptDataTypeAny], ToStringDeclaration)
     addDeclaration(classOf[ScriptDataTypeBoolean], ToStringDeclaration)

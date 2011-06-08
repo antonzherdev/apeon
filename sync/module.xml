@@ -4,4 +4,7 @@
     <name>ru.apeon.sync</name>
     <version>1.0</version>
     <listener>ru.apeon.sync.SyncListener</listener>
+
+    <listener>ru.apeon.sync.buffer.BufferListener</listener>
+    <parserDecorator>ru.apeon.sync.buffer.BufferParser</parserDecorator>
 </module>

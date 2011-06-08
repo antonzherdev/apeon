@@ -53,17 +53,21 @@ object Excel extends ObjectBase{
     override def parameters = Seq(DefPar("stream", ScriptDataTypeInputStream()))
   }
 
-  def toAny(cell : Cell) : Any = cell.getCellType match {
-    case Cell.CELL_TYPE_STRING => cell.getRichStringCellValue.getString
-    case Cell.CELL_TYPE_NUMERIC =>
-      if(DateUtil.isCellDateFormatted(cell)) {
-        cell.getDateCellValue
-      } else {
-        cell.getNumericCellValue
+  def toAny(cell : Cell) : Any =
+    if(cell == null) null
+    else {
+      cell.getCellType match {
+        case Cell.CELL_TYPE_STRING => cell.getRichStringCellValue.getString
+        case Cell.CELL_TYPE_NUMERIC =>
+          if(DateUtil.isCellDateFormatted(cell)) {
+            cell.getDateCellValue
+          } else {
+            cell.getNumericCellValue
+          }
+        case Cell.CELL_TYPE_BOOLEAN =>
+          cell.getBooleanCellValue
+        case Cell.CELL_TYPE_BLANK =>
+          null
       }
-    case Cell.CELL_TYPE_BOOLEAN =>
-      cell.getBooleanCellValue
-    case Cell.CELL_TYPE_BLANK =>
-      null
-  }
+    }
 }
