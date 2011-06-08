@@ -16,6 +16,7 @@ entity BankAccountStatement<comtec> extends StandardDocument {
         column currencyDebitAmount(debv) Dec(6, 4) //Сумма прихода в валюте
         column currencyCreditAmount(credv) Dec(6, 4) //Сумма расхода в валюте
         one partner(id_post) Partner //Дебитор-кредитор
+        one order(id_jdog) Order //Договор
         column remark(rem) String(210) //Примечание
         column documentDate(dat_docum) Date //Дата документа
         column documentNumber(docnu) String(20) //Номер документа
