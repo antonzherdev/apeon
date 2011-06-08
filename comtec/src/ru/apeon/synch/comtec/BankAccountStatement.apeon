@@ -21,6 +21,7 @@ entity BankAccountStatementMove(dba.banks) {
     column currencyDebitAmount(debv) decimal(6, 4) //Сумма прихода в валюте
     column currencyCreditAmount(credv) decimal(6, 4) //Сумма расхода в валюте
     one partner(id_post) Partner //Дебитор-кредитор
+    one order(id_jdog) Order //Договор
     column remark(rem) char(210) //Примечание
     column documentDate(dat_docum) date //Дата документа
     column documentNumber(docnu) char(20) //Номер документа
