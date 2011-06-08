@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  - Application context containing authentication, channel
+  - security and web URI beans.
+  -
+  - Only used by "filter" artifact.
+  -
+  - $Id: applicationContext-acegi-security.xml 1425 2006-04-28 06:43:50Z benalex $
+  -->
+
+<b:beans xmlns="http://www.springframework.org/schema/security"
+         xmlns:b="http://www.springframework.org/schema/beans"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+                        http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.0.xsd">
+
+    <http realm="Contacts Realm" auto-config="true">
+        <intercept-url pattern="/data/**" access="ROLE_USER"/>
+        <intercept-url pattern="/action/**" access="ROLE_USER"/>
+        <remember-me key="zskayKeyCom"/>
+    </http>
+
+
+    <authentication-manager>
+        <authentication-provider user-service-ref="userDetailsService">
+            <password-encoder hash="md5"/>
+        </authentication-provider>            
+    </authentication-manager>
+
+
+
+    <b:bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+        <b:property name="jndiName" value="java:comp/env/jdbc/comtec"/>
+        <b:property name="resourceRef" value="true" />
+    </b:bean>
+
+    <b:bean id="userDetailsService" class="org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl">
+        <b:property name="dataSource" ref="dataSource"/>
+        <b:property name="usersByUsernameQuery" value="select username, pwd, case enabled when '1' then 'true' else 'false' end from x_user where username = ?"/>
+        <b:property name="authoritiesByUsernameQuery" value="select username, nm
+from
+(select x_user.username as username, x_authority.nm as nm
+from x_user_authority
+    inner join x_user on x_user.id = x_user_authority.id_user
+    inner join x_authority on x_authority.id = x_user_authority.id_authority
+union all
+select x_user.username as username, 'ROLE_USER' as nm
+from x_user
+) as a
+where username = ?"/>
+    </b:bean>
+
+    <!-- Automatically receives AuthenticationEvent messages -->
+    <b:bean id="loggerListener" class="org.springframework.security.authentication.event.LoggerListener"/>
+
+</b:beans>

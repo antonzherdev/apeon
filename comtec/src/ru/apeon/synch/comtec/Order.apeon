@@ -1,0 +1,21 @@
+entity Order(dba.jdog) {
+    column id integer primary key
+    column number(nu) varchar(98)
+    column dateOfSigning(dat) date
+    column startDate(dat_workbeg) date
+    column endDate(dat_workend) date
+    column name(nm) text
+
+    one organization(id_post) Organization
+	one type(id_type) OrderType
+
+	def toString : String = Format.str("Договор", id, number)
+}
+
+
+entity OrderType(dba.jdog_type) {
+    column id integer primary key
+    column name(nm) varchar(98)
+
+    def toString : String = Format.str("Тип договора", id, name)
+}

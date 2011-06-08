@@ -1,0 +1,60 @@
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+    <appender name="console-info" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{ISO8601} [%5p] %c %m%n"/>
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelRangeFilter">
+            <param name="LevelMin" value="ALL"/>
+            <param name="LevelMax" value="INFO"/>
+        </filter>
+    </appender>
+
+    <appender name="console-warn" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.err"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{ISO8601} [%5p] %c %m%n"/>
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelRangeFilter">
+            <param name="LevelMin" value="WARN"/>
+        </filter>
+    </appender>
+
+    <appender name="log-file" class="org.apache.log4j.RollingFileAppender">
+        <param name="file" value="${catalina.home}/logs/apeon.log"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{ISO8601} [%5p] %c %m%n"/>
+        </layout>
+    </appender>
+
+    <appender name="log-file-changes" class="org.apache.log4j.RollingFileAppender">
+        <param name="file" value="${catalina.home}/logs/apeon-write.log"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d{ISO8601} [%5p] %c %m%n"/>
+        </layout>
+    </appender>
+
+    <logger name="ru.apeon.core.entity.SqlPersistentStore" additivity="false">
+        <level value="debug"/>
+        <appender-ref ref="log-file"/>
+        <appender-ref ref="log-file-changes"/>
+        <appender-ref ref="console-info"/>
+        <appender-ref ref="console-warn"/>
+    </logger>
+
+    <logger name="ru.apeon.core.sql.Sql" additivity="false">
+        <level value="debug"/>
+        <appender-ref ref="log-file"/>
+        <appender-ref ref="log-file-changes"/>
+        <appender-ref ref="console-info"/>
+        <appender-ref ref="console-warn"/>
+    </logger>
+
+    <root>
+        <priority value="debug"/>
+        <appender-ref ref="log-file"/>
+        <appender-ref ref="console-info"/>
+        <appender-ref ref="console-warn"/>
+    </root>
+</log4j:configuration>

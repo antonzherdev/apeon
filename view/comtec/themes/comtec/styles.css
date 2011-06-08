@@ -1,0 +1,104 @@
+@import url(../reindeer/styles.css);
+
+.v-formlayout-captioncell {
+	vertical-align: top;
+}
+
+.v-formlayout-captioncell .v-caption{
+	padding-top : 3px;
+}
+
+.v-app,
+.v-window,
+.v-popupview-popup,
+.v-tooltip,
+.v-app input,
+.v-app select,
+.v-app button,
+.v-app textarea,
+.v-window input,
+.v-window select,
+.v-window button,
+.v-window textarea,
+.v-popupview-popup input,
+.v-popupview-popup select,
+.v-popupview-popup button,
+.v-popupview-popup textarea,
+.v-filterselect-suggestpopup,
+.v-datefield-popup,
+.v-contextmenu,
+.v-Notification,
+.v-menubar-submenu {
+	font-family: "Segoe UI", "Trebuchet MS", geneva, helvetica, arial, tahoma, verdana, sans-serif;
+	font-size: 12px;
+	line-height: normal;
+	color: black;
+}
+
+.v-Notification {
+	color: white;
+}
+
+.m-toolbar{
+	background: url('toolbar-background.png') repeat-x;
+	color: white;
+	text-shadow: 0 1px 0 #3B5A7A;
+}
+
+.v-panel-content > div {
+	background: transparent;
+}
+
+.m-toolbar .v-panel-deco {
+	border-top-color: #42506b;
+	background: #050a10;
+}
+
+.v-tree-node-selected span,
+.v-table .v-selected {
+	background: url('selected.png') repeat-x;
+	font-weight : bold;
+}
+
+.v-table .v-selected .v-table-cell-content { 
+	border-right-color: #61b710;
+}
+
+.m-table-item-title {
+	font-size: 14px;
+	font-weight: bold;
+	display: block;
+	margin-bottom: 5px;
+}
+
+.m-table-item-info {
+	font-size: 11px;
+}
+
+.v-splitpanel-hsplitter{
+	width: 1px;
+	background: #e0e0e0;
+}
+
+.v-splitpanel-hsplitter div {
+	background: transparent;
+}
+
+.v-app {
+	background: #ffffff;
+	color: black;
+}
+
+.v-label-h1, .v-label-h2, .v-caption-h1, .v-caption-h2 {
+	color: black;
+}
+
+.m-email-box-label {
+	font-size : 14px;
+}
+
+.v-horizontallayout-m-email-box-label{
+	padding-left:   10px;
+	padding-top:    5px;
+    padding-bottom: 5px;
+}

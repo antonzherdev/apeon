@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+		  http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+         version="2.5">
+
+    <servlet>
+        <servlet-name>Order</servlet-name>
+        <servlet-class>com.vaadin.terminal.gwt.server.ApplicationServlet</servlet-class>
+        <init-param>
+            <param-name>application</param-name>
+            <param-value>ru.apeon.order.Order</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>Order</servlet-name>
+        <url-pattern>/Order/*</url-pattern>
+    </servlet-mapping>
+
+
+    <servlet>
+        <servlet-name>Bids</servlet-name>
+        <servlet-class>com.vaadin.terminal.gwt.server.ApplicationServlet</servlet-class>
+        <init-param>
+            <param-name>application</param-name>
+            <param-value>ru.apeon.order.Bids</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>Bids</servlet-name>
+        <url-pattern>/Bids/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>QueryTest</servlet-name>
+        <servlet-class>com.vaadin.terminal.gwt.server.ApplicationServlet</servlet-class>
+        <init-param>
+            <param-name>application</param-name>
+            <param-value>ru.apeon.admin.QueryTest</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>QueryTest</servlet-name>
+        <url-pattern>/QueryTest/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>Desktop</servlet-name>
+        <servlet-class>com.vaadin.terminal.gwt.server.ApplicationServlet</servlet-class>
+        <init-param>
+            <param-name>application</param-name>
+            <param-value>ru.apeon.desktop.Desktop</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>Desktop</servlet-name>
+        <url-pattern>/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>Login</servlet-name>
+        <jsp-file>/WEB-INF/login.jsp</jsp-file>
+    </servlet>
+     <servlet-mapping>
+        <servlet-name>Login</servlet-name>
+        <url-pattern>/login</url-pattern>
+    </servlet-mapping>
+
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>
+            /WEB-INF/applicationContext-security.xml
+        </param-value>
+    </context-param>
+
+    <servlet>
+        <servlet-name>EMail</servlet-name>
+        <servlet-class>com.vaadin.terminal.gwt.server.ApplicationServlet</servlet-class>
+        <init-param>
+            <param-name>application</param-name>
+            <param-value>ru.apeon.mail.EMailApp</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EMail</servlet-name>
+        <url-pattern>/Email/*</url-pattern>
+    </servlet-mapping>
+
+    <filter>
+        <filter-name>springSecurityFilterChain</filter-name>
+        <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>springSecurityFilterChain</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+</web-app>
