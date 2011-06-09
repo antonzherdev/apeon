@@ -29,9 +29,9 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 }
 
 object ScriptDataTypeSeqDescription {
-  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap)
+  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption, last, lastOption, tail)
   def map = iterable ++ Seq(mapGet, mapApply)
-  def seq = iterable
+  def seq = iterable ++ Seq(seqApply)
 
   def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeCollection]
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeCollection].dataType
@@ -142,5 +142,42 @@ object ScriptDataTypeSeqDescription {
       case _ => false
     }
   }
-
+  val seqApply = new Declaration {
+    def name = "apply"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get.asInstanceOf[ScriptDataTypeSeq].dataType
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Seq[Any]].apply(parameters.get.head.value.asInstanceOf[Int])
+    override def parameters = Seq(DefPar("index", ScriptDataTypeInteger()))
+  }
+  val head = new Declaration {
+    def name = "head"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = tp(env)
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Traversable[Any]].head
+  }
+  val last = new Declaration {
+    def name = "last"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = tp(env)
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Traversable[Any]].last
+  }
+  val headOption = new Declaration {
+    def name = "headOption"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeOption(tp(env))
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Traversable[Any]].headOption
+  }
+  val lastOption = new Declaration {
+    def name = "lastOption"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeOption(tp(env))
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Traversable[Any]].lastOption
+  }
+  val tail = new Declaration {
+    def name = "tail"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[Traversable[Any]].tail
+  }
 }

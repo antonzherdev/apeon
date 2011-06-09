@@ -101,7 +101,17 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
         ref("_") ~ ref("length")
       ))) should equal(Seq(1, 3, 2, 2))
     }
-
+    it("positioned") {
+      val s = seq(2, 3, 1)
+      run(s ~ ref("apply", 1)) should equal(3)
+      run(s ~ ref("head")) should equal(2)
+      run(s ~ ref("last")) should equal(1)
+      run(s ~ ref("headOption") ~ ref("get")) should equal(2)
+      run(s ~ ref("lastOption") ~ ref("get")) should equal(1)
+      run(s ~ ref("tail")) should equal(Seq(3, 1))
+      run(seq() ~ ref("headOption")) should equal(None)
+      run(seq() ~ ref("lastOption")) should equal(None)
+    }
   }
 
   describe("Карты") {
