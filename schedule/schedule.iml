@@ -20,6 +20,7 @@
     <orderEntry type="library" name="scala" level="project" />
     <orderEntry type="library" name="slf4j" level="project" />
     <orderEntry type="library" name="log4j" level="project" />
+    <orderEntry type="library" name="quartz" level="project" />
   </component>
 </module>
 

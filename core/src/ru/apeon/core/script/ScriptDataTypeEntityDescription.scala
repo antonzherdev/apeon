@@ -27,19 +27,19 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
 }
 
 object ScriptDataTypeEntityDescriptionTypeDescription {
-  def declarations = Seq(applyId, applyEql, findEql, insert, findId)
+  def declarations = Seq(applyId, applyEql, findEql, insert, findId, firstEql, firstOptionEql)
 
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeEntityDescription]
   def des(env : Environment) = tp(env).description
 
-  def insert = new Declaration {
+  val insert = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.em.insert(des(env), env.dataSource(dataSource).getOrElse(des(env).dataSource))
     def name = "insert"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(des(env))
   }
 
-  def applyId = new FindId {
+  val applyId = new FindId {
     override def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       super.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].getOrElse{
         throw ScriptException(env, "Entity %s not found for id %d".format(des(env), parameters.get.head.value))
@@ -62,31 +62,49 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
     override def parameters = Seq(DefPar("id", ScriptDataTypeInteger()))
   }
 
-  def applyEql = new FindEql {
-    override def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression])  =
-      super.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].getOrElse{
-        throw ScriptException(env, "Entity not found by %s".format(parameters.get.head.value))
+  val applyEql = new EqlBase {
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression])  =
+      select(env, parameters, dataSource)  match {
+        case Seq(e) => e
+        case Seq() => throw ScriptException(env, "Entity not found by %s".format(parameters.get.head.value))
+        case _ => throw ScriptException(env, "Found entity more then one")
       }
-    override  def name = "apply"
-    override def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(des(env))
+    def name = "apply"
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(des(env))
   }
-
-  def findEql = new FindEql
-
-  class FindEql extends Declaration {
+  val findEql = new EqlBase {
+    def name = "find"
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeOption(ScriptDataTypeEntityByDescription(des(env)))
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) : Any  = {
-      val where = parameters.get.head.value.asInstanceOf[eql.Expression]
-      val select = eql.Select(eql.FromEntity(des(env), None,
-        DataSourceExpressionDataSource(env.dataSource(dataSource).getOrElse{des(env).dataSource})), where = Some(where))
-      env.em.select(select) match {
+      select(env, parameters, dataSource)  match {
         case Seq(e) => Some(e)
         case Seq() => None
-        case _ => throw ScriptException(env, "Found entity more then one by %s".format(select))
+        case _ => throw ScriptException(env, "Found entity more then one")
       }
     }
-    def name = "find"
-    def dataType(env: Environment, parameters : Option[Seq[Par]]) : ScriptDataType =
-      ScriptDataTypeOption(ScriptDataTypeEntityByDescription(des(env)))
+  }
+  val firstEql = new EqlBase {
+    def name = "first"
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(des(env))
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      select(env, parameters, dataSource).head
+  }
+  val firstOptionEql = new EqlBase {
+    def name = "firstOption"
+    def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeOption(ScriptDataTypeEntityByDescription(des(env)))
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      select(env, parameters, dataSource).headOption
+  }
+
+  abstract class EqlBase extends Declaration {
+    def select(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Seq[Entity] = {
+      val where = parameters.get.head.value.asInstanceOf[eql.Expression]
+      val select = eql.Select(eql.FromEntity(des(env), None,
+        DataSourceExpressionDataSource(env.dataSource(dataSource).getOrElse {
+          des(env).dataSource
+        })), where = Some(where))
+      env.em.select(select)
+    }
     override def parameters = Seq(DefPar("where", ScriptDataTypeEqlExpression()))
   }
 }
