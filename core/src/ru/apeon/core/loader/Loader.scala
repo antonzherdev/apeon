@@ -14,6 +14,9 @@ object Loader extends Logging {
   private var _apeonXml : NodeSeq = _
   private var _model : ObjectModel = new DefaultObjectModel
   private var _persistDirectory : File = _
+  private var _loaderError : Option[Throwable] = None
+
+  def loaderError = _loaderError
 
   def apeonXml = _apeonXml
 
@@ -22,57 +25,64 @@ object Loader extends Logging {
   def model = _model
 
   def load() {
-    unload()
-    log.info("Loading modules")
-    val tomcatFolder = System.getProperty("catalina.home")
-    _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
-    _persistDirectory = new File(
-      (_apeonXml\"apeon"\"persistDirectory").lastOption.map{_.text}.getOrElse{
-        System.getProperty("user.home") + "/.apeon/"
-      }
-    )
-    if(!_persistDirectory.exists) _persistDirectory.mkdir()
+    _loaderError = None
+    try {
+      unload()
+      log.info("Loading modules")
+      val tomcatFolder = System.getProperty("catalina.home")
+      _apeonXml = XML.loadFile(tomcatFolder + "/conf/apeon.xml")
+      _persistDirectory = new File(
+        (_apeonXml\"apeon"\"persistDirectory").lastOption.map{_.text}.getOrElse{
+          System.getProperty("user.home") + "/.apeon/"
+        }
+      )
+      if(!_persistDirectory.exists) _persistDirectory.mkdir()
 
-    val apeonFolder = new File(tomcatFolder + "/apeon")
-    EntityConfiguration.model = model
+      val apeonFolder = new File(tomcatFolder + "/apeon")
+      EntityConfiguration.model = model
 
-    val modulesBuilder = Seq.newBuilder[Module]
-    if(apeonFolder.exists) {
-      apeonFolder.listFiles/*.par*/.foreach{dir =>
-        modulesBuilder += loadModule(model, dir)
-      }
-    }
-    apeonXml.\\("module")/*.par*/.foreach{module =>
-      modulesBuilder += loadModule(model, new File(module.\("@dir").text))
-    }
-
-    modules = modulesBuilder.result()
-
-    val urls = Array.newBuilder[URL]
-    for(module <- modules) {
-      val classes = new File(module.path + "/classes")
-      if(classes.isDirectory) {
-        urls += classes.toURI.toURL
-      }
-
-      val lib = new File(module.path + "/lib")
-      if(lib.isDirectory) {
-        lib.listFiles.filter(_.getName.endsWith(".jar")).foreach{jar =>
-          urls += jar.toURI.toURL
+      val modulesBuilder = Seq.newBuilder[Module]
+      if(apeonFolder.exists) {
+        apeonFolder.listFiles/*.par*/.foreach{dir =>
+          modulesBuilder += loadModule(model, dir)
         }
       }
+      apeonXml.\\("module")/*.par*/.foreach{module =>
+        modulesBuilder += loadModule(model, new File(module.\("@dir").text))
+      }
+
+      modules = modulesBuilder.result()
+
+      val urls = Array.newBuilder[URL]
+      for(module <- modules) {
+        val classes = new File(module.path + "/classes")
+        if(classes.isDirectory) {
+          urls += classes.toURI.toURL
+        }
+
+        val lib = new File(module.path + "/lib")
+        if(lib.isDirectory) {
+          lib.listFiles.filter(_.getName.endsWith(".jar")).foreach{jar =>
+            urls += jar.toURI.toURL
+          }
+        }
+      }
+
+      classLoader = new URLClassLoader(urls.result(), getClass.getClassLoader)
+
+      ScriptDataTypeDescription.load()
+      createListeners()
+      preloadListeners()
+      ScriptLoader.load(model, modules)
+      loadListeners()
+      model.dataSources.foreach(_.load())
+
+      log.info("Loaded modules")
+    } catch {
+      case e : Throwable =>
+        log.error(e, "Loader")
+        _loaderError = Some(e)
     }
-
-    classLoader = new URLClassLoader(urls.result(), getClass.getClassLoader)
-
-    ScriptDataTypeDescription.load()
-    createListeners()
-    preloadListeners()
-    ScriptLoader.load(model, modules)
-    loadListeners()
-    model.dataSources.foreach(_.load())
-
-    log.info("Loaded modules")
   }
 
   def unload() {
