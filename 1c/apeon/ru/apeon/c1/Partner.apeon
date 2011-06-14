@@ -1,9 +1,0 @@
-package ru.apeon.c1
-
-entity Partner<c1> {
-    table Catalog.Контрагенты
-    discriminator ЭтоГруппа = 0
-
-    column id(Ref) String(36) primary key
-    column name(Наименование) String(254)
-}

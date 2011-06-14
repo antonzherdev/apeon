@@ -1,7 +1,3 @@
 package ru.apeon.c1
 
 datasource c1
-
-query Test {
-    Material(`name = "Вентилятор настольный"`)
-}

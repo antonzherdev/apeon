@@ -1,0 +1,7 @@
+package ru.apeon.c1
+
+entity Document<c1> {
+    column id(Ref) String(36) primary key
+    column number(Номер) String(254)
+    column date(Дата) Date
+}
