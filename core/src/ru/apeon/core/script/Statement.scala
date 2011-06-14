@@ -51,7 +51,9 @@ abstract class StatementList extends Statement {
 
   private def tt(stm : Statement) : PartialFunction[Throwable, Any] = {
     case e @ ScriptException(_, _, None) =>
-      throw ScriptException("%s near %s".format(e.getMessage, stm), Some(e), Some(this))
+      throw ScriptException(e.getMessage, Some(e), Some(stm))
+    case t : Throwable =>
+      throw ScriptException(t.getMessage, Some(t), Some(stm))
   }
 
   def fillRef(env : Environment, imports : Imports) {

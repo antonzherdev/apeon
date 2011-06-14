@@ -132,9 +132,9 @@ class DefaultSqlDialect extends SqlDialect with TextGen {
         append("(")
         i.columns.foldLeft(false){ (b, c) =>
           if(b) append(", ")
-          append('"')
+          appendEscape()
           append(c.column)
-          append('"')
+          appendEscape()
           true
         }
         append(')')
@@ -469,3 +469,6 @@ class AsaSqlDialect extends DefaultSqlDialect {
  insert into %1$s(id) values(0);""".format(table)
 }
 
+class MySqlDialect extends DefaultSqlDialect {
+  override def appendEscape() {append('`')}
+}

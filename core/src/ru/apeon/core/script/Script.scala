@@ -34,7 +34,7 @@ class Script(val model : ObjectModel, val pack : Package, val statements : Seq[S
   } catch tt
 
   def tt : PartialFunction[Throwable, Script] = {
-    case s : ScriptException if fileName.isDefined =>
+    case s : Throwable if fileName.isDefined =>
       throw new ScriptException("%s in file %s".format(s.getMessage, fileName.get), Some(s))
   }
 

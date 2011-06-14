@@ -220,6 +220,8 @@ case class Def(name : String, statement : Statement, override val parameters : S
   private def tt : PartialFunction[Throwable, Any] = {
     case e @ ScriptException(_, _, None) =>
       throw ScriptException(e.getMessage, Some(e), Some(statement))
+    case t : Throwable =>
+      throw ScriptException(t.getMessage, Some(t), Some(statement))
   }
 
   private def eval(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Any =

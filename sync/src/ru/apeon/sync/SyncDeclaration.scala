@@ -107,17 +107,17 @@ object SyncDeclaration extends Declaration {
     }
 
   override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-    case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _), Par(bf : BuiltInFunction, _))) =>
+    case Some(Seq(Par(entity, _), Par(where : ConstEql, _), Par(bf : BuiltInFunction, _))) =>
       entity.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription]
-    case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _))) =>
+    case Some(Seq(Par(entity, _), Par(where : ConstEql, _))) =>
       entity.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription]
     case Some(Seq(Par(where : ConstEql, _), Par(bf : BuiltInFunction, _))) => true
     case Some(Seq(Par(where : ConstEql, _))) => true
     case Some(Seq(Par(bf : BuiltInFunction, _))) => true
     case None => true
-    case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _), Par(opt, _), Par(bf : BuiltInFunction, _))) =>
+    case Some(Seq(Par(entity, _), Par(where : ConstEql, _), Par(opt, _), Par(bf : BuiltInFunction, _))) =>
       entity.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription] && opt.dataType(env) == ScriptDataTypeInteger()
-    case Some(Seq(Par(entity : Ref, _), Par(where : ConstEql, _), Par(opt, _))) =>
+    case Some(Seq(Par(entity, _), Par(where : ConstEql, _), Par(opt, _))) =>
       entity.dataType(env).isInstanceOf[ScriptDataTypeEntityDescription] && opt.dataType(env) == ScriptDataTypeInteger()
     case Some(Seq(Par(where : ConstEql, _), Par(opt, _), Par(bf : BuiltInFunction, _))) => opt.dataType(env) == ScriptDataTypeInteger()
     case Some(Seq(Par(where : ConstEql, _), Par(opt, _))) => opt.dataType(env) == ScriptDataTypeInteger()
