@@ -123,7 +123,11 @@ abstract class SqlPersistentStoreBase
 class SqlPersistentStore(val name : String,
                          val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource,
                          val generator : SqlGenerator = new SqlGenerator) extends SqlPersistentStoreBase {
-  def getConnection = dataSource.getConnection
+  def getConnection = {
+    val ret = dataSource.getConnection
+    ret.setAutoCommit(false)
+    ret
+  }
 
   def dialect = dataSource.dialect
 }
