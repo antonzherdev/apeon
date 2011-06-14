@@ -23,7 +23,7 @@ object Sync {
 
   def syncWhere(env: Environment, description: Description, dataSource: Option[Expression]): eql.Expression = {
     syncWhereDeclaration(env, description).getOrElse{
-      throw ScriptException(env, "Sync where is not found.")
+      throw ScriptException("Sync where is not found.")
     }.value(env, None, dataSource) match {
       case e : eql.Expression => e
       case fields : Seq[String] => {
@@ -45,7 +45,7 @@ object Sync {
         syncWhere(env, destinationDescription, dataSource)
       }
       else {
-        throw ScriptException(env, "Source entity is not destination but where is not defined.")
+        throw ScriptException( "Source entity is not destination but where is not defined.")
       }
     }
 
@@ -59,7 +59,7 @@ object Sync {
         case d : eql.Dot => field(d) match {
           case DestinationField(o : ToOne) => DestinationField(o.entity.field(e.right.name))
           case SourceField(o : ToOne) => SourceField(o.entity.field(e.right.name))
-          case _ => throw ScriptException(env, "Not to one.")
+          case _ => throw ScriptException("Not to one.")
         }
       }
     }
@@ -71,7 +71,7 @@ object Sync {
         }
         fields match {
           case (l : ToOne, r : ToOne, s, d) => {
-            if(l != r) throw ScriptException(env, "Right to one not equals left to one. Use primary key to compare.")
+            if(l != r) throw ScriptException("Right to one not equals left to one. Use primary key to compare.")
             syncWhere(env, l.entity, dataSource).map{
               case eql.Dot(eql.Ref(name), v) if name == aliases._1 => eql.Dot(s, v)
               case eql.Dot(eql.Ref(name), v) if name == aliases._2 => eql.Dot(d, v)
@@ -116,7 +116,7 @@ object Sync {
         case Seq() => None
         case Seq(e) => Some(e)
         case many@_ =>
-          throw ScriptException(env,
+          throw ScriptException(
             """Many entities to sync.
           Source datasource = %s
           Source = %s

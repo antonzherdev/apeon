@@ -87,7 +87,7 @@ object SyncDeclaration extends Declaration {
     case Some(Seq(
       ParVal(opt : Int, _)
     )) => Sync.sync(env, source, source.id.description, dataSource, None, None, parent(env), option(opt))
-    case _ => throw ScriptException(env, "Error in parameters.")
+    case _ => throw ScriptException("Error in parameters.")
   }
 
   def dataType(env: Environment, parameters: Option[Seq[Par]]) =

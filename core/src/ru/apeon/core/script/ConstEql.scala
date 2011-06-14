@@ -38,15 +38,21 @@ case class ConstEql(string : String) extends Constant {
       external
     })
     val parser = new eql.EqlParser(env.model, Some(imports), externalCreator)
-    val stm = parser.parseOption(string)
-    if(stm.isDefined) {
-      _eql = stm.get
-    }else {
-      externals.clear()
-      _eql = parser.parseExpression(string)
+    try {
+      val stm = parser.parseOption(string)
+      if(stm.isDefined) {
+        _eql = stm.get
+      }else {
+        externals.clear()
+        _eql = parser.parseExpression(string)
+      }
     }
-
+    catch {
+      case e : Throwable => throw ScriptException("%s while EQL parsing".format(e.getMessage), Some(e))
+    }
   }
+
+  override def toString = "`%s`".format(string)
 }
 
 case class ScriptDataTypeEqlExpression() extends ScriptDataType
@@ -83,8 +89,8 @@ object ScriptDataTypeEqlSelectBaseDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType(env)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
       case Seq(ret) => ret
-      case Seq() => throw ScriptException(env, "Not found")
-      case _ => throw ScriptException(env, "Have found many but get one")
+      case Seq() => throw ScriptException("Not found")
+      case _ => throw ScriptException( "Have found many but get one")
     }
   }
 
@@ -94,7 +100,7 @@ object ScriptDataTypeEqlSelectBaseDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
       case Seq(ret) => Some(ret)
       case Seq() => None
-      case _ => throw ScriptException(env, "Have found many but get one")
+      case _ => throw ScriptException("Have found many but get one")
     }
   }
 
@@ -102,7 +108,7 @@ object ScriptDataTypeEqlSelectBaseDescription {
     def name = "first"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType(env)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
-      case Seq() => throw ScriptException(env, "Not found.")
+      case Seq() => throw ScriptException("Not found.")
       case s : Seq[_] => s.head
     }
   }

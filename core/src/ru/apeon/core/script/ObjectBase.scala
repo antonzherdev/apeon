@@ -25,7 +25,7 @@ trait ClassBase extends Declaration with Statement with InPackage {
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
 
   override def preFillRef(env : Environment, imports: Imports) {
-    declaredDeclarations.foreach(dec => env.preFillRef(dec, imports))
+    declaredDeclarations.foreach(dec => dec.preFillRef(env, imports))
   }
 
   def fillRef(env: Environment, imports: Imports) {
@@ -35,14 +35,14 @@ trait ClassBase extends Declaration with Statement with InPackage {
     declaredDeclarations.foreach {
       dec =>
         env.atomic {
-          env.fillRef(dec, imports)
+          dec.fillRef(env, imports)
         }
     }
     env.setThisType(old)
   }
 
   def evaluate(env: Environment) = {
-    declaredDeclarations.foreach(dec => env.evaluate(dec))
+    declaredDeclarations.foreach(dec => dec.evaluate(env))
     this
   }
 
@@ -79,7 +79,7 @@ trait ObjectBase extends ClassBase  {
 
   override def evaluate(env: Environment) = {
     env.model.addObj(this)
-    declaredDeclarations.foreach(dec => env.evaluate(dec))
+    declaredDeclarations.foreach(dec => dec.evaluate(env))
     this
   }
 }

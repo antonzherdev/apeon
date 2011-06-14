@@ -75,7 +75,7 @@ object SyncObject extends ObjectBase {
           dates.update(name, Calendar.getInstance().getTime)
           save()
           ret
-        case _ => throw ScriptException(env, "Error in parameters.")
+        case _ => throw ScriptException("Error in parameters.")
       }
     }
     def name = "sync"

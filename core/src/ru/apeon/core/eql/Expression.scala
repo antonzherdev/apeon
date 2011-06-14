@@ -13,9 +13,9 @@ abstract class Expression {
     } catch {
       case e : EqlException =>
         if(e.cause == null)
-          throw EqlException("Error %s near %s".format(e.getMessage, this), e)
+          throw EqlException("%s near %s".format(e.getMessage, this), e)
         else
-          throw EqlException("Error %s near %s".format(e.cause.getMessage, this), e.cause)
+          throw EqlException("%s near %s".format(e.cause.getMessage, this), e.cause)
     }
   }
   def isNear = false

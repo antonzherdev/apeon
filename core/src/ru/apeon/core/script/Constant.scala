@@ -45,11 +45,11 @@ case class ConstSeq(expressions : Seq[Expression]) extends Expression{
 
 
   def fillRef(env: Environment, imports: Imports) {
-    expressions.foreach(exp => env.fillRef(exp, imports))
+    expressions.foreach(exp => exp.fillRef(env, imports))
   }
 
   def preFillRef(env : Environment, imports: Imports) {
-    expressions.foreach(env.preFillRef(_, imports))
+    expressions.foreach(_.preFillRef(env, imports))
   }
 }
 

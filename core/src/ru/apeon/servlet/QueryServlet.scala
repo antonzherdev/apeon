@@ -25,7 +25,7 @@ class QueryServlet  extends BaseHttpServlet {
   }
 
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-    tr {
+    tr(resp) {
       redeploy(req)
 
       a(req, resp)
@@ -33,7 +33,7 @@ class QueryServlet  extends BaseHttpServlet {
   }
 
   override def doPost(req: HttpServletRequest, resp: HttpServletResponse) {
-    tr {
+    tr(resp) {
       a(req, resp)
     }
   }

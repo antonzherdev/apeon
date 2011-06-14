@@ -114,7 +114,7 @@ object ScriptDataTypeSeqDescription {
     def name = "toMap"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = env.dotType match {
       case Some(ScriptDataTypeSeq(item : ScriptDataTypeMapItem)) => ScriptDataTypeMap(item.keyDataType, item.valueDataType)
-      case s => throw ScriptException(env, "Unsupported collection data type %s".format(s))
+      case s => throw ScriptException("Unsupported collection data type %s".format(s))
     }
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[Traversable[(_, _)]].toMap

@@ -5,48 +5,12 @@ import ru.apeon.core.entity._
 import collection.Seq
 
 trait Environment{
-  def fileName : Option[String]
-
   def atomic(f : => Any) : Any = {
     push()
     val ret = f
     pop()
     ret
   }
-
-  val stack = Stack[Statement]()
-
-  def evaluate(statement : Statement) : Any ={
-    stack.push(statement)
-    try {
-      statement.evaluate(this)
-    }
-    finally {
-      stack.pop()
-    }
-  }
-
-  def fillRef(statement : Statement, imports : Imports) : Any ={
-    stack.push(statement)
-    try {
-      statement.fillRef(this, imports)
-    }
-    finally {
-      stack.pop()
-    }
-  }
-
-  def preFillRef(statement : Statement, imports : Imports) : Any ={
-    stack.push(statement)
-    try {
-      statement.preFillRef(this, imports)
-    }
-    finally {
-      stack.pop()
-    }
-  }
-
-  def stackString = stack.mkString("\n")
 
   /**
    * Выражение в Set, которое слева.
@@ -71,7 +35,7 @@ trait Environment{
 
   def entityDescription(name : String, imports : Option[Imports] = None) = {
     model.entityDescriptionOption(name, imports).getOrElse{
-       throw ScriptException(this, "Entity %s not found".format(name))
+       throw ScriptException("Entity %s not found".format(name))
     }
   }
 
@@ -114,7 +78,7 @@ trait Environment{
     declarationOption(name, parameters, imports).getOrElse{
       val tp = dotType.orElse{thisType}
       if(tp.isDefined) {
-        throw ScriptException(this,
+        throw ScriptException(
 """Could not find ref %s%s in "%s".
 DataTypes: %s%s
 Variants:
@@ -124,7 +88,7 @@ Variants:
           tp.get.declarations.filter(_.name == name).map(_.declarationString).mkString("\n")
         ))
       }
-      throw ScriptException(this, "Could not find ref \"%s\"".format(name))
+      throw ScriptException("Could not find ref \"%s\"".format(name))
     }
 
   def declarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[DeclarationThis] = {
@@ -196,7 +160,7 @@ Variants:
 }
 
 
-class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model, val fileName : Option[String] = None) extends Environment
+class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model) extends Environment
 {
   def push() {
     dataStack.push(data.save)

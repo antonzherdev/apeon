@@ -42,7 +42,7 @@ trait Declaration{
    * @param parameter параметер
    */
   def builtInParameters(env : Environment, parameters: Option[Seq[Par]], parameterNumber : Int, parameter : Par) : Seq[BuiltInParameterDef] =
-    throw ScriptException(env, "Not supported")
+    throw ScriptException( "Not supported")
 
   def declarationString : String = name + "(" + parameters.mkString(", ") + ")"
 
@@ -106,13 +106,13 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
     if(dataSource.isDefined) {
       val old = env.dotType
       env.setDotType(None)
-      env.fillRef(dataSource.get, imports)
+      dataSource.get.fillRef(env, imports)
       env.setDotType(old)
     }
     if(parameters.isDefined && (!parameters.get.isEmpty)) {
       val old = env.dotType
       env.setDotType(None)
-      parameters.foreach(_.foreach(par => env.fillRef(par.expression, imports)))
+      parameters.foreach(_.foreach(par => par.expression.fillRef(env, imports)))
       env.setDotType(old)
     }
     _declaration = env.declaration(name, parameters, Some(imports))
@@ -134,9 +134,9 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
 
   def preFillRef(env : Environment, imports: Imports) {
     if(dataSource.isDefined) {
-      env.preFillRef(dataSource.get, imports)
+      dataSource.get.preFillRef(env, imports)
     }
-    parameters.foreach(_.foreach(par => env.preFillRef(par.expression, imports)))
+    parameters.foreach(_.foreach(par => par.expression.preFillRef(env, imports)))
   }
 
   override def toString = name +
@@ -169,12 +169,12 @@ case class BuiltInFunction(statement : StatementList, aliases : Seq[String] = Se
     )
     env.atomic{
       _parameters.foreach(env.addDeclaration(_))
-      env.fillRef(statement, imports)
+      statement.fillRef(env, imports)
     }
   }
 
   override def preFillRef(env : Environment, imports: Imports) {
-    env.preFillRef(statement, imports)
+    statement.preFillRef(env, imports)
   }
 
   case class ParDeclaration(name : String, dataType : ScriptDataType) extends  Declaration{
@@ -217,60 +217,75 @@ case class Def(name : String, statement : Statement, override val parameters : S
     env.addDeclaration(this)
   }
 
-  private def eval(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Any = env.atomic{
-    if (parameters.isDefined) {
-      val i = parameters.get.iterator
-
-      this.parameters.foreach {
-        parameter =>
-          env.addDeclaration(parameter)
-          env.update(parameter, i.next().value)
-      }
-    }
-    val oldThisRef = env.thisRef
-    env.setThisRef(env.dotRef)
-    val oldDotRef = env.dotRef
-    env.setDotRef(None)
-    try{
-      if (dataSource.isDefined) {
-        val oldDS = env.currentDataSource
-        env.setCurrentDataSource(env.dataSource(dataSource))
-        statement.evaluate(env)
-        env.setCurrentDataSource(oldDS)
-      } else {
-        statement.evaluate(env)
-      }
-    } finally {
-      env.setThisRef(oldThisRef)
-      env.setDotRef(oldDotRef)
-    }
+  private def tt : PartialFunction[Throwable, Any] = {
+    case e @ ScriptException(_, _, None) =>
+      throw ScriptException(e.getMessage, Some(e), Some(statement))
   }
+
+  private def eval(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Any =
+    try {
+      env.atomic{
+        if (parameters.isDefined) {
+          val i = parameters.get.iterator
+
+          this.parameters.foreach {
+            parameter =>
+              env.addDeclaration(parameter)
+              env.update(parameter, i.next().value)
+          }
+        }
+        val oldThisRef = env.thisRef
+        env.setThisRef(env.dotRef)
+        val oldDotRef = env.dotRef
+        env.setDotRef(None)
+        try{
+          if (dataSource.isDefined) {
+            val oldDS = env.currentDataSource
+            env.setCurrentDataSource(env.dataSource(dataSource))
+            statement.evaluate(env)
+            env.setCurrentDataSource(oldDS)
+          } else {
+            statement.evaluate(env)
+          }
+        } finally {
+          env.setThisRef(oldThisRef)
+          env.setDotRef(oldDotRef)
+        }
+      }
+    }
+    catch tt
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) =
-  if(cached){
-    env.cache.getOrElseUpdate((this, parameters.getOrElse{Seq()}.map{_.value}).hashCode(),
-      eval(env, parameters, dataSource))
-  } else {
-    eval(env, parameters, dataSource)
-  }
+    if(cached){
+      env.cache.getOrElseUpdate((this, parameters.getOrElse{Seq()}.map{_.value}).hashCode(),
+        eval(env, parameters, dataSource))
+    } else {
+      eval(env, parameters, dataSource)
+    }
 
   override def fillRef(env: Environment, imports: Imports) {
-    env.addDeclaration(this)
-    env.atomic{
-      this.parameters.foreach{parameter =>
-        env.addDeclaration(parameter)
+    try {
+      env.addDeclaration(this)
+      env.atomic{
+        this.parameters.foreach{parameter =>
+          env.addDeclaration(parameter)
+        }
+        statement.fillRef(env, imports)
       }
-      env.fillRef(statement, imports)
+      if(resultType.isDefined) resultType.get.fillRef(env, imports)
     }
-    if(resultType.isDefined) resultType.get.fillRef(env, imports)
+    catch tt
   }
 
   override def preFillRef(env : Environment, imports: Imports) {
-    env.preFillRef(statement, imports)
-    if(resultType.isDefined) resultType.get.preFillRef(env, imports)
-    parameters.foreach{parameter =>
-      parameter.dataType.preFillRef(env, imports)
+    try {
+      statement.preFillRef(env, imports)
+      if(resultType.isDefined) resultType.get.preFillRef(env, imports)
+      parameters.foreach{parameter =>
+        parameter.dataType.preFillRef(env, imports)
+      }
     }
+    catch tt
   }
 
   override def declarationString = name + "(" + parameters.mkString(", ") + ")" + resultType.map(" : " + _).getOrElse("")
@@ -308,11 +323,11 @@ abstract class VariableDeclaration extends DeclarationStatement {
 
   override def fillRef(env: Environment, imports: Imports) {
     env.addDeclaration(this)
-    env.fillRef(init, imports)
+    init.fillRef(env, imports)
   }
 
   override def preFillRef(env : Environment, imports: Imports) {
-    env.preFillRef(init, imports)
+    init.preFillRef(env, imports)
   }
 }
 

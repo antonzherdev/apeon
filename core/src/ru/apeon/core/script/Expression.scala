@@ -12,13 +12,13 @@ abstract class BinaryOperator extends Expression {
   def dataType(env: Environment) = left.dataType(env)
 
   def fillRef(env : Environment, imports : Imports) {
-    env.fillRef(left, imports)
-    env.fillRef(right, imports)
+    left.fillRef(env, imports)
+    right.fillRef(env, imports)
   }
 
   def preFillRef(env : Environment, imports: Imports) {
-    env.preFillRef(left, imports)
-    env.preFillRef(right, imports)
+    left.preFillRef(env, imports)
+    right.preFillRef(env, imports)
   }
 
   def name : String
@@ -45,24 +45,24 @@ object Plus {
         case j : Int => i + j
         case s : String => i + s.toInt
         case d : BigDecimal => d + i
-        case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for plus with Int".format(u.getClass))
-        case _ => throw ScriptException(env, "Unsupported datatype for plus with Int")
+        case u : Object => throw ScriptException( "Unsupported datatype \"%s\" for plus with Int".format(u.getClass))
+        case _ => throw ScriptException("Unsupported datatype for plus with Int")
       }
     case d : BigDecimal => right match {
       case j : Int => d + j
       case s : String => d + s.toDouble
       case j : BigDecimal => d + j
-      case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for plus with Decimal".format(u.getClass))
-      case _ => throw ScriptException(env, "Unsupported datatype for plus with Decimal")
+      case u : Object => throw ScriptException("Unsupported datatype \"%s\" for plus with Decimal".format(u.getClass))
+      case _ => throw ScriptException("Unsupported datatype for plus with Decimal")
     }
     case s : String => s + right.toString
     case l : Traversable[Any] => right match {
       case r : Traversable[Any] => l ++ r
       case r : Any => l ++ Seq(r)
-      case _ => throw ScriptException(env, "Unsupported datatype for plus with Seq")
+      case _ => throw ScriptException("Unsupported datatype for plus with Seq")
     }
-    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for plus.".format(u.getClass))
-    case _ => throw ScriptException(env, "Unsupported datatype for plus")
+    case u : Object => throw ScriptException("Unsupported datatype \"%s\" for plus.".format(u.getClass))
+    case _ => throw ScriptException("Unsupported datatype for plus")
   }
 }
 
@@ -84,18 +84,18 @@ object Minus {
     case i : Int => right match {
         case j : Int => i - j
         case d : BigDecimal => BigDecimal(i) - d
-        case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for minus with Int".format(u.getClass))
-        case _ => throw ScriptException(env, "Unsupported datatype for minus with Int")
+        case u : Object => throw ScriptException("Unsupported datatype \"%s\" for minus with Int".format(u.getClass))
+        case _ => throw ScriptException("Unsupported datatype for minus with Int")
       }
     case d : BigDecimal => right match {
       case j : Int => d - j
       case s : String => d - BigDecimal(s.toDouble)
       case j : BigDecimal => d - j
-      case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for minus with Decimal".format(u.getClass))
-      case _ => throw ScriptException(env, "Unsupported datatype for minus with Decimal")
+      case u : Object => throw ScriptException("Unsupported datatype \"%s\" for minus with Decimal".format(u.getClass))
+      case _ => throw ScriptException("Unsupported datatype for minus with Decimal")
     }
-    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for minus.".format(u.getClass))
-    case _ => throw ScriptException(env, "Unsupported datatype for minus")
+    case u : Object => throw ScriptException("Unsupported datatype \"%s\" for minus.".format(u.getClass))
+    case _ => throw ScriptException("Unsupported datatype for minus")
   }
 }
 
@@ -117,18 +117,18 @@ object Mul {
     case i : Int => right match {
         case j : Int => i*j
         case d : BigDecimal => BigDecimal(i)*d
-        case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for mul with Int".format(u.getClass))
-        case _ => throw ScriptException(env, "Unsupported datatype for mul with Int")
+        case u : Object => throw ScriptException("Unsupported datatype \"%s\" for mul with Int".format(u.getClass))
+        case _ => throw ScriptException("Unsupported datatype for mul with Int")
       }
     case d : BigDecimal => right match {
       case j : Int => d*j
       case s : String => d*BigDecimal(s.toDouble)
       case j : BigDecimal => d*j
-      case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for mul with Decimal".format(u.getClass))
-      case _ => throw ScriptException(env, "Unsupported datatype for mul with Decimal")
+      case u : Object => throw ScriptException("Unsupported datatype \"%s\" for mul with Decimal".format(u.getClass))
+      case _ => throw ScriptException("Unsupported datatype for mul with Decimal")
     }
-    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for mul.".format(u.getClass))
-    case _ => throw ScriptException(env, "Unsupported datatype for mul")
+    case u : Object => throw ScriptException("Unsupported datatype \"%s\" for mul.".format(u.getClass))
+    case _ => throw ScriptException("Unsupported datatype for mul")
   }
 }
 
@@ -151,18 +151,18 @@ object Div {
     case i : Int => right match {
         case j : Int => i/j
         case d : BigDecimal => BigDecimal(i)/d
-        case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for div with Int".format(u.getClass))
-        case _ => throw ScriptException(env, "Unsupported datatype for div with Int")
+        case u : Object => throw ScriptException("Unsupported datatype \"%s\" for div with Int".format(u.getClass))
+        case _ => throw ScriptException("Unsupported datatype for div with Int")
       }
     case d : BigDecimal => right match {
       case j : Int => d/j
       case s : String => d/BigDecimal(s.toDouble)
       case j : BigDecimal => d/j
-      case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for div with Decimal".format(u.getClass))
-      case _ => throw ScriptException(env, "Unsupported datatype for div with Decimal")
+      case u : Object => throw ScriptException("Unsupported datatype \"%s\" for div with Decimal".format(u.getClass))
+      case _ => throw ScriptException("Unsupported datatype for div with Decimal")
     }
-    case u : Object => throw ScriptException(env, "Unsupported datatype \"%s\" for div.".format(u.getClass))
-    case _ => throw ScriptException(env, "Unsupported datatype for div")
+    case u : Object => throw ScriptException("Unsupported datatype \"%s\" for div.".format(u.getClass))
+    case _ => throw ScriptException("Unsupported datatype for div")
   }
 }
 
@@ -229,11 +229,11 @@ case class Or(left : Expression, right : Expression) extends BooleanBinaryExpres
 
 case class Not(expression : Expression) extends Expression {
   def preFillRef(env: Environment, imports: Imports) {
-    env.preFillRef(expression, imports)
+    expression.preFillRef(env, imports)
   }
 
   def fillRef(env: Environment, imports: Imports) {
-    env.fillRef(expression, imports)
+    expression.fillRef(env, imports)
   }
 
   def evaluate(env: Environment) = expression.evaluate(env) match {
@@ -242,19 +242,19 @@ case class Not(expression : Expression) extends Expression {
     case i : Int => i == 0
     case s : String => s.isEmpty
     case s : Iterable[_] => s.isEmpty
-    case _ => throw ScriptException(env, "Unknown data type for not.")
+    case _ => throw ScriptException("Unknown data type for not.")
   }
   def dataType(env: Environment) = ScriptDataTypeBoolean()
 }
 
 case class MapItem(key : Expression, value : Expression) extends Expression {
   def preFillRef(env: Environment, imports: Imports) {
-    env.preFillRef(key, imports)
-    env.preFillRef(value, imports)
+    key.preFillRef(env, imports)
+    value.preFillRef(env, imports)
   }
   def fillRef(env: Environment, imports: Imports) {
-    env.fillRef(key, imports)
-    env.fillRef(value, imports)
+    key.fillRef(env, imports)
+    value.fillRef(env, imports)
   }
   def evaluate(env: Environment) = (key.evaluate(env), value.evaluate(env))
   def dataType(env: Environment) = ScriptDataTypeMapItem(key.dataType(env), value.dataType(env))

@@ -97,7 +97,7 @@ object ScriptDataTypeEntityTypeDescription {
 
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       fAsInstanceOfOption.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].getOrElse {
-        throw ScriptException(env, "Entity %s can not be instance of %s.".format(env.ref, parameters.get.head))
+        throw ScriptException("Entity %s can not be instance of %s.".format(env.ref, parameters.get.head))
       }
     }
     override def parameters = Seq(DefPar("entity", ScriptDataTypeEntityDescriptionTemplate()))

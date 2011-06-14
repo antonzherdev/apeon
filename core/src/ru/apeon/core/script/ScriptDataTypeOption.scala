@@ -9,7 +9,7 @@ object ScriptDataTypeOptionDescription {
 
   def get = new Declaration{
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
-      env.ref.asInstanceOf[Option[Any]].getOrElse(throw ScriptException(env, "Get empty option object."))
+      env.ref.asInstanceOf[Option[Any]].getOrElse(throw ScriptException("Get empty option object."))
     }
     def name = "get"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = tp(env)

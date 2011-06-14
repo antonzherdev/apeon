@@ -1,9 +1,8 @@
 package ru.apeon.servlet
 
-import javax.servlet.http.{HttpServletRequest, HttpServlet}
 import akka.util.Logging
 import ru.apeon.core.loader.Loader
-import java.lang.RuntimeException
+import javax.servlet.http.{HttpServletResponse, HttpServletRequest, HttpServlet}
 
 /**
  * @author Anton Zherdev
@@ -18,19 +17,24 @@ class BaseHttpServlet extends HttpServlet with Logging {
     }
   }
 
-  def tr( f : => Unit) {
+  def tr(resp: HttpServletResponse)( f : => Unit) {
     if(Loader.loaderError.isDefined) {
-      throw new RuntimeException("Error in loading", Loader.loaderError.get)
+      resp.sendError(500, "Error in loading: %s".format(Loader.loaderError.get.getMessage))
     }
-    try {
-      f
-    }
-    catch {
-      case e : Throwable => {
-        log.error(e, "Servlet")
-        throw e
+    else {
+      try {
+        f
       }
-      case _ => log.error("Servlet")
+      catch {
+        case e : Throwable => {
+          log.error(e, "Servlet")
+          resp.sendError(500, e.getMessage)
+        }
+        case _ => {
+          log.error("Servlet")
+          resp.sendError(500)
+        }
+      }
     }
   }
 }

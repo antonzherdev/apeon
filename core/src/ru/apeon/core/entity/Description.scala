@@ -240,13 +240,13 @@ case class ToManyBuiltIn(pack : Package, name : String, entity : Description) ex
   def toOne : ToOne = entity.field("parent").asInstanceOf[ToOne]
 
   override def evaluate(env: Environment) {
-    env.evaluate(entity)
+    entity.evaluate(env)
   }
   override def preFillRef(env: Environment, imports: Imports) {
-    env.preFillRef(entity, imports)
+    entity.preFillRef(env, imports)
   }
   override def fillRef(env: Environment, imports: Imports) {
-    env.fillRef(entity, imports)
+    entity.fillRef(env, imports)
   }
 }
 
@@ -265,7 +265,7 @@ case class ExtendEntity(module : Module, entityName : String, declarations : Seq
     entityDescription = env.model.entityDescription(entityName, Some(imports))
     declarations.foreach{declaration =>
       entityDescription.extend(declaration)
-      env.preFillRef(declaration, imports)
+      declaration.preFillRef(env, imports)
     }
   }
 
@@ -275,7 +275,7 @@ case class ExtendEntity(module : Module, entityName : String, declarations : Seq
 
   def fillRef(env : Environment, imports : Imports) {
     declarations.foreach{field =>
-      env.fillRef(field, imports)
+      field.fillRef(env, imports)
     }
   }
 }

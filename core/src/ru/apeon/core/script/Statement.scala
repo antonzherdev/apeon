@@ -34,18 +34,33 @@ abstract class StatementList extends Statement {
   def evaluate(env: Environment) = env.atomic{
     var ret : Any = null
     statements.foreach{statement =>
-      ret = statement.evaluate(env)
+      try {
+        ret = statement.evaluate(env)
+      }
+      catch tt(statement)
     }
     ret
   }
 
   def preFillRef(env : Environment, imports: Imports) {
-    statements.foreach(stm => env.preFillRef(stm, imports))
+    statements.foreach(stm =>
+      try {
+        stm.preFillRef(env, imports)
+      } catch tt(stm))
+  }
+
+  private def tt(stm : Statement) : PartialFunction[Throwable, Any] = {
+    case e @ ScriptException(_, _, None) =>
+      throw ScriptException("%s near %s".format(e.getMessage, stm), Some(e), Some(this))
   }
 
   def fillRef(env : Environment, imports : Imports) {
     env.atomic {
-      statements.foreach(stm => env.fillRef(stm, imports))
+      statements.foreach{stm =>
+        try {
+          stm.fillRef(env, imports)
+        } catch tt(stm)
+      }
     }
   }
 }
@@ -85,15 +100,15 @@ case class Eql(string : String) extends Expression {
         case ScriptDataTypeSeq(ScriptDataTypeEntity(entity)) => env.em.select(select)
         case _ => select.dataSource.store.select(select)
       }
-//      case update : eql.Update => update.dataSource.store.update(update)
-//      case insert : eql.Insert => insert.dataSource.store.insert(insert)
-//      case delete : eql.Delete => delete.dataSource.store.delete(delete)
+      //      case update : eql.Update => update.dataSource.store.update(update)
+      //      case insert : eql.Insert => insert.dataSource.store.insert(insert)
+      //      case delete : eql.Delete => delete.dataSource.store.delete(delete)
     }
   }
 
 
   def preFillRef(env : Environment, imports: Imports) {
-     stm = eql.EqlParser(string, env.model, Some(imports),Some({s : String =>
+    stm = eql.EqlParser(string, env.model, Some(imports),Some({s : String =>
       val external = new EqlExternalScript(ScriptParser.parseStatement(env.model, s))
       external.preFillRef(env, imports)
       externals.append(external)
@@ -111,11 +126,11 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
   def data = _data
 
   def fillRef(env : Environment, imports : Imports) {
-    env.fillRef(statement, imports)
+    statement.fillRef(env, imports)
   }
 
   def preFillRef(env : Environment, imports : Imports) {
-    env.preFillRef(statement, imports)
+    statement.preFillRef(env, imports)
   }
 
   def evaluate(env: Environment) {
@@ -146,19 +161,19 @@ case class Dot(left : Expression, right : Ref) extends Expression{
   }
 
   def fillRef(env : Environment, imports : Imports) {
-    env.fillRef(left, imports)
+    left.fillRef(env, imports)
     val old = env.dotType
     env.setDotType(Some(left.dataType(env)))
     try {
-      env.fillRef(right, imports)
+      right.fillRef(env, imports)
     } finally {
-      env.setDotType(None)
+      env.setDotType(old)
     }
   }
 
   def preFillRef(env : Environment, imports: Imports) {
-    env.preFillRef(left, imports)
-    env.preFillRef(right, imports)
+    left.preFillRef(env, imports)
+    right.preFillRef(env, imports)
   }
 
   override def toString = "%s.%s".format(left, right)
@@ -192,11 +207,11 @@ abstract class SetBase extends Expression {
             env.setSet(oldSet, oldEntity)
           }
         }
-        case _ => throw ScriptException(env, "Return is not entity")
+        case _ => throw ScriptException("Return is not entity")
       }
-      case _ => throw ScriptException(env, "Unsupported datatype for dot in set")
+      case _ => throw ScriptException("Unsupported datatype for dot in set")
     }
-    case _ => throw ScriptException(env, "Unsupported expression for set")
+    case _ => throw ScriptException("Unsupported expression for set")
   }
 
   def evaluate(env: Environment, ref : Ref) : Any
@@ -205,12 +220,12 @@ abstract class SetBase extends Expression {
   def dataType(env: Environment) = left.dataType(env)
 
   def fillRef(env : Environment, imports : Imports) {
-    env.fillRef(left, imports)
-    env.fillRef(right, imports)
+    left.fillRef(env, imports)
+    right.fillRef(env, imports)
   }
   def preFillRef(env : Environment, imports: Imports) {
-    env.preFillRef(left, imports)
-    env.preFillRef(right, imports)
+    left.preFillRef(env, imports)
+    right.preFillRef(env, imports)
   }
   override def toString = "%s %s %s".format(left, name, right)
 }
@@ -285,7 +300,7 @@ case class If(check : Expression, forTrue : Statement, forFalse : Option[Stateme
   def evaluate(env: Environment) = {
     val c : Boolean = check.evaluate(env) match {
       case b : Boolean => b
-      case _ => throw ScriptException(env, "Unsupported datatype for if")
+      case _ => throw ScriptException("Unsupported datatype for if")
     }
     if(c) forTrue.evaluate(env)
     else {
@@ -295,15 +310,15 @@ case class If(check : Expression, forTrue : Statement, forFalse : Option[Stateme
   }
 
   def fillRef(env : Environment, imports : Imports) {
-    env.fillRef(check, imports)
-    env.fillRef(forTrue, imports)
-    if(forFalse.isDefined) env.fillRef(forFalse.get, imports)
+    check.fillRef(env, imports)
+    forTrue.fillRef(env, imports)
+    if(forFalse.isDefined) forFalse.get.fillRef(env, imports)
   }
 
   def preFillRef(env : Environment, imports: Imports) {
-    env.preFillRef(check, imports)
-    env.preFillRef(forTrue, imports)
-    if(forFalse.isDefined) env.preFillRef(forFalse.get, imports)
+    check.preFillRef(env, imports)
+    forTrue.preFillRef(env, imports)
+    if(forFalse.isDefined) forFalse.get.preFillRef(env, imports)
   }
 }
 

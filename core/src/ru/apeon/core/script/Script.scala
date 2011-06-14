@@ -27,35 +27,41 @@ object Script {
 }
 
 class Script(val model : ObjectModel, val pack : Package, val statements : Seq[Statement], val fileName : Option[String] = None){
-  def fillRef(env : Environment = new DefaultEnvironment(model, fileName)) : Script = {
+  def fillRef(env : Environment = new DefaultEnvironment(model)) : Script = try{
     val imports = Imports(pack, statements.filter(_.isInstanceOf[Import]).map(_.asInstanceOf[Import].name))
-    statements.foreach(stm => env.fillRef(stm, imports))
+    statements.foreach(stm => stm.fillRef(env, imports))
     this
+  } catch tt
+
+  def tt : PartialFunction[Throwable, Script] = {
+    case s : ScriptException if fileName.isDefined =>
+      throw new ScriptException("%s in file %s".format(s.getMessage, fileName.get), Some(s))
   }
 
-  def preFillRef(env : Environment = new DefaultEnvironment(model, fileName)) : Script = {
+  def preFillRef(env : Environment = new DefaultEnvironment(model)) : Script = try {
     val imports = Imports(pack, statements.filter(_.isInstanceOf[Import]).map(_.asInstanceOf[Import].name))
-    statements.foreach(stm => env.preFillRef(stm, imports))
+    statements.foreach(stm => stm.preFillRef(env, imports))
     this
-  }
-
+  } catch tt
 
   override def equals(obj: Any) = obj match {
     case s : Script => s.statements.corresponds(this.statements){_ == _}
     case _ => false
   }
 
-  def evaluate(env : Environment = new DefaultEnvironment(model, fileName)): Any =
+  def evaluate(env : Environment = new DefaultEnvironment(model)): Any = try {
     Script.evaluate(env, statements)
+  } catch tt
 
   override def toString = statements.map(_.toString).mkString("\n")
 }
 
-object ScriptException {
-  def apply(env : Environment, message : String) = {
-    new ScriptException("%s\n%sStack:\n%s".format(
-      message, env.fileName.map(file => "File: " + file + "\n").getOrElse(""), env.stackString))
+
+case class ScriptException(message : String,
+                           cause: Option[Throwable] = None,
+                           near : Option[Statement] = None) extends RuntimeException(message, cause.getOrElse{null}) {
+  override def getMessage = near match {
+    case None => message
+    case Some(n) => "%s near %s".format(message, n)
   }
 }
-
-class ScriptException(message : String) extends RuntimeException(message)

@@ -42,7 +42,7 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
   val applyId = new FindId {
     override def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       super.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].getOrElse{
-        throw ScriptException(env, "Entity %s not found for id %d".format(des(env), parameters.get.head.value))
+        throw ScriptException("Entity %s not found for id %d".format(des(env), parameters.get.head.value))
       }
     override def name = "apply"
     override def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(des(env))
@@ -54,7 +54,7 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) : Any =
       parameters.get.head.value match {
         case id : Int => env.em.get(new OneEntityId(env.dataSource(dataSource).getOrElse(des(env).dataSource), des(env), id))
-        case _ => throw ScriptException(env, "Not Int")
+        case _ => throw ScriptException("Not Int")
       }
     def name = "find"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) : ScriptDataType =
@@ -66,8 +66,8 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression])  =
       select(env, parameters, dataSource)  match {
         case Seq(e) => e
-        case Seq() => throw ScriptException(env, "Entity not found by %s".format(parameters.get.head.value))
-        case _ => throw ScriptException(env, "Found entity more then one")
+        case Seq() => throw ScriptException("Entity not found by %s".format(parameters.get.head.value))
+        case _ => throw ScriptException("Found entity more then one")
       }
     def name = "apply"
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = ScriptDataTypeEntityByDescription(des(env))
@@ -79,7 +79,7 @@ object ScriptDataTypeEntityDescriptionTypeDescription {
       select(env, parameters, dataSource)  match {
         case Seq(e) => Some(e)
         case Seq() => None
-        case _ => throw ScriptException(env, "Found entity more then one")
+        case _ => throw ScriptException("Found entity more then one")
       }
     }
   }
