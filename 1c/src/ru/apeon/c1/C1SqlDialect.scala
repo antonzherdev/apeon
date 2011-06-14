@@ -7,4 +7,5 @@ class C1SqlDialect extends DefaultSqlDialect {
 
   override protected val stringSymbol = '"'
   override protected val escapeStringSymbol = '\\'
+  override protected val dateSymbol = '"'
 }
