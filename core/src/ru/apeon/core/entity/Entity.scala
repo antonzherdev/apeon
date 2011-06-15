@@ -84,7 +84,7 @@ class Entity(val manager : EntityManager,
     id.description.field(columnName) match {
       case many : ToMany => {
         val entities = value.asInstanceOf[Traversable[Entity]]
-        entities.foreach{_.update(many.toOne, this)}
+        entities.foreach{_.update(many.one, this)}
         apply(columnName) match {
           case s : Traversable[Entity] => s.foreach{e =>
             if(entities.find(_.id == e.id).isEmpty) e.delete()

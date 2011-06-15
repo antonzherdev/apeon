@@ -244,8 +244,9 @@ case class Def(name : String, statement : Statement, override val parameters : S
           if (dataSource.isDefined) {
             val oldDS = env.currentDataSource
             env.setCurrentDataSource(env.dataSource(dataSource))
-            statement.evaluate(env)
+            val ret = statement.evaluate(env)
             env.setCurrentDataSource(oldDS)
+            ret
           } else {
             statement.evaluate(env)
           }

@@ -4,7 +4,6 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.Spec
 import collection.Map
 import ru.apeon.core.eql._
-import ru.apeon.core.script.{Package}
 
 /**
  * @author Anton Zherdev

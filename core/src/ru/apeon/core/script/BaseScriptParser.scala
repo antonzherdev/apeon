@@ -266,7 +266,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     case name ~ statements => ExtendEntity(parser.module, name, statements)
   }
 
-  def extendEntityStatement = (attribute | one | manyBuiltIn | manyRef)
+  def extendEntityStatement = (attribute | one | manyBuiltIn | manyRef | defStatement)
 
   def importStm = "import" ~> repsep(ident, ".") ^^ {case n => Import(n.mkString("."))}
 

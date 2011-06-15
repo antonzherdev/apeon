@@ -243,8 +243,8 @@ class SqlGenerator {
     }
     case e : FromToMany => {
       val t = e.ref match {
-        case d : Dot => genFromTable(ef.parent.get, d.left, e.toMany.toOne.tableName(ef.dataSource))
-        case r : Ref => ef.parent.get.get(r.defaultFrom.get, e.toMany.toOne.tableName(ef.dataSource) )
+        case d : Dot => genFromTable(ef.parent.get, d.left, e.toMany.one.tableName(ef.dataSource))
+        case r : Ref => ef.parent.get.get(r.defaultFrom.get, e.toMany.one.tableName(ef.dataSource) )
       }
 
       ef.table = genTable(ef, e.entity)
@@ -253,7 +253,7 @@ class SqlGenerator {
           discriminator(ef, e.entity, ef.table),
           sql.Equal(
             sql.Ref(t, e.toMany.entity.primaryKeys.head.columnName(ef.dataSource)),
-            sql.Ref(ef.table, e.toMany.toOne.columnName(ef.dataSource))
+            sql.Ref(ef.table, e.toMany.one.columnName(ef.dataSource))
           )
         )))
     }
@@ -464,14 +464,14 @@ class SqlGenerator {
     new ToManySelect(toMany, SqlGenerator(
       Select(
         columns = toMany.entity.fields.map{ column : Field =>
-          if(column == toMany.toOne)
-            Column(Dot(Dot(Ref(ft), Ref(toMany.toOne)), Ref(Id)), column.name)
+          if(column == toMany.one)
+            Column(Dot(Dot(Ref(ft), Ref(toMany.one)), Ref(Id)), column.name)
           else
             Column(Dot(Ref(ft), Ref(column)), column.name)
         },
         from = ft,
         where = Some(
-          Equal(Dot(Ref(ft), Ref(toMany.toOne)), Parameter("id") )
+          Equal(Dot(Ref(ft), Ref(toMany.one)), Parameter("id") )
         ))
     ))
   }

@@ -60,7 +60,7 @@ abstract class DataSourceImpl {
 
   def lazyLoad(em : EntityManager, entity : Entity, many : ToMany) : Set[Entity] =
     em.select( Select(FromEntity(many.entity, Some("m"), DataSourceExpressionDataSource(dataSource)),
-        where = Some(Equal(Dot(Ref("m"), Ref(many.toOne)), entity.id.const)))).toSet
+        where = Some(Equal(Dot(Ref("m"), Ref(many.one)), entity.id.const)))).toSet
 
   def lazyLoad(em : EntityManager, entity : Entity, one : ToOne, data : Any) : Entity = data match {
     case id : Int => em.get(new OneEntityId(entity.id.dataSource, one.entity, id)).getOrElse(null)

@@ -49,7 +49,7 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
 
       val r = model.entityDescription("ru.apeon.core.Test")
       r.fields should equal(
-        Seq(Id, t, t2))
+        Seq(t, t2, id))
     }
   }
 
@@ -70,7 +70,7 @@ class EntityDescriptionSpec  extends Spec with ShouldMatchers with EntityDefine 
 
       val r = model.entityDescription("ru.apeon.core.Test.inner")
       r.fields should equal(
-        Seq(id, att("test", int)))
+        Seq(att("test", int), id))
     }
   }
 }

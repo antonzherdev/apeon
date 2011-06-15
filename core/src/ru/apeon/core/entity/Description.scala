@@ -58,7 +58,7 @@ case class Description(module : Module,
   }
 
 
-  override protected def declarationsLoad = super.declarationsLoad ++ extendedDeclarations
+  override protected def declarationsLoad = extendedDeclarations ++ super.declarationsLoad
 
   lazy val fields : Seq[Field] = declarations.filter(_.isInstanceOf[Field]).asInstanceOf[Seq[Field]]
   lazy val joinedTables : Seq[JoinedTable] = declaredJoinedTables ++ extendsClass.map{_.joinedTables}.getOrElse(Seq())
@@ -185,9 +185,15 @@ abstract class FieldWithSource extends Field {
   }
 }
 
-abstract class BaseFieldSource
-case class FieldSource(columnName : String, tableName : Option[String] = None) extends BaseFieldSource
-case class NullFieldSource() extends BaseFieldSource
+abstract class BaseFieldSource {
+  def isDefined : Boolean
+}
+case class FieldSource(columnName : String, tableName : Option[String] = None) extends BaseFieldSource {
+  def isDefined = true
+}
+case class NullFieldSource() extends BaseFieldSource {
+  def isDefined = false
+}
 case class FieldSources(default : BaseFieldSource, sources : Map[String, FieldSource] = Map()) {
   def apply(dataSource : DataSource) : BaseFieldSource = apply(dataSource.name)
 
@@ -220,7 +226,7 @@ case class ToOne(pack : Package, name : String, sources :  FieldSources,
 
 abstract class ToMany extends Field {
   def entity : Description
-  def toOne : ToOne
+  def one : ToOne
 
   def scriptDataType = ScriptDataTypeSeq(ScriptDataTypeEntityByDescription(entity))
 }
@@ -229,7 +235,7 @@ case class ToManyRef(pack : Package, name : String, entityName : String, toOneNa
   private var _entity : Description = _
 
   def entity = _entity
-  def toOne : ToOne = entity.field(toOneName).asInstanceOf[ToOne]
+  def one : ToOne = entity.field(toOneName).asInstanceOf[ToOne]
 
   override def preFillRef(env: Environment, imports: Imports) {
     _entity = env.entityDescription(entityName, Some(imports))
@@ -237,7 +243,7 @@ case class ToManyRef(pack : Package, name : String, entityName : String, toOneNa
 }
 
 case class ToManyBuiltIn(pack : Package, name : String, entity : Description) extends ToMany {
-  def toOne : ToOne = entity.field("parent").asInstanceOf[ToOne]
+  def one : ToOne = entity.field("parent").asInstanceOf[ToOne]
 
   override def evaluate(env: Environment) {
     entity.evaluate(env)
@@ -274,9 +280,12 @@ case class ExtendEntity(module : Module, entityName : String, declarations : Seq
   def dataType(env: Environment) = ScriptDataTypeUnit()
 
   def fillRef(env : Environment, imports : Imports) {
+    val old = env.thisType
+    env.setThisType(Some(ScriptDataTypeEntityByDescription(entityDescription)))
     declarations.foreach{field =>
       field.fillRef(env, imports)
     }
+    env.setThisType(old)
   }
 }
 
