@@ -103,30 +103,32 @@ object Sync {
                where: Option[eql.Expression], parent: Option[ParentSync] = None,
                aliases: (String, String) = ("s", "d") ) : Option[Entity] =
   {
-    val ds = dataSource(env, destinationDescription, dataSourceExpression, parent)
-    var w: eql.Expression = buildWhere(env, source, destinationDescription, where, aliases, dataSourceExpression)
-    if (!parent.isDefined || (!parent.get.entity.id.isTemporary && parent.get.checkUnique)) {
-      if (parent.isDefined) {
-        w = eql.And(w, eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(parent.get.toOne.name)), parent.get.entity.id.const))
-      }
-      val select = eql.Select(
-        eql.FromEntity(destinationDescription, Some(aliases._2), eql.DataSourceExpressionDataSource(ds)),
-        where = Some(w))
-      env.em.select(select) match {
-        case Seq() => None
-        case Seq(e) => Some(e)
-        case many@_ =>
-          throw ScriptException(
-            """Many entities to sync.
-          Source datasource = %s
-          Source = %s
+    env.cache.getOrElseUpdate((17, source.id, where).hashCode(), {
+      val ds = dataSource(env, destinationDescription, dataSourceExpression, parent)
+      var w: eql.Expression = buildWhere(env, source, destinationDescription, where, aliases, dataSourceExpression)
+      if (!parent.isDefined || (!parent.get.entity.id.isTemporary && parent.get.checkUnique)) {
+        if (parent.isDefined) {
+          w = eql.And(w, eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(parent.get.toOne.name)), parent.get.entity.id.const))
+        }
+        val select = eql.Select(
+          eql.FromEntity(destinationDescription, Some(aliases._2), eql.DataSourceExpressionDataSource(ds)),
+          where = Some(w))
+        env.em.select(select) match {
+          case Seq() => None
+          case Seq(e) => Some(e)
+          case many@_ =>
+            throw ScriptException(
+              """Many entities to sync.
+            Source datasource = %s
+            Source = %s
 
-          Destination datasource = %s
-          Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, many))
+            Destination datasource = %s
+            Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, many))
+        }
+      } else {
+        None
       }
-    } else {
-      None
-    }
+    }).asInstanceOf[Option[Entity]]
   }
 
   def sync(env : Environment, source : Entity, destinationDescription : Description,
@@ -143,9 +145,11 @@ object Sync {
     if(found.isEmpty && UpdateOnly() == options.sync) {
       return null
     }
-    val d = found.getOrElse{
+    val d : Entity = found.getOrElse{
       val ds: DataSource = dataSource(env, destinationDescription, dataSourceExpression, parent)
-      env.em.insert(destinationDescription, ds)
+      val ret = env.em.insert(destinationDescription, ds)
+      env.cache.update((17, source.id, where).hashCode(), Some(ret))
+      ret
     }
 
     if(parent.isDefined) {
@@ -204,11 +208,12 @@ object Sync {
               }
             }
           }
-          env.em.transaction{}
+//          env.em.transaction{}
 
           one match {case AutoToOne() =>
             destinationDescription.ones.filter{one =>
-              syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne) && !changedFields.contains(one.name)
+              syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne) &&
+                      !changedFields.contains(one.name) && one.source(d.id.dataSource).isDefined
             }.foreach{
               one => source.id.description.fieldOption(one.name) match {
                 case Some(f : ToOne) => if(f.entity == one.entity) {
@@ -223,10 +228,11 @@ object Sync {
           }
           many match {case a : AutoToMany =>
             destinationDescription.manies.filter{
-              many => syncWhereDeclaration(env, many.entity).isDefined && !changedFields.contains(many.name)
+              many => syncWhereDeclaration(env, many.entity).isDefined && !changedFields.contains(many.name) &&
+                      many.one.source(d.id.dataSource).isDefined
             }.foreach{
               many => source.id.description.fieldOption(many.name) match {
-                case Some(f : ToMany) => if(f.entity == many.entity && f.toOne == many.toOne) {
+                case Some(f : ToMany) => if(f.entity == many.entity && f.one == many.one) {
                   val b = collection.immutable.Set.newBuilder[Entity]
                   if(a.isInstanceOf[AutoToManyAppend]) {
                     b ++= d(many).asInstanceOf[Iterable[Entity]]
@@ -236,7 +242,7 @@ object Sync {
                       entities.foreach{
                         e => b += sync(env, e, many.entity, dataSourceExpression,
                           options = SyncOptions(InsertOnly()),
-                          parent = Some(ParentSync(d, many.toOne, found.isDefined)))
+                          parent = Some(ParentSync(d, many.one, found.isDefined)))
                       }
                     case null => {}
                   }

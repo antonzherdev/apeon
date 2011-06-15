@@ -9,7 +9,7 @@ object SyncDeclaration extends Declaration {
 
   def parent(env: Environment) : Option[ParentSync] = env.leftEntity match{
     case Some(par) => par.id.description.field(env.currentSet.get.left.asInstanceOf[Dot].right.name) match {
-        case many : ToMany => Some(ParentSync(par, many.toOne))
+        case many : ToMany => Some(ParentSync(par, many.one))
         case _ => None
       }
     case None => None

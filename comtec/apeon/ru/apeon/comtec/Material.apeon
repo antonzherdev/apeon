@@ -23,7 +23,7 @@ entity Material<comtec> extends StandardCatalog {
     column quantityInPackage("package") Dec(13, 5)   //Кол-во в упак в осн ед измерения
     column photoFileName(foto) String(1024) //Фото
     column price(prc1) Dec(17, 2) //Справочная цена
-    column inventoryNumber(inv) Dec(17, 2)  //Инвентарный номер
+    column inventoryNumber(inv) String(19)  //Инвентарный номер
     column packingType(packing) String(19) //Вид упаковки
     column volume(vol_bat) Dec(6, 3) //Объем
     column displayedInPriceList(active_in_price) Int //Показывать в прайс-листе

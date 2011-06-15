@@ -3,8 +3,10 @@ package ru.apeon.comtec
 entity Country<comtec> extends StandardCatalog{
     table dba.country
 
+    def syncWhere = ["number"]
+
     column shortName(nm_short) String(45)
-    column code(kod) String(3)
+    column number(kod) String(3)
 	
 	def toString : String = Format.str("Страна", id, name)
 }
