@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact build-on-make="true" name="apeon-sync-debug">
-    <output-path>$PROJECT_DIR$/out/artifacts/apeon-sync</output-path>
+    <output-path>$PROJECT_DIR$/out-0.2/artifacts/apeon-sync</output-path>
     <root id="root">
       <element id="file-copy" path="$PROJECT_DIR$/sync/module.xml" />
       <element id="directory" name="classes">

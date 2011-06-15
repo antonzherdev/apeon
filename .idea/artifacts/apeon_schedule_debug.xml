@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact build-on-make="true" name="apeon-schedule-debug">
-    <output-path>$PROJECT_DIR$/out/artifacts/apeon-schedule</output-path>
+    <output-path>$PROJECT_DIR$/out-0.2/artifacts/apeon-schedule</output-path>
     <root id="root">
       <element id="directory" name="classes">
         <element id="module-output" name="schedule" />

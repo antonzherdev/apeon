@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="war" name="apeon-core">
-    <output-path>$PROJECT_DIR$/out/artifacts/</output-path>
+    <output-path>$PROJECT_DIR$/out-0.2/artifacts/</output-path>
     <root id="archive" name="apeon-core-0.2.war">
       <element id="directory" name="WEB-INF">
         <element id="directory" name="classes">
