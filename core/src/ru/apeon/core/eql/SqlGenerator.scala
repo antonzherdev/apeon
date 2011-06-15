@@ -52,8 +52,8 @@ class SqlGenerator {
       sql.InsertColumn(column.column.columnName(q.dataSource), genExpression(column.expression, new EqlSqlFrom(q.dataSource)))
     }
     q.from.entity.discriminator match {
-      case DiscriminatorColumn(column, value) =>
-        columns = sql.InsertColumn(column, sql.Expression.constant(value)) +: columns
+      case DiscriminatorColumn(sources, value) =>
+        columns = sql.InsertColumn(sources(q.dataSource).columnName, sql.Expression.constant(value)) +: columns
       case DiscriminatorNull() => {}
     }
     columns =  columns ++ default(q, q.from.entity.table)
@@ -199,7 +199,7 @@ class SqlGenerator {
   }
 
   def discriminator(ef : EqlSqlFrom, entity : Description, table : sql.From) : Option[sql.Expression] = entity.discriminator match {
-    case DiscriminatorColumn(column, value) => Some(sql.Equal(sql.Ref(Some(table.name), column), sql.Expression.constant(value)))
+    case DiscriminatorColumn(sources, value) => Some(sql.Equal(sql.Ref(Some(table.name), sources(ef.dataSource).columnName), sql.Expression.constant(value)))
     case DiscriminatorNull() => None
   }
 

@@ -2,6 +2,7 @@ package ru.apeon.core.entity
 
 import ru.apeon.core.script._
 import collection.mutable.Buffer
+import java.lang.RuntimeException
 
 /**
  * Сущность
@@ -187,12 +188,14 @@ abstract class FieldWithSource extends Field {
 
 abstract class BaseFieldSource {
   def isDefined : Boolean
+  def columnName : String
 }
 case class FieldSource(columnName : String, tableName : Option[String] = None) extends BaseFieldSource {
   def isDefined = true
 }
 case class NullFieldSource() extends BaseFieldSource {
   def isDefined = false
+  def columnName = throw new RuntimeException("Null field source")
 }
 case class FieldSources(default : BaseFieldSource, sources : Map[String, FieldSource] = Map()) {
   def apply(dataSource : DataSource) : BaseFieldSource = apply(dataSource.name)
@@ -262,7 +265,7 @@ class EntityError(var s : String) extends Exception(s)
 
 abstract class Discriminator
 case class DiscriminatorNull() extends Discriminator
-case class DiscriminatorColumn(columnName : String, value : Any) extends Discriminator
+case class DiscriminatorColumn(sources : FieldSources, value : Any) extends Discriminator
 
 case class ExtendEntity(module : Module, entityName : String, declarations : Seq[DeclarationStatement]) extends Statement {
   def evaluate(env: Environment) {}

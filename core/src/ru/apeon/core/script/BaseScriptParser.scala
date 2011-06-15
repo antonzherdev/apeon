@@ -119,18 +119,19 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
   def attribute : Parser[Attribute] =
     ("column" ~> ident) ~! (dbName?) ~ attributeDataType ~ primaryKey ~ (default?)  ^^ {
       case name ~ dbName ~ dataType ~ pk ~ default => {
-        val names : Map[String, FieldSource]= dbName.getOrElse(Map("" -> FieldSource(name)))
         Attribute(parser.pack.get, name,
-          FieldSources(names.getOrElse("", NullFieldSource()), names.filterNot(_._1.isEmpty)),
+          toSources(dbName.getOrElse(Map("" -> FieldSource(name)))),
           dataType, isPrimaryKey = pk, default = default
         )
       }
     }
 
+  def toSources(names: Map[String, FieldSource]): FieldSources = {
+    FieldSources(names.getOrElse("", NullFieldSource()), names.filterNot(_._1.isEmpty))
+  }
+
   def fieldSourcesToOne(name: String, dbNames: Option[Map[String, FieldSource]]): FieldSources = {
-    val names = dbNames.getOrElse(Map("" -> FieldSource(name + "_id")))
-    val fieldSources: FieldSources = FieldSources(names.getOrElse("", NullFieldSource()), names.filterNot(_._1.isEmpty))
-    fieldSources
+    toSources(dbNames.getOrElse(Map("" -> FieldSource(name + "_id"))))
   }
 
   def one : Parser[ToOne] =
@@ -180,12 +181,13 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       }
     }
 
-  def dbName : Parser[Map[String, FieldSource]] =
-    ("(" ~> repsep(dbName1, ",") <~ ")") ^^ {
-      case ns => ns.toMap
-    }
+  def dbName : Parser[Map[String, FieldSource]] = "(" ~> dbName1 <~ ")"
 
-  def dbName1 : Parser[(String, FieldSource)] =
+  def dbName1 : Parser[Map[String, FieldSource]] = repsep(dbName2, ",") ^^ {
+    case ns => ns.toMap
+  }
+
+  def dbName2 : Parser[(String, FieldSource)] =
     opt((ident | stringLit) <~ ".") ~ (ident | stringLit) ~ opt("<" ~> ident  <~ ">") ^^ {
       case table ~ column ~ dataSource => (dataSource.getOrElse(""), FieldSource(column, table))
     }
@@ -205,10 +207,12 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
 
   def tableStatement : Parser[Table] = "table" ~> table
 
-  def discriminator : Parser[Discriminator] = "discriminator" ~> ident ~! ("=" ~>
+  def discriminator : Parser[Discriminator] = "discriminator" ~> dbName1 ~! ("=" ~>
           (stringLit|
                   numericLit ^^ {case num => num.toInt})) ^^ {
-    case column ~ value => DiscriminatorColumn(column, value)
+    case names ~ value => {
+      DiscriminatorColumn(toSources(names), value)
+    }
   }
 
   def joinTable: Parser[JoinedTable] = "join" ~> table ~! ("(" ~> ident <~ ")") ^^ {

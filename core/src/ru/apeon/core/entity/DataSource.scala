@@ -16,7 +16,7 @@ case class DataSource(pack : Package, name : String) extends Statement with Decl
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
 
   private lazy val xml = Loader.apeonXml.\\("datasource").find(_.\("@name").text == fullName).getOrElse{
-    throw new RuntimeException("Datasource \"%s\" nor found in apeon.xml.".format(name))}
+    throw new RuntimeException("Datasource \"%s\" nor found in apeon.xml.".format(fullName))}
   private lazy val impl =
     xml.\("@class").headOption.map{className =>
       Loader.loadClass(className.text).getConstructor(classOf[DataSource]).newInstance(this).asInstanceOf[DataSourceImpl]
