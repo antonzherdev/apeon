@@ -128,8 +128,8 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     }
 
   def fieldSourcesToOne(name: String, dbNames: Option[Map[String, FieldSource]]): FieldSources = {
-    val names = dbNames.getOrElse(Map())
-    val fieldSources: FieldSources = FieldSources(names.getOrElse("", FieldSource(name + "_id")), names.filterNot(_._1.isEmpty))
+    val names = dbNames.getOrElse(Map("" -> FieldSource(name + "_id")))
+    val fieldSources: FieldSources = FieldSources(names.getOrElse("", NullFieldSource()), names.filterNot(_._1.isEmpty))
     fieldSources
   }
 

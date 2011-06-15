@@ -267,7 +267,13 @@ class SqlGenerator {
       case _ => false
     }).map{column => column.expression match {
       case ref : Dot =>
-        if(ref.right.isToOne) genToOne(column, getFrom(ef, Some(ref.left), ref.right), ref.right.declaration.asInstanceOf[ToOne], ef)
+        if(ref.right.isToOne) {
+          if(ref.right.declaration.asInstanceOf[ToOne].source(ef.dataSource).isDefined) {
+            genToOne(column, getFrom(ef, Some(ref.left), ref.right), ref.right.declaration.asInstanceOf[ToOne], ef)
+          } else {
+            sql.Column(sql.ConstNull(), Some(column.name))
+          }
+        }
         else sql.Column(genExpression(ref, ef), Some(column.name))
       case ref : Ref =>
         if(ref.isToOne) genToOne(column, getFrom(ef, None, ref), ref.declaration.asInstanceOf[ToOne], ef)
