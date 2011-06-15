@@ -1,8 +1,8 @@
 <component name="ArtifactManager">
   <artifact name="apeon-excel">
-    <output-path>$PROJECT_DIR$/out-0.2/artifacts/</output-path>
+    <output-path>$PROJECT_DIR$/out-0.3/artifacts/</output-path>
     <root id="root">
-      <element id="archive" name="apeon-excel-0.2.zip">
+      <element id="archive" name="apeon-excel-0.3.zip">
         <element id="dir-copy" path="$PROJECT_DIR$/out/artifacts/apeon-excel" />
       </element>
     </root>
