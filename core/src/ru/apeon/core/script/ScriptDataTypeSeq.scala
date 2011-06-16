@@ -29,7 +29,8 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 }
 
 object ScriptDataTypeSeqDescription {
-  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption, last, lastOption, tail, HashCodeDeclaration)
+  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption,
+    last, lastOption, tail, HashCodeDeclaration, mapBy)
   def map = iterable ++ Seq(mapGet, mapApply)
   def seq = iterable ++ Seq(seqApply)
 
@@ -100,6 +101,14 @@ object ScriptDataTypeSeqDescription {
       ScriptDataTypeMap(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env), t(env))
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
       items.groupBy(item => f.run(env, item))
+  }
+
+  val mapBy = new OneBuiltInDeclaration {
+    def name = "mapBy"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      ScriptDataTypeMap(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env), tp(env))
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
+      items.map(item => (f.run(env, item), item)).toMap
   }
 
   val mapFunc = new OneBuiltInDeclaration {
