@@ -130,5 +130,22 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     it("apply") {
       run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("apply", 1)) should equal ("A")
     }
+    it("getOrElse") {
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("getOrElse", 1, bf(ConstString("No")))) should equal ("A")
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("getOrElse", 3, bf(ConstString("No")))) should equal ("No")
+    }
+    it("update") {
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("update", 3, "C")) should equal (
+        Map(1 -> "A", 2 -> "B", 3 -> "C")
+      )
+    }
+    it("getOrElseUpdate") {
+      run(
+        Val("m", seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap")),
+        ref("m") ~ ref("getOrElseUpdate", 1, bf(ConstString("No"))),
+        ref("m") ~ ref("getOrElseUpdate", 3, bf(ConstString("No"))),
+        ref("m")
+      ) should equal (Map(1 -> "A", 2 -> "B", 3 -> "No"))
+    }
   }
 }

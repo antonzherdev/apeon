@@ -1,5 +1,7 @@
 package ru.apeon.core.script
 
+import scala.collection._
+import mutable.{Builder}
 
 abstract class ScriptDataTypeCollection extends ScriptDataType{
   def dataType : ScriptDataType
@@ -31,7 +33,7 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 object ScriptDataTypeSeqDescription {
   def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption,
     last, lastOption, tail, HashCodeDeclaration, mapBy)
-  def map = iterable ++ Seq(mapGet, mapApply)
+  def map = iterable ++ Seq(mapGet, mapApply, mapGetOrElse, mapUpdate, mapGetOrElseUpdate)
   def seq = iterable ++ Seq(seqApply)
 
   def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeCollection]
@@ -99,16 +101,32 @@ object ScriptDataTypeSeqDescription {
     def name = "groupBy"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       ScriptDataTypeMap(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env), t(env))
-    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
-      items.groupBy(item => f.run(env, item))
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      val m = mutable.Map.empty[Any, Builder[Any, Any]]
+      for (elem <- items) {
+        val key = f.run(env, elem)
+        val bldr = m.getOrElseUpdate(key, Seq.newBuilder[Any])
+        bldr += elem
+      }
+      val b = mutable.Map.empty[Any, Any]
+      for ((k, v) <- m)
+        b += ((k, v.result()))
+      b
+    }
   }
 
   val mapBy = new OneBuiltInDeclaration {
     def name = "mapBy"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       ScriptDataTypeMap(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env), tp(env))
-    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
-      items.map(item => (f.run(env, item), item)).toMap
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      val m = mutable.Map.empty[Any, Any]
+      for (elem <- items) {
+        val key = f.run(env, elem)
+        m.update(key, elem)
+      }
+      m
+    }
   }
 
   val mapFunc = new OneBuiltInDeclaration {
@@ -125,8 +143,13 @@ object ScriptDataTypeSeqDescription {
       case Some(ScriptDataTypeSeq(item : ScriptDataTypeMapItem)) => ScriptDataTypeMap(item.keyDataType, item.valueDataType)
       case s => throw ScriptException("Unsupported collection data type %s".format(s))
     }
-    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Traversable[(_, _)]].toMap
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val r = mutable.Map.empty[Any, Any]
+      for(i <- env.ref.asInstanceOf[Traversable[(_, _)]]) {
+        r += i
+      }
+      r
+    }
   }
 
   val mapGet = new Declaration {
@@ -134,18 +157,62 @@ object ScriptDataTypeSeqDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       ScriptDataTypeOption(env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Map[Any, Any]].get(parameters.get.head.value)
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].get(parameters.get.head.value)
     override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
       case Some(Seq(Par(_, _))) => true
       case _ => false
     }
   }
+  val mapGetOrElse = new Declaration {
+    def name = "getOrElse"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].getOrElse(parameters.get.head.value, {
+        parameters.get.apply(1).value.asInstanceOf[BuiltInFunction].run(env)
+      })
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _), Par(bf : BuiltInFunction, _))) => true
+      case _ => false
+    }
+    override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) = Seq()
+  }
+
+  val mapUpdate = new Declaration {
+    def name = "update"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val m = env.ref.asInstanceOf[mutable.Map[Any, Any]]
+      m.update(parameters.get.head.value, parameters.get.apply(1).value)
+      m
+    }
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _), Par(_, _))) => true
+      case _ => false
+    }
+  }
+  val mapGetOrElseUpdate = new Declaration {
+    def name = "getOrElseUpdate"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].getOrElseUpdate(parameters.get.head.value,
+        parameters.get.apply(1).value.asInstanceOf[BuiltInFunction].run(env))
+    }
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _), Par(bf : BuiltInFunction, _))) => true
+      case _ => false
+    }
+    override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) = Seq()
+  }
+
   val mapApply = new Declaration {
     def name = "apply"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Map[Any, Any]].apply(parameters.get.head.value)
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].apply(parameters.get.head.value)
     override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
       case Some(Seq(Par(_, _))) => true
       case _ => false
