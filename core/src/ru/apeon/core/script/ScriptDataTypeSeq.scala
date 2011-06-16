@@ -29,7 +29,7 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 }
 
 object ScriptDataTypeSeqDescription {
-  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption, last, lastOption, tail)
+  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption, last, lastOption, tail, HashCodeDeclaration)
   def map = iterable ++ Seq(mapGet, mapApply)
   def seq = iterable ++ Seq(seqApply)
 

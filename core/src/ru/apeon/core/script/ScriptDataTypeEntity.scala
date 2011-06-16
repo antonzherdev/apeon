@@ -31,7 +31,7 @@ case class ScriptDataTypeObject(query : ObjectBase) extends ScriptDataType {
 case class ScriptDataTypeEntityByDescription(description : Description) extends ScriptDataTypeEntity
 
 object ScriptDataTypeEntityTypeDescription {
-  def declarations = Seq(copy0, copy1, delete, fAsInstanceOf, fAsInstanceOfOption, fIsInstanceOf)
+  def declarations = Seq(copy0, copy1, delete, fAsInstanceOf, fAsInstanceOfOption, fIsInstanceOf, HashCodeDeclaration)
 
   def delete = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) {

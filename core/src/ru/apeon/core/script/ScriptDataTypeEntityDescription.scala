@@ -27,7 +27,7 @@ case class ScriptDataTypeEntityDescription(model : ObjectModel, description : De
 }
 
 object ScriptDataTypeEntityDescriptionTypeDescription {
-  def declarations = Seq(applyId, applyEql, findEql, insert, findId, firstEql, firstOptionEql)
+  def declarations = Seq(applyId, applyEql, findEql, insert, findId, firstEql, firstOptionEql, HashCodeDeclaration)
 
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeEntityDescription]
   def des(env : Environment) = tp(env).description

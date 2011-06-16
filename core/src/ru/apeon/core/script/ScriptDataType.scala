@@ -85,3 +85,9 @@ object ToStringDeclaration extends Declaration {
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeString()
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref.toString
 }
+
+object HashCodeDeclaration extends Declaration {
+  def name = "hashCode"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref.hashCode()
+}

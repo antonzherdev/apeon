@@ -10,7 +10,7 @@ case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("dec") {
 }
 
 object ScriptDataTypeDecimalDescription {
-  def declarations = Seq(roundPar, round)
+  def declarations = Seq(roundPar, round, HashCodeDeclaration)
 
   def roundPar = new Declaration {
     def name = "round"

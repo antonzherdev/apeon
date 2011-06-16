@@ -15,7 +15,7 @@ case class ScriptDataTypeString() extends ScriptDataTypeSimple("string") {
 }
 
 object ScriptDataTypeStringDescription {
-  def declarations = Seq(format, toInt, toDec0, toDec1, replace, length, substr1, substr2, pos1, pos2, toDate, trim)
+  def declarations = Seq(format, toInt, toDec0, toDec1, replace, length, substr1, substr2, pos1, pos2, toDate, trim, HashCodeDeclaration)
 
   def format = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {

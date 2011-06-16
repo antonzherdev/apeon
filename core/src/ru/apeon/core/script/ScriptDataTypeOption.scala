@@ -3,7 +3,7 @@ package ru.apeon.core.script
 case class ScriptDataTypeOption(dataType : ScriptDataType) extends ScriptDataType
 
 object ScriptDataTypeOptionDescription {
-  def declarations = Seq(get, isDefined, isEmpty, getOrElse)
+  def declarations = Seq(get, isDefined, isEmpty, getOrElse, HashCodeDeclaration)
 
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeOption].dataType
 

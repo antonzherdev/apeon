@@ -26,6 +26,7 @@ trait ScriptDefine {
   implicit def toBuilder(d : Expression) : ExpressionBuilder = new ExpressionBuilder(d)
 
   def seq(es : Expression*) = ConstSeq(es.toSeq)
+  def tuple(es : Expression*) = Tuple(es.toSeq)
 
   def Eql(s : String) = ConstEql(s)
 

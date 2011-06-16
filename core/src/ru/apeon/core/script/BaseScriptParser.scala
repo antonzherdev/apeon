@@ -252,7 +252,10 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
 
   def datasource = "datasource" ~> ident ^^ {case name => DataSource(parser.pack.get, name)}
 
-  def bracket = "(" ~> expression <~ ")"
+  def bracket = "(" ~> rep1sep(expression, ",") <~ ")" ^^ {
+    case Seq(e) => e
+    case s => Tuple(s)
+  }
 
   def nullConst = "null" ^^^ {ConstNull()}
   def string = stringLit ^^ {case s => ConstString(s)}
