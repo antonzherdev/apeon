@@ -5,90 +5,130 @@ import ru.apeon.core.eql
 import ru.apeon.core.script._
 
 object Sync {
-  private def replaceRef(source : Entity, sourceAlias : String, dot : eql.Dot) : Option[Any] = dot.left match {
-    case parent : eql.Dot => replaceRef(source, sourceAlias, parent) match {
-      case Some(e : Entity) => Some(e(dot.right.name))
-      case Some(null) => Some(null)
+  abstract class SyncWhere {
+    def eqlValue : eql.Expression
+    def sourceAlias : String
+    def destinationAlias : String
+    def sourceDescription : Description
+    def destinationDescription : Description
+
+    lazy val buildEql : eql.Expression = {
+      abstract class F { val field : Field}
+      case class DestinationField(field : Field) extends F
+      case class SourceField(field : Field) extends F
+      def field(e: eql.Dot): F = {
+        e.left match {
+          case eql.Ref(name) if name == sourceAlias => SourceField(sourceDescription.field(e.right.name))
+          case eql.Ref(name) if name == destinationAlias => DestinationField(destinationDescription.field(e.right.name))
+          case d : eql.Dot => field(d) match {
+            case DestinationField(o : ToOne) => DestinationField(o.entity.field(e.right.name))
+            case SourceField(o : ToOne) => SourceField(o.entity.field(e.right.name))
+            case _ => throw ScriptException("Not to one.")
+          }
+        }
+      }
+      eqlValue.map {
+        case e @ eql.Equal(left : eql.Dot, right : eql.Dot) => {
+          val fields = (field(left), field(right)) match {
+            case f @ (SourceField(l), DestinationField(r)) => (l, r, left, right)
+            case (DestinationField(l), SourceField(r)) => (r, l, right, left)
+          }
+          fields match {
+            case (l : ToOne, r : ToOne, s, d) => {
+              if(l != r) throw ScriptException("Right to one not equals left to one. Use primary key to compare.")
+              syncWhere(new DefaultEnvironment(), l.entity, r.entity).eqlValue.map{
+                case eql.Dot(eql.Ref(name), v) if name == sourceAlias => eql.Dot(s, v)
+                case eql.Dot(eql.Ref(name), v) if name == destinationAlias => eql.Dot(d, v)
+              }
+            }
+            case _ => e
+          }
+        }
+      }
+    }
+
+    def replaceRef(source : Entity) : eql.Expression = buildEql.map {
+      case ref: eql.Dot => replaceRef(source, sourceAlias, ref) match {
+        case Some(a) => eql.Const(a)
+        case None => ref
+      }
+    }
+
+    private def replaceRef(source : Entity, sourceAlias : String, dot : eql.Dot) : Option[Any] = dot.left match {
+      case parent : eql.Dot => replaceRef(source, sourceAlias, parent) match {
+        case Some(e : Entity) => Some(e(dot.right.name))
+        case Some(null) => Some(null)
+        case _ => None
+      }
+      case r : eql.Ref => if(r.name == sourceAlias) Some(source(dot.right.name)) else None
       case _ => None
     }
-    case r : eql.Ref => if(r.name == sourceAlias) Some(source(dot.right.name)) else None
-    case _ => None
+
+    def buildFields : Seq[Seq[String]]
+  }
+  case class SyncWhereEql(eqlValue : eql.Expression,
+                          sourceDescription : Description, sourceAlias : String,
+                          destinationDescription : Description, destinationAlias : String) extends SyncWhere
+  {
+    def buildFields = throw ScriptException("Not supported with eql where")
+    override def hashCode = eqlValue.hashCode()
   }
 
-  def syncWhereDeclaration(env: Environment, destinationDescription: Description): Option[Declaration] =
+  case class SyncWhereFields(fields : Seq[String],
+                             sourceDescription : Description, destinationDescription : Description) extends SyncWhere
+  {
+    def eqlValue = {
+      val ands = fields.map{field => eql.Equal(eql.Dot("d." + field),  eql.Dot("s." + field))}
+      var ret : eql.Expression = ands.head
+      for(and <- ands.tail) {
+        ret = eql.And(ret, and)
+      }
+      ret
+    }
+    val sourceAlias = "s"
+    val destinationAlias = "d"
+
+    lazy val buildFields = {
+      val b = Seq.newBuilder[Seq[String]]
+      for(field <- fields) {
+        sourceDescription.field(field) match {
+          case a : Attribute => b += Seq(field)
+          case o : ToOne => b ++= syncWhere(new DefaultEnvironment(), o.entity, o.entity).buildFields.map{
+            s => field +: s
+          }
+        }
+      }
+      b.result()
+    }
+
+    override def hashCode = fields.hashCode()
+  }
+
+
+  private def syncWhereDeclaration(env: Environment, destinationDescription: Description): Option[Declaration] =
     destinationDescription.declarations.find {
       dec => dec.name == "syncWhere" && dec.isInstanceOf[Def] && dec.asInstanceOf[Def].parameters.isEmpty
     }
 
 
-  def syncWhere(env: Environment, description: Description, dataSource: Option[Expression]): eql.Expression = {
-    syncWhereDeclaration(env, description).getOrElse{
-      throw ScriptException("Sync where is not found.")
-    }.value(env, None, dataSource) match {
-      case e : eql.Expression => e
-      case fields : Seq[String] => {
-        val ands = fields.map{field => eql.Equal(eql.Dot("d." + field),  eql.Dot("s." + field))}
-        var ret : eql.Expression = ands.head
-        for(and <- ands.tail) {
-          ret = eql.And(ret, and)
-        }
-        ret
-      }
+  private def syncWhere(env: Environment, sourceDescription: Description, destinationDescription : Description): SyncWhere = {
+    if(sourceDescription != destinationDescription) throw ScriptException("Source and destination descriptions are not equal")
+    syncWhereDeclaration(env, sourceDescription).getOrElse {
+      throw ScriptException("Sync where is not found")
+    }.value(env, None, None) match {
+      case e : eql.Expression => SyncWhereEql(e, sourceDescription, "s", destinationDescription, "d")
+      case fields : Seq[String] => SyncWhereFields(fields, sourceDescription, destinationDescription)
     }
   }
 
-  def buildWhere(env: Environment, source: Entity, destinationDescription: Description, where: Option[eql.Expression],
-                 aliases: (String, String), dataSource: Option[Expression]): eql.Expression =
+  private def syncWhere(env: Environment,
+                        sourceDescription: Description, sourceAlias : String,
+                        destinationDescription: Description,  destinationAlias : String,
+                        where: Option[eql.Expression]) : SyncWhere =
   {
-    var w : eql.Expression = where.getOrElse {
-      if (source.id.description == destinationDescription) {
-        syncWhere(env, destinationDescription, dataSource)
-      }
-      else {
-        throw ScriptException( "Source entity is not destination but where is not defined.")
-      }
+    where.map(e => SyncWhereEql(e, sourceDescription, sourceAlias, destinationDescription, destinationAlias)).getOrElse{
+      syncWhere(env, sourceDescription, destinationDescription)
     }
-
-    abstract class F { val field : Field}
-    case class DestinationField(field : Field) extends F
-    case class SourceField(field : Field) extends F
-    def field(e: eql.Dot): F = {
-      e.left match {
-        case eql.Ref(name) if name == aliases._1 => SourceField(source.id.description.field(e.right.name))
-        case eql.Ref(name) if name == aliases._2 => DestinationField(destinationDescription.field(e.right.name))
-        case d : eql.Dot => field(d) match {
-          case DestinationField(o : ToOne) => DestinationField(o.entity.field(e.right.name))
-          case SourceField(o : ToOne) => SourceField(o.entity.field(e.right.name))
-          case _ => throw ScriptException("Not to one.")
-        }
-      }
-    }
-    w = w.map {
-      case e @ eql.Equal(left : eql.Dot, right : eql.Dot) => {
-        val fields = (field(left), field(right)) match {
-          case f @ (SourceField(l), DestinationField(r)) => (l, r, left, right)
-          case (DestinationField(l), SourceField(r)) => (r, l, right, left)
-        }
-        fields match {
-          case (l : ToOne, r : ToOne, s, d) => {
-            if(l != r) throw ScriptException("Right to one not equals left to one. Use primary key to compare.")
-            syncWhere(env, l.entity, dataSource).map{
-              case eql.Dot(eql.Ref(name), v) if name == aliases._1 => eql.Dot(s, v)
-              case eql.Dot(eql.Ref(name), v) if name == aliases._2 => eql.Dot(d, v)
-            }
-          }
-          case _ => e
-        }
-      }
-    }
-
-    w = w.map {
-      case ref: eql.Dot => replaceRef(source, aliases._1, ref) match {
-        case Some(a) => eql.Const(a)
-        case None => ref
-      }
-    }
-    w
   }
 
   def dataSource(env: Environment, destinationDescription: Description, dataSource: Option[Expression], parent: Option[ParentSync]): DataSource = {
@@ -101,34 +141,81 @@ object Sync {
   def syncFind(env: Environment, source: Entity, destinationDescription: Description,
                dataSourceExpression: Option[Expression],
                where: Option[eql.Expression], parent: Option[ParentSync] = None,
+               options : SyncOptions = SyncOptions(),
                aliases: (String, String) = ("s", "d") ) : Option[Entity] =
+  {
+    syncFindW(env, source, destinationDescription, dataSourceExpression,
+      syncWhere(env, source.id.description, aliases._1, destinationDescription, aliases._2, where),
+      parent, options, aliases
+    )
+  }
+
+  private def syncFindW(env: Environment, source: Entity, destinationDescription: Description,
+               dataSourceExpression: Option[Expression],
+               where: SyncWhere, parent: Option[ParentSync] = None,
+               options : SyncOptions = SyncOptions(),
+               aliases: (String, String) = ("s", "d")) : Option[Entity] =
   {
     env.cache.getOrElseUpdate((17, source.id, where).hashCode(), {
       val ds = dataSource(env, destinationDescription, dataSourceExpression, parent)
-      var w: eql.Expression = buildWhere(env, source, destinationDescription, where, aliases, dataSourceExpression)
-      if (!parent.isDefined || (!parent.get.entity.id.isTemporary && parent.get.checkUnique)) {
-        if (parent.isDefined) {
-          w = eql.And(w, eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(parent.get.toOne.name)), parent.get.entity.id.const))
-        }
-        val select = eql.Select(
-          eql.FromEntity(destinationDescription, Some(aliases._2), eql.DataSourceExpressionDataSource(ds)),
-          where = Some(w))
-        env.em.select(select) match {
-          case Seq() => None
-          case Seq(e) => Some(e)
-          case many@_ =>
-            throw ScriptException(
-              """Many entities to sync.
-            Source datasource = %s
-            Source = %s
-
-            Destination datasource = %s
-            Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, many))
-        }
+      if(options.hasOptimization(HashIndexOptimization())) {
+        val fields = where.buildFields
+        env.cache.getOrElseUpdate((19, ds, destinationDescription, where).hashCode(), {
+          env.em.select(eql.Select(eql.FromEntity(destinationDescription, None, eql.DataSourceExpressionDataSource(ds)))).map {
+            e => (e.hashCode(fields), e)
+          }.toMap
+        }).asInstanceOf[Map[Int, Entity]].get(source.hashCode(fields))
       } else {
-        None
+        var w: eql.Expression = where.replaceRef(source)
+        if (!parent.isDefined || (!parent.get.entity.id.isTemporary && parent.get.checkUnique)) {
+          if (parent.isDefined) {
+            w = eql.And(w, eql.Equal(eql.Dot(eql.Ref(aliases._2), eql.Ref(parent.get.toOne.name)), parent.get.entity.id.const))
+          }
+          val select = eql.Select(
+            eql.FromEntity(destinationDescription, Some(aliases._2), eql.DataSourceExpressionDataSource(ds)),
+            where = Some(w))
+          env.em.select(select) match {
+            case Seq() => None
+            case Seq(e) => Some(e)
+            case many@_ =>
+              throw ScriptException(
+                """Many entities to sync.
+              Source datasource = %s
+              Source = %s
+
+              Destination datasource = %s
+              Destination = %s""".format(source.id.dataSource.fullName, source, ds.fullName, many))
+          }
+        } else {
+          None
+        }
       }
     }).asInstanceOf[Option[Entity]]
+  }
+
+  def syncAny(env : Environment, source : Any, destinationDescription : Description,
+              dataSourceExpression : Option[Expression], where : Option[eql.Expression] = None,
+              func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
+              options : SyncOptions = SyncOptions()) : Any = source match
+  {
+    case s : Traversable[Entity] => syncMany(env, s, destinationDescription, dataSourceExpression, where, func, parent, options)
+    case s : Entity => sync(env, s, destinationDescription, dataSourceExpression, where, func, parent, options)
+    case null => null
+  }
+
+  def syncMany(env : Environment, sources : Traversable[Entity], destinationDescription : Description,
+               dataSourceExpression : Option[Expression], where : Option[eql.Expression] = None,
+               func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
+               options : SyncOptions = SyncOptions()) : Traversable[Entity] =
+  {
+    if(sources.isEmpty) return Seq()
+
+    val opt = if(sources.size > 100) options.addOptimization(HashIndexOptimization()) else options
+    val aliases: (String, String) = getAliases(func)
+    val w = syncWhere(env, sources.head.id.description, aliases._1, destinationDescription, aliases._2, where)
+    sources.map{
+      source => syncW(env, source, destinationDescription, dataSourceExpression, w, func, parent, opt, aliases)
+    }
   }
 
   def sync(env : Environment, source : Entity, destinationDescription : Description,
@@ -136,12 +223,28 @@ object Sync {
            func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
            options : SyncOptions = SyncOptions()) : Entity =
   {
-    val aliases = func.map{ f =>
-      val pars = f.parameters
-      (pars(0).name, pars(1).name)
-    }.getOrElse(("s", "d"))
+    val aliases: (String, String) = getAliases(func)
+    syncW(env, source, destinationDescription, dataSourceExpression,
+      syncWhere(env, source.id.description, aliases._1, destinationDescription, aliases._2, where),
+      func, parent, options, aliases
+    )
+  }
 
-    val found = syncFind(env, source, destinationDescription, dataSourceExpression, where, parent, aliases)
+  private def getAliases(func: Option[BuiltInFunction]): (String, String) = {
+    func.map {
+      f =>
+        val pars = f.parameters
+        (pars(0).name, pars(1).name)
+    }.getOrElse(("s", "d"))
+  }
+
+  private def syncW(env : Environment, source : Entity, destinationDescription : Description,
+           dataSourceExpression : Option[Expression], where : SyncWhere,
+           func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
+           options : SyncOptions = SyncOptions(), aliases: (String, String) = ("s", "d")) : Entity =
+  {
+
+    val found = syncFindW(env, source, destinationDescription, dataSourceExpression, where, parent, options, aliases)
     if(found.isEmpty && UpdateOnly() == options.sync) {
       return null
     }
@@ -208,7 +311,7 @@ object Sync {
               }
             }
           }
-//          env.em.transaction{}
+          //          env.em.transaction{}
 
           one match {case AutoToOne() =>
             destinationDescription.ones.filter{one =>

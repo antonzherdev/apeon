@@ -1,6 +1,12 @@
 package ru.apeon.sync
 
-case class SyncOptions(sync : SyncMode = InsertUpdate(), auto : AutoMode = AutoUpdate())
+case class SyncOptions(sync : SyncMode = InsertUpdate(), auto : AutoMode = AutoUpdate(),
+                       optimization : Set[Optimization] = Set())
+{
+  def hasOptimization(o : Optimization) = optimization.contains(o)
+  def addOptimization(o : Optimization) : SyncOptions =
+    SyncOptions(sync, auto, optimization + o)
+}
 
 abstract class SyncMode
 case class InsertOnly() extends SyncMode
@@ -21,3 +27,6 @@ case class NoAutoToMany() extends AutoToManyMode
 abstract class AutoToMany extends AutoToManyMode
 case class AutoToManySet() extends AutoToMany
 case class AutoToManyAppend() extends AutoToMany
+
+abstract class Optimization
+case class HashIndexOptimization() extends Optimization

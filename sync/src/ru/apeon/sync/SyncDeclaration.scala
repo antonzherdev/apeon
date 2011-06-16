@@ -9,84 +9,93 @@ object SyncDeclaration extends Declaration {
 
   def parent(env: Environment) : Option[ParentSync] = env.leftEntity match{
     case Some(par) => par.id.description.field(env.currentSet.get.left.asInstanceOf[Dot].right.name) match {
-        case many : ToMany => Some(ParentSync(par, many.one))
-        case _ => None
-      }
+      case many : ToMany => Some(ParentSync(par, many.one))
+      case _ => None
+    }
     case None => None
   }
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref match {
-    case source : Entity => value(env, parameters, dataSource, source)
-    case sources : Traversable[Entity] => sources.map{
-      source => value(env, parameters, dataSource, source)
-    }
+    case e : Traversable[Entity] =>
+      if(e.isEmpty) Seq()
+      else value(env, parameters, dataSource, e, e.head.id.description)
+    case e : Entity => value(env, parameters, dataSource, e, e.id.description)
     case null => null
   }
 
+
+
   def option(value : Int) : SyncOptions =
     SyncOptions(
-      sync = if((value & SyncObject.InsertOnly) != 0) {
-        InsertOnly()
-      } else {
-        if((value & SyncObject.UpdateOnly) != 0) UpdateOnly() else InsertUpdate()
-      },
+      sync =
+              if((value & SyncObject.InsertOnly) != 0) {
+                InsertOnly()
+              } else {
+                if((value & SyncObject.UpdateOnly) != 0) UpdateOnly() else InsertUpdate()
+              },
       auto =
               if((value & SyncObject.NoAutoUpdate) != 0) NoAutoUpdate() else AutoUpdate(
                 one = if((value & SyncObject.NoAutoUpdateToOne) != 0) NoAutoToOne() else AutoToOne(),
                 many = if((value & SyncObject.NoAutoUpdateToMany) != 0) NoAutoToMany() else {
                   if((value & SyncObject.ToManyAppend) != 0) AutoToManyAppend() else AutoToManySet()
                 }
-              )
+              ),
+      optimization =
+              {
+                val b = collection.immutable.Set.newBuilder[Optimization]
+                if((value & SyncObject.HashIndexOptimization) != 0) b += (HashIndexOptimization())
+                b.result()
+              }
     )
 
-  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression], source : Entity) = parameters match {
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression], source : Any, d : Description) = parameters match {
     case Some(Seq(
-      ParVal(destinationDescription : Description, _),
-      ParVal(where : eql.Expression, _),
-      ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), Some(func), parent(env))
+    ParVal(destinationDescription : Description, _),
+    ParVal(where : eql.Expression, _),
+    ParVal(func : BuiltInFunction, _)
+    )) => Sync.syncAny(env, source, destinationDescription, dataSource, Some(where), Some(func), parent(env))
     case Some(Seq(
-      ParVal(destinationDescription : Description, _),
-      ParVal(where : eql.Expression, _)
-    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), None, parent(env))
+    ParVal(destinationDescription : Description, _),
+    ParVal(where : eql.Expression, _)
+    )) => Sync.syncAny(env, source, destinationDescription, dataSource, Some(where), None, parent(env))
     case Some(Seq(
-      ParVal(where : eql.Expression, _),
-      ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), Some(func), parent(env))
+    ParVal(where : eql.Expression, _),
+    ParVal(func : BuiltInFunction, _)
+    )) => Sync.syncAny(env, source, d, dataSource, Some(where), Some(func), parent(env))
     case Some(Seq(
-      ParVal(where : eql.Expression, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), None, parent(env))
+    ParVal(where : eql.Expression, _)
+    )) => Sync.syncAny(env, source, d, dataSource, Some(where), None, parent(env))
     case Some(Seq(
-      ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, None, Some(func), parent(env))
-    case None => Sync.sync(env, source, source.id.description, dataSource, None, None, parent(env))
+    ParVal(func : BuiltInFunction, _)
+    )) => Sync.syncAny(env, source, d, dataSource, None, Some(func), parent(env))
+    case None => Sync.syncAny(env, source, d, dataSource, None, None, parent(env))
     case Some(Seq(
-      ParVal(destinationDescription : Description, _),
-      ParVal(where : eql.Expression, _),
-      ParVal(opt : Int, _),
-      ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), Some(func), parent(env), option(opt))
+    ParVal(destinationDescription : Description, _),
+    ParVal(where : eql.Expression, _),
+    ParVal(opt : Int, _),
+    ParVal(func : BuiltInFunction, _)
+    )) => Sync.syncAny(env, source, destinationDescription, dataSource, Some(where), Some(func), parent(env), option(opt))
     case Some(Seq(
-      ParVal(destinationDescription : Description, _),
-      ParVal(where : eql.Expression, _),
-      ParVal(opt : Int, _)
-    )) => Sync.sync(env, source, destinationDescription, dataSource, Some(where), None, parent(env), option(opt))
+    ParVal(destinationDescription : Description, _),
+    ParVal(where : eql.Expression, _),
+    ParVal(opt : Int, _)
+    )) => Sync.syncAny(env, source, destinationDescription, dataSource, Some(where), None, parent(env), option(opt))
     case Some(Seq(
-      ParVal(where : eql.Expression, _),
-      ParVal(opt : Int, _),
-      ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), Some(func), parent(env), option(opt))
+    ParVal(where : eql.Expression, _),
+    ParVal(opt : Int, _),
+    ParVal(func : BuiltInFunction, _)
+    )) => Sync.syncAny(env, source, d, dataSource, Some(where), Some(func), parent(env), option(opt))
     case Some(Seq(
-      ParVal(where : eql.Expression, _),
-      ParVal(opt : Int, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, Some(where), None, parent(env), option(opt))
+    ParVal(where : eql.Expression, _),
+    ParVal(opt : Int, _)
+    )) => Sync.syncAny(env, source, d, dataSource, Some(where), None, parent(env), option(opt))
     case Some(Seq(
-      ParVal(opt : Int, _),
-      ParVal(func : BuiltInFunction, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, None, Some(func), parent(env), option(opt))
+    ParVal(opt : Int, _),
+    ParVal(func : BuiltInFunction, _)
+    )) => Sync.syncAny(env, source, d, dataSource, None, Some(func), parent(env), option(opt))
     case Some(Seq(
-      ParVal(opt : Int, _)
-    )) => Sync.sync(env, source, source.id.description, dataSource, None, None, parent(env), option(opt))
+    ParVal(opt : Int, _)
+    )) => Sync.syncAny(env, source, d, dataSource, None, None, parent(env), option(opt))
     case _ => throw ScriptException("Error in parameters.")
   }
 
@@ -127,9 +136,9 @@ object SyncDeclaration extends Declaration {
   }
 
   def tp(env : Environment) : ScriptDataType = env.dotType.get match {
-      case ScriptDataTypeSeq(tp) => tp
-      case tp => tp
-    }
+    case ScriptDataTypeSeq(tp) => tp
+    case tp => tp
+  }
 
   override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) =
     Seq(BuiltInParameterDef("s", tp(env)),

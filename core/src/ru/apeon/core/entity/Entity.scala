@@ -14,8 +14,12 @@ class Entity(val manager : EntityManager,
 
   def id = _id
 
-  def apply(columnName : String) : Any = apply(id.description.field(columnName))
+  def apply(field : String) : Any = apply(id.description.field(field))
   def update(column : Field, d : Any) : Entity  = update(column.name, d)
+
+  def path(fields : String*) : Any =
+    if(fields.tail.isEmpty) apply(fields.head)
+    else apply(fields.head).asInstanceOf[Entity].path(fields.tail : _*)
 
   private def lazyUpdate(column : Field, data : Any = null) = {
     val l = manager.lazyLoad(this, column, data)
@@ -176,6 +180,12 @@ class Entity(val manager : EntityManager,
   }
 
   override def hashCode = id.hashCode
+
+  def hashCode(fields : Seq[Seq[String]]) = {
+    fields.foldLeft(17){case (ret, p) =>
+      ret*32 + path(p : _*).hashCode()
+    }
+  }
 }
 
 /**

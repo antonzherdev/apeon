@@ -17,6 +17,11 @@ trait ScriptDefine {
     case s => Some(s)
   })
 
+  def refDs(name : String, ds : Expression, parameters : Expression*) = Ref(name, parameters.toSeq.map(Par(_)) match {
+    case a if a.isEmpty => None
+    case s => Some(s)
+  }, Some(ds))
+
   implicit def toExpression(d : ExpressionBuilder) : Expression = d.expression
   implicit def toBuilder(d : Expression) : ExpressionBuilder = new ExpressionBuilder(d)
 
