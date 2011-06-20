@@ -34,6 +34,7 @@ object Sync {
         }
         ret
       }
+      case e => throw ScriptException("Sync where for entity \"%s\" return unsupported value \"%s\".".format(description.fullName, e))
     }
   }
 
