@@ -217,13 +217,6 @@ case class Def(name : String, statement : Statement, override val parameters : S
     env.addDeclaration(this)
   }
 
-  private def tt : PartialFunction[Throwable, Any] = {
-    case e @ ScriptException(_, _, None) =>
-      throw ScriptException(e.getMessage, Some(e), Some(statement))
-    case t : Throwable =>
-      throw ScriptException(t.getMessage, Some(t), Some(statement))
-  }
-
   private def eval(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Any =
     try {
       env.atomic{
@@ -256,7 +249,7 @@ case class Def(name : String, statement : Statement, override val parameters : S
         }
       }
     }
-    catch tt
+    catch Script.thrCatch(this)
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) =
     if(cached){
@@ -277,7 +270,7 @@ case class Def(name : String, statement : Statement, override val parameters : S
       }
       if(resultType.isDefined) resultType.get.fillRef(env, imports)
     }
-    catch tt
+    catch Script.thrCatch(this)
   }
 
   override def preFillRef(env : Environment, imports: Imports) {
@@ -288,7 +281,7 @@ case class Def(name : String, statement : Statement, override val parameters : S
         parameter.dataType.preFillRef(env, imports)
       }
     }
-    catch tt
+    catch Script.thrCatch(this)
   }
 
   override def declarationString = name + "(" + parameters.mkString(", ") + ")" + resultType.map(" : " + _).getOrElse("")

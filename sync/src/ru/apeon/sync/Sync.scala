@@ -3,6 +3,7 @@ package ru.apeon.sync
 import ru.apeon.core.entity._
 import ru.apeon.core.eql
 import ru.apeon.core.script._
+import scala.PartialFunction
 
 object Sync {
   abstract class SyncWhere {
@@ -35,7 +36,7 @@ object Sync {
           }
           fields match {
             case (l : ToOne, r : ToOne, s, d) => {
-              if(l != r) throw ScriptException("Right to one not equals left to one. Use primary key to compare.")
+              if(l != r) throw SyncException("Right to one not equals left to one. Use primary key to compare.")
               syncWhere(new DefaultEnvironment(), l.entity, r.entity).eqlValue.map{
                 case eql.Dot(eql.Ref(name), v) if name == sourceAlias => eql.Dot(s, v)
                 case eql.Dot(eql.Ref(name), v) if name == destinationAlias => eql.Dot(d, v)
@@ -70,7 +71,7 @@ object Sync {
                           sourceDescription : Description, sourceAlias : String,
                           destinationDescription : Description, destinationAlias : String) extends SyncWhere
   {
-    def buildFields = throw ScriptException("Not supported with eql where")
+    def buildFields = throw SyncException("Not supported with eql where")
     override def hashCode = eqlValue.hashCode()
   }
 
@@ -112,9 +113,9 @@ object Sync {
 
 
   private def syncWhere(env: Environment, sourceDescription: Description, destinationDescription : Description): SyncWhere = {
-    if(sourceDescription != destinationDescription) throw ScriptException("Source and destination descriptions are not equal")
+    if(sourceDescription != destinationDescription) throw SyncException("Source and destination descriptions are not equal")
     syncWhereDeclaration(env, sourceDescription).getOrElse {
-      throw ScriptException("Sync where is not found")
+      throw SyncException("Sync where is not found")
     }.value(env, None, None) match {
       case e : eql.Expression => SyncWhereEql(e, sourceDescription, "s", destinationDescription, "d")
       case fields : Seq[String] => SyncWhereFields(fields, sourceDescription, destinationDescription)
@@ -151,10 +152,10 @@ object Sync {
   }
 
   private def syncFindW(env: Environment, source: Entity, destinationDescription: Description,
-               dataSourceExpression: Option[Expression],
-               where: SyncWhere, parent: Option[ParentSync] = None,
-               options : SyncOptions = SyncOptions(),
-               aliases: (String, String) = ("s", "d")) : Option[Entity] =
+                        dataSourceExpression: Option[Expression],
+                        where: SyncWhere, parent: Option[ParentSync] = None,
+                        options : SyncOptions = SyncOptions(),
+                        aliases: (String, String) = ("s", "d")) : Option[Entity] =
   {
     env.cache.getOrElseUpdate((17, source.id, where).hashCode(), {
       val ds = dataSource(env, destinationDescription, dataSourceExpression, parent)
@@ -178,7 +179,7 @@ object Sync {
             case Seq() => None
             case Seq(e) => Some(e)
             case many@_ =>
-              throw ScriptException(
+              throw SyncException(
                 """Many entities to sync.
               Source datasource = %s
               Source = %s
@@ -238,32 +239,110 @@ object Sync {
     }.getOrElse(("s", "d"))
   }
 
-  private def syncW(env : Environment, source : Entity, destinationDescription : Description,
-           dataSourceExpression : Option[Expression], where : SyncWhere,
-           func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
-           options : SyncOptions = SyncOptions(), aliases: (String, String) = ("s", "d")) : Entity =
+  private def syncAttributes(destDesc: Description, source: Entity, dest: Entity, changedFields: Seq[String]) {
+    destDesc.attributes.filterNot {
+      f => changedFields.contains(f.name)
+    }.foreach {
+      column =>
+        if (!column.isPrimaryKey) {
+          source.id.description.fieldOption(column.name) match {
+            case Some(a: Attribute) => {
+              if (a.dataType.getClass == column.dataType.getClass) {
+                dest.update(column, source(a))
+              }
+            }
+            case _ => {}
+          }
+        }
+    }
+  }
+
+  private def syncOne(env: Environment, destDesc: Description, parent: Option[ParentSync], source: Entity,
+                      dest: Entity, oneMode: AutoToOneMode, dsExp: Option[Expression], changedFields: scala.Seq[String])
+  {
+    oneMode match {
+      case AutoToOne() =>
+        destDesc.ones.filter {
+          one =>
+            syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne) &&
+                    !changedFields.contains(one.name) && one.source(dest.id.dataSource).isDefined
+        }.foreach {
+          one => source.id.description.fieldOption(one.name) match {
+            case Some(f: ToOne) => if (f.entity == one.entity) {
+              try {
+                dest.update(one, source(f) match {
+                  case e: Entity => sync(env, e, one.entity, dsExp, options = SyncOptions(InsertOnly()))
+                  case null => null
+                })
+              } catch tt (one.name)
+            }
+            case _ => {}
+          }
+        }
+    }
+  }
+
+  private def syncMany(env: Environment, destDesc: Description, d: Entity, source: Entity,
+                       manyMode: AutoToManyMode, dsExp: Option[Expression], isFound: Boolean,
+                       changedFields: scala.Seq[String])
+  {
+    manyMode match {
+      case a: AutoToMany =>
+        destDesc.manies.filter {
+          many => syncWhereDeclaration(env, many.entity).isDefined && !changedFields.contains(many.name) &&
+                  many.one.source(d.id.dataSource).isDefined
+        }.foreach {
+          many => source.id.description.fieldOption(many.name) match {
+            case Some(f: ToMany) => if (f.entity == many.entity && f.one == many.one) {
+              val b = collection.immutable.Set.newBuilder[Entity]
+              if (a.isInstanceOf[AutoToManyAppend]) {
+                b ++= d(many).asInstanceOf[Iterable[Entity]]
+              }
+              source(f) match {
+                case entities: Iterable[Entity] =>
+                  try {
+                    entities.foreach {
+                      e => b += sync(env, e, many.entity, dsExp,
+                        options = SyncOptions(InsertOnly()),
+                        parent = Some(ParentSync(d, many.one, isFound)))
+                    }
+                  } catch tt(many.name)
+                case null => {}
+              }
+              d.update(many, b.result())
+            }
+            case _ => {}
+          }
+        }
+    }
+  }
+
+  private def syncW(env : Environment, source : Entity, destDesc : Description,
+                    dsExp : Option[Expression], where : SyncWhere,
+                    func : Option[BuiltInFunction] = None, parent : Option[ParentSync] = None,
+                    options : SyncOptions = SyncOptions(), aliases: (String, String) = ("s", "d")) : Entity =
   {
 
-    val found = syncFindW(env, source, destinationDescription, dataSourceExpression, where, parent, options, aliases)
+    val found = syncFindW(env, source, destDesc, dsExp, where, parent, options, aliases)
     if(found.isEmpty && UpdateOnly() == options.sync) {
       return null
     }
-    val d : Entity = found.getOrElse{
-      val ds: DataSource = dataSource(env, destinationDescription, dataSourceExpression, parent)
-      val ret = env.em.insert(destinationDescription, ds)
+    val dest : Entity = found.getOrElse{
+      val ds: DataSource = dataSource(env, destDesc, dsExp, parent)
+      val ret = env.em.insert(destDesc, ds)
       env.cache.update((17, source.id, where).hashCode(), Some(ret))
       ret
     }
 
     if(parent.isDefined) {
-      d.update(parent.get.toOne, parent.get.entity)
+      dest.update(parent.get.toOne, parent.get.entity)
     }
 
     var funcDestinationAlias = aliases._2
     val syncProc : Option[Def] = if(func.isDefined) None else {
-      destinationDescription.declarations.find{
+      destDesc.declarations.find{
         decl => decl.name == "syncProc" && (decl.parameters match {
-          case Seq(DefPar(name, ScriptDataTypeEntity(descr))) => if(descr == destinationDescription) {
+          case Seq(DefPar(name, ScriptDataTypeEntity(descr))) => if(descr == destDesc) {
             funcDestinationAlias = name
             true
           } else false
@@ -283,7 +362,7 @@ object Sync {
       case _ => true
     }) {
       val oldDS = env.currentDataSource
-      env.setCurrentDataSource(Some(d.id.dataSource))
+      env.setCurrentDataSource(Some(dest.id.dataSource))
 
       options.auto match {
         case AutoUpdate(one, many) => {
@@ -297,75 +376,20 @@ object Sync {
           }.filter(_.isDefined).map(_.get)
 
 
-          destinationDescription.attributes.filterNot{
-            f => changedFields.contains(f.name)
-          }.foreach{column =>
-            if(!column.isPrimaryKey) {
-              source.id.description.fieldOption(column.name) match {
-                case Some(a : Attribute) => {
-                  if(a.dataType.getClass == column.dataType.getClass) {
-                    d.update(column, source(a))
-                  }
-                }
-                case _ => {}
-              }
-            }
-          }
-          //          env.em.transaction{}
-
-          one match {case AutoToOne() =>
-            destinationDescription.ones.filter{one =>
-              syncWhereDeclaration(env, one.entity).isDefined && Some(one) != parent.map(_.toOne) &&
-                      !changedFields.contains(one.name) && one.source(d.id.dataSource).isDefined
-            }.foreach{
-              one => source.id.description.fieldOption(one.name) match {
-                case Some(f : ToOne) => if(f.entity == one.entity) {
-                  d.update(one, source(f) match {
-                    case e : Entity => sync(env, e, one.entity, dataSourceExpression, options = SyncOptions(InsertOnly()))
-                    case null => null
-                  })
-                }
-                case _ => {}
-              }
-            }
-          }
-          many match {case a : AutoToMany =>
-            destinationDescription.manies.filter{
-              many => syncWhereDeclaration(env, many.entity).isDefined && !changedFields.contains(many.name) &&
-                      many.one.source(d.id.dataSource).isDefined
-            }.foreach{
-              many => source.id.description.fieldOption(many.name) match {
-                case Some(f : ToMany) => if(f.entity == many.entity && f.one == many.one) {
-                  val b = collection.immutable.Set.newBuilder[Entity]
-                  if(a.isInstanceOf[AutoToManyAppend]) {
-                    b ++= d(many).asInstanceOf[Iterable[Entity]]
-                  }
-                  source(f) match {
-                    case entities : Iterable[Entity] =>
-                      entities.foreach{
-                        e => b += sync(env, e, many.entity, dataSourceExpression,
-                          options = SyncOptions(InsertOnly()),
-                          parent = Some(ParentSync(d, many.one, found.isDefined)))
-                      }
-                    case null => {}
-                  }
-                  d.update(many, b.result())
-                }
-                case _ => {}
-              }
-            }
-          }
+          syncAttributes(destDesc, source, dest, changedFields)
+          syncOne(env, destDesc, parent, source, dest, one, dsExp, changedFields)
+          syncMany(env, destDesc, dest, source, many, dsExp, found.isDefined, changedFields)
         }
         case NoAutoUpdate() => {}
       }
 
       if(func.isDefined) {
-        func.get.run(env, source , d)
+        func.get.run(env, source , dest)
       } else if(syncProc.isDefined) {
         val oldThisRef = env.thisRef
         env.setThisRef(Some(source))
         try {
-          syncProc.get.value(env, Some(Seq(ParVal(d, None))), None)
+          syncProc.get.value(env, Some(Seq(ParVal(dest, None))), None)
         } finally {
           env.setThisRef(oldThisRef)
         }
@@ -374,8 +398,22 @@ object Sync {
 
       env.setCurrentDataSource(oldDS)
     }
-    d
+    dest
+  }
+
+  def tt(column : String) : PartialFunction[Throwable, Any] = {
+    case e @ SyncException(message, s, path) => throw SyncException(message, s.orElse(Some(e)), column +: path)
+    case t : Throwable => throw SyncException(t.getMessage, Some(t), Seq(column))
   }
 }
 
 case class ParentSync(entity : Entity, toOne : ToOne, checkUnique : Boolean = true)
+
+case class SyncException(message : String,
+                         cause: Option[Throwable] = None,
+                         path : Seq[String] = Seq()) extends RuntimeException(message, cause.getOrElse{null}) {
+  override def getMessage = path match {
+    case Seq() => message
+    case _ => "%s: %s ".format(path.mkString("/"), message)
+  }
+}
