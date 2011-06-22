@@ -3,7 +3,9 @@
     <output-path>$PROJECT_DIR$/out-0.2/artifacts/</output-path>
     <root id="root">
       <element id="archive" name="apeon-excel-0.2.zip">
-        <element id="dir-copy" path="$PROJECT_DIR$/out/artifacts/apeon-excel" />
+        <element id="directory" name="apeon-excel-0.2">
+          <element id="dir-copy" path="$PROJECT_DIR$/out-0.2/artifacts/apeon-excel" />
+        </element>
       </element>
     </root>
   </artifact>
