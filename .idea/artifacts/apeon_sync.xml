@@ -3,7 +3,9 @@
     <output-path>$PROJECT_DIR$/out-0.3/artifacts/</output-path>
     <root id="root">
       <element id="archive" name="apeon-sync-0.3.zip">
-        <element id="dir-copy" path="$PROJECT_DIR$/out/artifacts/apeon-sync" />
+        <element id="directory" name="apeon-sync-0.3">
+          <element id="dir-copy" path="$PROJECT_DIR$/out/artifacts/apeon-sync" />
+        </element>
       </element>
     </root>
   </artifact>

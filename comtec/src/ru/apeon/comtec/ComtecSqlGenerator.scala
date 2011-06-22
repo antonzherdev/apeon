@@ -7,7 +7,7 @@ import ru.apeon.core.entity.{FieldWithSource, Description}
 class ComtecSqlGenerator extends SqlGenerator {
   def genVocUpdate(q: Insert) : Option[sql.Update] = q.from.entity.joinedTables match {
     case Seq() => None
-    case Seq(join) => q.columns.filter{_.column.tableName(q.dataSource).getOrElse("") == join.table.name} match {
+    case Seq(join) => q.columns.filterNot(_.column.isNullFor(q.dataSource)).filter{_.column.tableName(q.dataSource).getOrElse("") == join.table.name} match {
       case Seq() => None
       case columns => Some(sql.Update(sql.FromTable(sqlTable(join.table)),
         columns.map{column =>

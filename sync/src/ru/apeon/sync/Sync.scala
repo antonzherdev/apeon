@@ -119,6 +119,7 @@ object Sync {
     }.value(env, None, None) match {
       case e : eql.Expression => SyncWhereEql(e, sourceDescription, "s", destinationDescription, "d")
       case fields : Seq[String] => SyncWhereFields(fields, sourceDescription, destinationDescription)
+      case e => throw ScriptException("Sync where for entity \"%s\" return unsupported value \"%s\".".format(sourceDescription.fullName, e))
     }
   }
 
