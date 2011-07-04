@@ -132,6 +132,15 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with E
         script(Mul(Plus(ConstInt(10), ConstInt(5)), ConstInt(6)))
       )
     }
+
+    it("-u") {
+      parser.parse("var a = 5\na = -a") should equal {
+        script(
+          Var("a", 5),
+          Set(ref("a"), UMinus(ref("a")))
+        )
+      }
+    }
   }
 
   describe("Eql") {

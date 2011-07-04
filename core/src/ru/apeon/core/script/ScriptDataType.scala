@@ -56,6 +56,7 @@ object ScriptDataTypeDescription {
     addDeclaration(classOf[ScriptDataTypeDate], ToStringDeclaration, InDeclaration)
     addDeclaration(classOf[ScriptDataTypeDecimal], ToStringDeclaration, InDeclaration)
     addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration, InDeclaration)
+    addDeclaration(classOf[ScriptDataTypeString], ToStringDeclaration, InDeclaration)
   }
   load()
 }

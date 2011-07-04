@@ -259,3 +259,19 @@ case class MapItem(key : Expression, value : Expression) extends Expression {
   def evaluate(env: Environment) = (key.evaluate(env), value.evaluate(env))
   def dataType(env: Environment) = ScriptDataTypeMapItem(key.dataType(env), value.dataType(env))
 }
+
+case class UMinus(exp : Expression) extends Expression {
+  def preFillRef(env: Environment, imports: Imports) {
+    exp.preFillRef(env, imports)
+  }
+  def fillRef(env: Environment, imports: Imports) {
+    exp.fillRef(env, imports)
+  }
+  def evaluate(env: Environment) {
+    exp.evaluate(env) match {
+      case i : Int => -i
+      case i : BigDecimal => -i
+    }
+  }
+  def dataType(env: Environment) = exp.dataType(env)
+}

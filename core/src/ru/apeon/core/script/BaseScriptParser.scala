@@ -268,6 +268,11 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       case s ~ None => ConstInt(-s.toInt)
       case s ~ Some(d) => ConstDecimal(BigDecimal(-(s + "." + d).toDouble))
     })
+  def minus = "-" ~> expression ^^ {
+    case ConstInt(i) => ConstInt(-i)
+    case ConstDecimal(i) => ConstDecimal(-i)
+    case e => UMinus(e)
+  }
   def seq = "[" ~> repsep(expression, ",") <~ "]" ^^ {s => ConstSeq(s)}
   def extendEntity = "extend" ~> "entity" ~> entityRef ~ ("{" ~> (extendEntityStatement*) <~ "}") ^^ {
     case name ~ statements => ExtendEntity(parser.module, name, statements)
@@ -283,7 +288,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     | varStatement
     )
 
-  def term : Parser[Expression] = string | numeric | eqlConst | nullConst |
+  def term : Parser[Expression] = string | numeric | minus | eqlConst | nullConst |
           ifExpr | builtInFunction | bracket | seq | not |
           "true" ^^^ {ConstBoolean(true)} | "false" ^^^ {ConstBoolean(false)} | ref
 
