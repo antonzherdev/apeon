@@ -123,6 +123,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   }
 
   def beginTransaction() {
+    log.debug("beginTransaction")
     transactionCounter += 1
   }
 
@@ -134,8 +135,8 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
 
   def commit() {
     try{
-      if(log.logger.isDebugEnabled) {
-        /*val sb = new StringBuilder
+      /*if(log.logger.isDebugEnabled) {
+        val sb = new StringBuilder
         sb.append("Commit")
         if(!insertedEntities.isEmpty) {
           sb.append("\nInserted:\n")
@@ -149,9 +150,10 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
           sb.append("\nDeleted:\n")
           sb.append(deletedEntities.mkString("\n"))
         }
-        log.debug(sb.toString())*/
-        log.debug("Commit")
-      }
+        log.debug(sb.toString())
+      }*/
+      checkTransaction()
+      log.debug("Commit %d".format(transactionCounter))
 
       var i = 0
       var size = insertedEntities.size
