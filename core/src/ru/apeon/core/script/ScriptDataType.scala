@@ -51,9 +51,11 @@ object ScriptDataTypeDescription {
     addDeclaration(classOf[ScriptDataTypeInputStream], ScriptDataTypeInputStreamDescription.declarations : _*)
     addDeclaration(classOf[ScriptDataTypeInteger], ScriptDataTypeIntegerDeclaration.declarations : _*)
 
-    addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration)
-    addDeclaration(classOf[ScriptDataTypeAny], ToStringDeclaration)
+    addDeclaration(classOf[ScriptDataTypeAny], ToStringDeclaration, InDeclaration)
     addDeclaration(classOf[ScriptDataTypeBoolean], ToStringDeclaration)
+    addDeclaration(classOf[ScriptDataTypeDate], ToStringDeclaration, InDeclaration)
+    addDeclaration(classOf[ScriptDataTypeDecimal], ToStringDeclaration, InDeclaration)
+    addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration, InDeclaration)
   }
   load()
 }
@@ -98,4 +100,15 @@ abstract class BetweenDeclaration[T] extends Declaration with eql.SqlGeneration 
   def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) = sql.Between(ref, parameters(0), parameters(1))
   def dataType : ScriptDataType
   def compare(min : T, max : T) : Boolean
+}
+
+object InDeclaration extends Declaration with eql.SqlGeneration {
+  def name = "in"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+    parameters.get.find(_.value == env.ref).isDefined
+  override def correspond(env: Environment, parameters: Option[Seq[Par]]) =
+    parameters.isDefined && !parameters.get.isEmpty
+  def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
+    sql.In(ref, parameters)
 }

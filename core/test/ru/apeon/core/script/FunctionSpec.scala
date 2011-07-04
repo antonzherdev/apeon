@@ -62,6 +62,10 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       ConstInt(4) ~ ref("between", 1, 3) should equal (false)
       ConstInt(2) ~ ref("between", 2, 2) should equal (true)
     }
+    it("in") {
+      ConstInt(2) ~ ref("in", 3, 2, 1) should equal (true)
+      ConstInt(4) ~ ref("in", 3, 2, 1) should equal (false)
+    }
   }
 
   describe("Датные функции") {

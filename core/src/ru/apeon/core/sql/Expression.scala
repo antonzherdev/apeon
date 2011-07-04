@@ -61,7 +61,7 @@ case class Div(left : Expression, right : Expression) extends BinaryExpression {
 }
 
 case class Between(left : Expression, min : Expression, max : Expression) extends Expression
-
+case class In(left : Expression, set : Seq[Expression]) extends Expression
 
 class And(val left : Expression, val right : Expression) extends BinaryExpression {
   val alias = "and"

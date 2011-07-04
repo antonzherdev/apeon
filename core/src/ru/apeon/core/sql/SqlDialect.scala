@@ -339,6 +339,12 @@ class DefaultSqlDialect extends SqlDialect with TextGen {
       append(" and ")
       append(b.max)
     }
+    case i : In => {
+      append(i.left)
+      append(" in (")
+      append(i.set, ", ")
+      append(")")
+    }
   }
 
   var dateFormat : DateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
