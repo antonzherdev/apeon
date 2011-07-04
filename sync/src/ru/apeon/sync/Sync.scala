@@ -71,7 +71,7 @@ object Sync {
                           sourceDescription : Description, sourceAlias : String,
                           destinationDescription : Description, destinationAlias : String) extends SyncWhere
   {
-    def buildFields = throw SyncException("Not supported with eql where")
+    def buildFields = throw SyncException("Not supported with eql where for %s to %s".format(sourceDescription.fullName, destinationDescription.fullName))
     override def hashCode = eqlValue.hashCode()
   }
 
@@ -212,9 +212,9 @@ object Sync {
   {
     if(sources.isEmpty) return Seq()
 
-    val opt = if(sources.size > 100) options.addOptimization(HashIndexOptimization()) else options
     val aliases: (String, String) = getAliases(func)
     val w = syncWhere(env, sources.head.id.description, aliases._1, destinationDescription, aliases._2, where)
+    val opt = if(sources.size > 100 && w.isInstanceOf[SyncWhereFields]) options.addOptimization(HashIndexOptimization()) else options
     sources.map{
       source => syncW(env, source, destinationDescription, dataSourceExpression, w, func, parent, opt, aliases)
     }
