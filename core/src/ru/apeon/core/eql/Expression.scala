@@ -4,7 +4,6 @@ import java.util.Date
 import ru.apeon.core.entity._
 import ru.apeon.core._
 import script.{Imports}
-import java.lang.{RuntimeException}
 
 abstract class Expression {
   def fillRef(env : Environment) {

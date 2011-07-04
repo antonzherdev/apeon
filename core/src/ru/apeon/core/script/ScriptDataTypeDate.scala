@@ -2,6 +2,7 @@ package ru.apeon.core.script
 
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
+import ru.apeon.core.sql.Expression
 
 case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
   val valueOfFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -25,7 +26,8 @@ object ScriptDataTypeDateDescription {
     Diff("diffSeconds", 1000),
     Diff("diffMinutes", 60000),
     Diff("diffHours", 360000),
-    Diff("diffDays", 86400000)
+    Diff("diffDays", 86400000),
+    between
   )
 
   case class AddFunction(name : String, field : Int) extends Declaration {
@@ -75,5 +77,9 @@ object ScriptDataTypeDateDescription {
 
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
     override def parameters = Seq(DefPar("end", ScriptDataTypeDate()))
+  }
+  val between = new BetweenDeclaration[Date] {
+    def dataType = ScriptDataTypeDate()
+    def compare(min: Date, max: Date) = min.compareTo(max) <= 0
   }
 }

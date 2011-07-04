@@ -54,6 +54,14 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
       run(Dot(ConstDecimal(BigDecimal(1.5)), Ref("round"))) should equal (2)
     }
+    it("between") {
+      ConstInt(2) ~ ref("between", 1, 3) should equal (true)
+      ConstInt(1) ~ ref("between", 1, 3) should equal (true)
+      ConstInt(3) ~ ref("between", 1, 3) should equal (true)
+      ConstInt(0) ~ ref("between", 1, 3) should equal (false)
+      ConstInt(4) ~ ref("between", 1, 3) should equal (false)
+      ConstInt(2) ~ ref("between", 2, 2) should equal (true)
+    }
   }
 
   describe("Датные функции") {

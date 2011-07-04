@@ -25,4 +25,9 @@ object ScriptDataTypeDecimalDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[BigDecimal].round(new MathContext(1)).toInt
   }
+
+  val between = new BetweenDeclaration[BigDecimal] {
+    def dataType = ScriptDataTypeDecimal()
+    def compare(min: BigDecimal, max: BigDecimal) = min <= max
+  }
 }
