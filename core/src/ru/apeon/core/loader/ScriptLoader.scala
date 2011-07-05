@@ -59,9 +59,9 @@ object ScriptLoader extends Logging {
     ScriptParser.parse(model, module, text(file), Some(file.getAbsolutePath), decorators)
   }
   catch {
-    case pe : ParserException => throw ParserException("Parse error in file %s\n%s".format(file.getAbsolutePath, pe.msg))
-    case e : Throwable => throw new RuntimeException("Parse error in file %s\n%s".format(file.getAbsolutePath, e.getMessage), e)
-    case _ => throw ParserException("Unknown parse error in file %s".format(file.getAbsolutePath))
+    case pe : ParserException => throw ParserException("Parse error in file %s\n%s".format(file.getAbsolutePath, pe.msg), pe)
+    case e : Throwable => throw ParserException("Parse error in file %s\n%s".format(file.getAbsolutePath, e.getMessage), e)
+    case _ => throw ParserException("Unknown parse error in file %s".format(file.getAbsolutePath), null)
   }
 
 }

@@ -32,7 +32,7 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 
 object ScriptDataTypeSeqDescription {
   def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption,
-    last, lastOption, tail, HashCodeDeclaration, mapBy)
+    last, lastOption, tail, HashCodeDeclaration, mapBy, sum)
   def map = iterable ++ Seq(mapGet, mapApply, mapGetOrElse, mapUpdate, mapGetOrElseUpdate)
   def seq = iterable ++ Seq(seqApply)
 
@@ -47,6 +47,10 @@ object ScriptDataTypeSeqDescription {
     }
     def value(env : Environment, items : Iterable[Any], f : BuiltInFunction) : Any
     override def parameters = Seq(DefPar("f", ScriptDataTypeBuiltInFunction()))
+    protected def builtInDataType(env: Environment, parameters: Option[Seq[Par]]): ScriptDataType = {
+      parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env)
+    }
+
   }
 
   val foreach = new OneBuiltInDeclaration{
@@ -80,6 +84,22 @@ object ScriptDataTypeSeqDescription {
       ScriptDataTypeOption(tp(env))
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = items.find {
       item => f.run(env, item).asInstanceOf[Boolean]
+    }
+  }
+
+  val sum = new OneBuiltInDeclaration{
+    def name = "sum"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = builtInDataType(env, parameters)
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      f.statement.dataType(env) match {
+        case ScriptDataTypeInteger() => items.foldLeft(0) {
+          case (sum, v) => sum + f.run(env, v).asInstanceOf[Int]
+        }
+        case ScriptDataTypeDecimal() => items.foldLeft(BigDecimal(0)) {
+          case (sum, v) => f.run(env, v).asInstanceOf[BigDecimal] + sum
+        }
+        case ScriptDataTypeString() => items.map{v => f.run(env, v)}.mkString
+      }
     }
   }
 
@@ -131,8 +151,7 @@ object ScriptDataTypeSeqDescription {
 
   val mapFunc = new OneBuiltInDeclaration {
     def name = "map"
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
-      ScriptDataTypeSeq(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env))
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(builtInDataType(env, parameters))
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
       items.map(item => f.run(env, item))
   }

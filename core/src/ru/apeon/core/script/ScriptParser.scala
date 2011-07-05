@@ -62,7 +62,7 @@ final class ScriptParserParser extends StdTokenParsers with ApeonTokens
     val ret = parser.apply(scanner)
     ret match {
       case Success(f, next) => f
-      case NoSuccess(msg, next) => throw ParserException(msg)
+      case n : NoSuccess => throw ParserException(n.toString, null)
     }
   }
 
@@ -74,7 +74,7 @@ final class ScriptParserParser extends StdTokenParsers with ApeonTokens
     val ret = parser.apply(scanner)
     ret match {
       case Success(f, next) => f
-      case NoSuccess(msg, next) => throw ParserException(msg)
+      case n : NoSuccess => throw ParserException(n.toString, null)
     }
   }
 
@@ -104,6 +104,8 @@ abstract class ScriptParserComponent {
 
   implicit def keyword(chars: String) = parser.keyword(chars)
   implicit def accept(e: parser.Elem) = parser.accept(e)
+  def a(e: String, text : String) =
+    parser.acceptIf(_ == parser.lexical.Keyword(e))("`"+e+"' expected but " + _ + " found " + text) ^^ (_.chars)
 
   def repsep[T](p: => Parser[T], q: => Parser[Any]): Parser[List[T]] =
     parser.repsep(p, q)
@@ -153,7 +155,7 @@ abstract class ScriptParserDecorator extends ScriptParserComponent{
 }
 
 
-case class ParserException(msg : String) extends RuntimeException(msg)
+case class ParserException(msg : String, e : Throwable) extends RuntimeException(msg, e)
 
 class Lexer extends StdLexical with ApeonTokens {
   def mkString(chars: List[Char]): String = {
@@ -194,10 +196,9 @@ class Lexer extends StdLexical with ApeonTokens {
   override def whitespace: Parser[Any] = rep(
       whitespaceChar
     | '/' ~ '*' ~ rep( chrExceptPrev(('\0', EofCh), ('*', '/')) ) ~ '/'
-    | '/' ~ '/' ~ rep( chrExcept(EofCh, '\n') )
+    | '/' ~ '/' ~ rep( chrExcept(EofCh, '\n', '\r') )
     | '/' ~ '*' ~ failure("unclosed comment")
     )
-
 
   private var prevSymbol : Char = '\0'
 
