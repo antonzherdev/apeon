@@ -267,7 +267,7 @@ case class UMinus(exp : Expression) extends Expression {
   def fillRef(env: Environment, imports: Imports) {
     exp.fillRef(env, imports)
   }
-  def evaluate(env: Environment) {
+  def evaluate(env: Environment) = {
     exp.evaluate(env) match {
       case i : Int => -i
       case i : BigDecimal => -i

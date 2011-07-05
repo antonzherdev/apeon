@@ -325,6 +325,9 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     it("/Int") {
       run(Div(ConstInt(4), ConstInt(2))) should equal(2)
     }
+    it("-u") {
+      run(UMinus(4)) should equal(-4)
+    }
   }
 
   describe("=") {
