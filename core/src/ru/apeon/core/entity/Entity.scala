@@ -24,6 +24,7 @@ class Entity(val manager : EntityManager,
   }
 
   def append(many : ToMany, entity : Entity) {
+    entity.update(many.one, this)
     apply(many) match {
       case es : Set[Entity] => _data.update(many.name, es + entity)
       case es : Seq[Entity] => _data.update(many.name, es :+ entity)
