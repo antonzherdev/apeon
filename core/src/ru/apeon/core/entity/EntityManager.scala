@@ -169,7 +169,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
 
       var i = 0
       var size = insertedEntities.size
-      insertedEntities.foreach{e =>
+      for(e <- insertedEntities) {
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
@@ -182,7 +182,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
 
       i = 0
       size = touchedEntities.size
-      touchedEntities.foreach{kv =>
+      for(kv <- touchedEntities) {
         val e = kv._1
         val columns = kv._2
         if (!touchedStories.contains(e.id.store)) {
@@ -197,7 +197,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
 
       i = 0
       size = deletedEntities.size
-      deletedEntities.foreach{e =>
+      for(e <- deletedEntities) {
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
@@ -241,7 +241,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
       val value : Any = field match {
         case s : FieldWithSource => s.default match {
           case Some(DefaultInt(i)) => i
-          case Some(DefaultString(s)) => s
+          case Some(DefaultString(ss)) => ss
           case None => null
         }
         case _=> Set()

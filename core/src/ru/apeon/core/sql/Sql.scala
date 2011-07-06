@@ -14,7 +14,7 @@ trait SqlReadOnly {
   val readOnlyLog = Logger("ru.apeon.core.sql.SqlReadOnly")
   var connection : Connection = null
   protected var connectionCounter = 0
-
+  var statement: java.sql.Statement = null
 
   def closeConnection() {
     connection.close()
@@ -23,6 +23,7 @@ trait SqlReadOnly {
   def beginTransaction() {
     if (connection == null) {
       connection = getConnection
+      statement = connection.createStatement
     }
     connectionCounter += 1
   }
@@ -30,6 +31,8 @@ trait SqlReadOnly {
   def commit() {
     connectionCounter -= 1
     if(connectionCounter <= 0) {
+      statement.close()
+      statement = null
       connection.commit()
       closeConnection()
       connection = null
@@ -77,9 +80,11 @@ trait SqlReadOnly {
   }
 
 
+
+
   def selectOne(sql : String, parameters : collection.Map[String, Any]): Option[Row] = {
     checkTransaction()
-    val stm : java.sql.Statement = connection.createStatement
+    val stm : java.sql.Statement = statement
     val rs : ResultSet = stm.executeQuery(applyParameters(sql, parameters))
     if(!rs.next) return None
     Some(new RowSimple(rs))
@@ -87,7 +92,7 @@ trait SqlReadOnly {
 
   def selectOne(sql : Select, parameters : collection.Map[String, Any]): Option[Row] = {
     checkTransaction()
-    val stm : java.sql.Statement = connection.createStatement
+    val stm : java.sql.Statement = statement
     val s : String = dialect.toString(sql, parameters)
     readOnlyLog.debug(s)
     val rs : ResultSet = stm.executeQuery(s)
@@ -126,7 +131,7 @@ trait SqlReadOnly {
 
   def select(sql : String, parameters : collection.Map[String, Any]) : Rows = {
     checkTransaction()
-    val stm = connection.createStatement
+    val stm = statement
     val rs : ResultSet = stm.executeQuery(applyParameters(sql, parameters))
     new Rows(rs, {rows => new RowSimple(rows.rs)})
   }
@@ -136,7 +141,7 @@ trait SqlReadOnly {
   def select(sql : Select) : Rows = select(sql, immutable.Map[String, Any]())
   protected def selectResultSet(sql: Select, parameters: Map[String, Any]): ResultSet = {
     checkTransaction()
-    val stm = connection.createStatement
+    val stm = statement
     val s: String = dialect.toString(sql, pars(parameters))
     readOnlyLog.debug(s)
     val rs: ResultSet = stm.executeQuery(s)
@@ -164,12 +169,12 @@ trait Sql extends SqlReadOnly {
 
   def insert(table : SqlTable, sql : String, parameters : collection.Map[String, Any]) : Int = {
     checkTransaction()
-    connection.createStatement.execute(applyParameters(sql, parameters))
+    statement.execute(applyParameters(sql, parameters))
     lastIdentity(table)
   }
 
   def lastIdentity(table : SqlTable) : Int = {
-    val rs : ResultSet = connection.createStatement.executeQuery("select " + dialect.lastIdentityExpression(table))
+    val rs : ResultSet = statement.executeQuery("select " + dialect.lastIdentityExpression(table))
     if(!rs.next) throw new SqlError("Could not get last identity")
     rs.getInt(1)
   }
@@ -178,7 +183,7 @@ trait Sql extends SqlReadOnly {
     checkTransaction()
     val s : String = dialect.toString(sql, pars(parameters))
     log.debug(s)
-    connection.createStatement.execute(s)
+    statement.execute(s)
     lastIdentity(sql.table)
   }
 
@@ -186,7 +191,7 @@ trait Sql extends SqlReadOnly {
     checkTransaction()
     val s : String = dialect.toString(sql, pars(parameters))
     log.debug(s)
-    val stm = connection.createStatement
+    val stm = statement
     val ret = if(stm.execute(s)) Some(stm.getResultSet)
     else None
 
