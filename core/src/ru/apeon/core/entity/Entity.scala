@@ -8,15 +8,11 @@ import ru.apeon.core.eql._
  * @param _data данные
  */
 class Entity(val manager : EntityManager,
-             private var _id : EntityId,
+             var id : EntityId,
              private val _data : collection.mutable.Map[String, Any] = collection.mutable.Map[String, Any]()) {
   manager.register(this)
 
-  def id = _id
-
   def apply(field : String) : Any = apply(id.description.field(field))
-  def update(column : Field, d : Any) : Entity  = update(column.name, d)
-
   def path(fields : String*) : Any =
     if(fields.tail.isEmpty) apply(fields.head)
     else apply(fields.head).asInstanceOf[Entity].path(fields.tail : _*)
@@ -27,79 +23,95 @@ class Entity(val manager : EntityManager,
     l
   }
 
-  def apply(column : Field) : Any = {
-    val ret = _data.get(column.name)
-    column match {
+  def append(many : ToMany, entity : Entity) {
+    apply(many) match {
+      case es : Set[Entity] => _data.update(many.name, es + entity)
+      case es : Seq[Entity] => _data.update(many.name, es :+ entity)
+      case null => _data.update(many.name, Set(entity))
+    }
+  }
+
+  def apply(field : Field) : Any = {
+    val ret = _data.get(field.name)
+    field match {
       case toOne : ToOne => ret match {
         case Some(e : Entity) => e
         case Some(null) => null
-        case Some(id) => lazyUpdate(column, id)
-        case None => lazyUpdate(column)
+        case Some(idValue) => lazyUpdate(field, idValue)
+        case None => lazyUpdate(field)
       }
       case _ => {
         if(ret.isDefined) ret.get
-        else lazyUpdate(column)
+        else lazyUpdate(field)
       }
     }
   }
 
-  def update(column : String, value : Any) : Entity = _data.get(column) match {
-    case None => {
-      doUpdate(column, value)
-      this
-    }
-    case Some(e : Entity) => {
-      val upd = value match {
-        case v : Entity =>
-          if(v.id == e.id) {
-            false
-          } else {
-            if(v.id.equalInheritance(e.id)) {
-              if(v.id.description.isInstanceOf(e.id.description)) {
-                _data.update(column, value)
-              }
-              false
-            }
-            else {
-              true
-            }
-          }
-        case _ => e.id.equalAny(value)
-      }
-      if(upd) doUpdate(column, value)
-      this
-    }
-    case Some(e) => {
-      if(!(value match {
-        case v : Entity => v.id.equalAny(e)
-        case _ => e == value
-      })) {
-        doUpdate(column, value)
-      }
-      this
-    }
+  def update(fieldName : String, value : Any) {
+    update(id.description.field(fieldName), value)
+  }
 
+  def update(field : Field, value : Any) {
+    _data.get(field.name) match {
+      case None => {
+        doUpdate(field, value)
+        this
+      }
+      case Some(e : Entity) => {
+        val upd = value match {
+          case v : Entity =>
+            if(v.id == e.id) {
+              false
+            } else {
+              if(v.id.equalInheritance(e.id)) {
+                if(v.id.description.isInstanceOf(e.id.description)) {
+                  _data.update(field.name, value)
+                }
+                false
+              }
+              else {
+                true
+              }
+            }
+          case _ => e.id.equalAny(value)
+        }
+        if(upd) doUpdate(field, value)
+        this
+      }
+      case Some(e) => {
+        if(!(value match {
+          case v : Entity => v.id.equalAny(e)
+          case _ => e == value
+        })) {
+          doUpdate(field, value)
+        }
+        this
+      }
+    }
   }
 
   def data : collection.Map[String, Any] = _data
 
-  protected def doUpdate(columnName : String, value : Any) {
-    manager.beforeUpdate(this, columnName, value)
-    id.description.field(columnName) match {
-      case many : ToMany => {
+  protected def doUpdate(field: Field, value: Any) {
+    manager.beforeUpdate(this, field.name, value)
+    field match {
+      case many: ToMany => {
         val entities = value.asInstanceOf[Traversable[Entity]]
-        entities.foreach{_.update(many.one, this)}
-        apply(columnName) match {
-          case s : Traversable[Entity] => s.foreach{e =>
-            if(entities.find(_.id == e.id).isEmpty) e.delete()
+        entities.foreach {
+          _.update(many.one, this)
+        }
+        apply(field) match {
+          case s: Traversable[Entity] => s.foreach {
+            e =>
+              if (entities.find(_.id.hashCode() == e.id.hashCode()).isEmpty) e.delete()
           }
           case null => {}
         }
-        _data.update(columnName, value)
+        _data.update(field.name, value)
       }
-      case _ => _data.update(columnName, value)
+      case _ => _data.update(field.name, value)
     }
-    manager.afterUpdate(this, columnName, value)
+    manager.afterUpdate(this, field.name, value)
   }
 
   override def toString = id.description.toString(this)
@@ -135,7 +147,7 @@ class Entity(val manager : EntityManager,
   def saveId(id : Any) {
     this.id.description.primaryKeys match {
       case Seq(pk) => {
-        _id  = this.id match {
+        this.id = this.id match {
           case i : TemporaryEntityId => {
             OneEntityId(i.dataSource, i.description, id)
           }
@@ -145,7 +157,7 @@ class Entity(val manager : EntityManager,
         _data.update(pk.name, id)
       }
       case pks => {
-        _id  = this.id match {
+        this.id = this.id match {
           case i : TemporaryEntityId => {
             MultiEntityId(i.dataSource, i.description, id.asInstanceOf[Seq[Any]])
           }
@@ -164,15 +176,23 @@ class Entity(val manager : EntityManager,
   def copy(description : Description = id.description, dataSource : DataSource = id.dataSource) : Entity = {
     val ret = manager.insert(description, dataSource)
     val copyOnlyAttributes = id.dataSource != dataSource
-    _data.foreach{col =>
-      val field = description.fieldOption(col._1)
+    description.fields.foreach{col =>
+      val field = description.fieldOption(col.name)
       if(field.isDefined) {
-        if(field.get match {
-          case att : Attribute => true
-          case toOne : ToOne => copyOnlyAttributes
-          case toMany : ToMany => false
-        }) {
-          ret.update(field.get, col._2)
+        field.get match {
+          case att : Attribute => ret.update(field.get, apply(col))
+          case toOne : ToOne => if(!copyOnlyAttributes) {
+            ret.update(field.get, apply(col))
+          }
+          case toMany : ToMany =>
+            if(description == id.description) {
+              ret.update(field.get,
+                apply(col).asInstanceOf[Traversable[Entity]].map{e =>
+                  val r = e.copy(e.id.description, dataSource)
+                  r.update(toMany.one, ret)
+                  r
+                })
+            }
         }
       }
     }
@@ -216,10 +236,7 @@ trait EntityId {
 
   def equalAny(id : Any)  : Boolean
 
-  override def equals(obj: Any) = obj match {
-    case id : EntityId => id.dataSource == dataSource && id.description == description && equalId(id)
-    case _ => false
-  }
+  override def equals(obj: Any) = obj.hashCode == this.hashCode
 
   def equalInheritance(id : EntityId) : Boolean =
     (id.description.isInstanceOf(description) || description.isInstanceOf(id.description)) && equalId(id)
@@ -250,17 +267,14 @@ case class TemporaryEntityId(dataSource : DataSource, description : Description,
   def data = Seq(id)
 
   def idFor(desc: Description) = TemporaryEntityId(dataSource, desc, id)
+
+  override val hashCode = ((113 + description.hashCode)*37 + dataSource.hashCode)*37 + id
 }
 
 case class OneEntityId(dataSource : DataSource, description : Description, id : Any) extends EntityId {
   def isTemporary = false
 
   override def toString = id.toString
-
-  override def equals(obj: Any) = obj match {
-    case sqlId : OneEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description == description
-    case _ => false
-  }
 
   def eqlFindById(alias : Option[String]) = alias match {
     case Some(a) => Equal(Dot(Ref(a), Ref(description.primaryKeys.head.name)), Const(id))
@@ -269,7 +283,7 @@ case class OneEntityId(dataSource : DataSource, description : Description, id : 
 
   def const = Const(id)
 
-  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + id.hashCode
+  override val hashCode = ((149 + description.hashCode)*37 + dataSource.hashCode)*37 + id.hashCode
 
   def equalAny(id: Any) = id match {
     case i : OneEntityId => i == this
@@ -291,11 +305,6 @@ case class MultiEntityId(dataSource : DataSource, description : Description, ids
 
   override def toString = ids.mkString("<", ",", ">")
 
-  override def equals(obj: Any) = obj match {
-    case sqlId : MultiEntityId => sqlId.ids.corresponds(this.ids){_ == _} && sqlId.dataSource == dataSource && sqlId.description == description
-    case _ => false
-  }
-
   def eqlFindById(alias : Option[String]) = {
     var ret : Option[Expression] = None
     val i = ids.iterator
@@ -311,7 +320,7 @@ case class MultiEntityId(dataSource : DataSource, description : Description, ids
 
   def const = throw new RuntimeException("Const is not supported for multi identity")
 
-  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + ids.hashCode
+  override val hashCode = ((619 + description.hashCode)*37 + dataSource.hashCode)*37 + ids.hashCode
 
   def equalAny(id: Any) = id match {
     case i : MultiEntityId => i == this

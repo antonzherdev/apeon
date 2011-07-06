@@ -245,9 +245,13 @@ case class SetPlus(left : Expression, right : Expression) extends SetBase {
     env.update(ref.declaration, Plus.evaluate(env, ref.declaration.value(env), right.evaluate(env)))
 
   def evaluate(env: Environment, entity: Entity, ref: Ref) = {
-    val ret = Plus.evaluate(env, entity(ref.name), right.evaluate(env))
-    entity.update(ref.name, ret)
-    ret
+    ref.declaration match {
+      case many : ToMany => entity.append(many, right.evaluate(env).asInstanceOf[Entity])
+      case _ =>
+        val ret = Plus.evaluate(env, entity(ref.name), right.evaluate(env))
+        entity.update(ref.name, ret)
+        ret
+    }
   }
   def name = "+="
 }

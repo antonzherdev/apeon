@@ -153,7 +153,7 @@ trait SqlReadOnly {
       case c : CellData => if(!c.isEmpty) return value
       case _ => return value
     }
-    return values.last
+    values.last
   }
 }
 
@@ -264,18 +264,21 @@ class RowSyntax(rs : ResultSet, val sql : Select) extends RowSimple(rs) {
   def toMutableMap(column : ColumnSeq, i : Int) : (mutable.Map[String, Any], Int) = {
     var j = i
     val m = mutable.Map.empty[String, Any]
-    column.columns.foreach{col => col match {
-      case named : Column => {
-        val v = value(named, j)
-        m += (named.name.getOrElse{rs.getMetaData.getColumnLabel(j + 1)} -> v)
-        j += 1
+
+    for(col <- column.columns) {
+      col match {
+        case named : Column => {
+          val v = value(named, j)
+          m += (named.name.getOrElse{rs.getMetaData.getColumnLabel(j + 1)} -> v)
+          j += 1
+        }
+        case seq : ColumnSeq => {
+          val r = toMutableMap(seq, j)
+          m += (seq.name.get -> r._1)
+          j = r._2
+        }
       }
-      case seq : ColumnSeq => {
-        val r = toMutableMap(seq, j)
-        m += (seq.name.get -> r._1)
-        j = r._2
-      }
-    }}
+    }
     (m, j)
   }
 }

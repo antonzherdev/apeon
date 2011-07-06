@@ -4,7 +4,6 @@ import ru.apeon.core.eql._
 import collection.mutable.Buffer
 import akka.util.Logging
 import ru.apeon.core.script.{ObjectModel}
-import org.aspectj.weaver.ast.Var
 
 trait EntityManager {
   def model : ObjectModel
@@ -110,6 +109,8 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   }
 
   def select(select : Select) = {
+    flush()
+
     val from = select.from.asInstanceOf[FromEntity].entity
     if(!select.columns.isEmpty) throw new RuntimeException("Columns is not empty")
 
@@ -134,6 +135,19 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   }
 
   def commit() {
+    checkTransaction()
+    log.debug("Commit %d".format(transactionCounter))
+    flush()
+
+    transactionCounter -= 1
+    if(transactionCounter == 0) {
+      touchedStories.foreach(_.commit())
+      touchedStories.clear()
+    }
+  }
+
+  def flush() {
+    log.debug("Flush")
     try{
       /*if(log.logger.isDebugEnabled) {
         val sb = new StringBuilder
@@ -152,8 +166,6 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
         }
         log.debug(sb.toString())
       }*/
-      checkTransaction()
-      log.debug("Commit %d".format(transactionCounter))
 
       var i = 0
       var size = insertedEntities.size
@@ -195,11 +207,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
         log.debug("%d of %d".format(i, size))
       }
 
-      transactionCounter -= 1
-      if(transactionCounter == 0) {
-        touchedStories.foreach(_.commit())
-        touchedStories.clear()
-      }
+
     } catch {
       case e : Throwable => {
         touchedStories.foreach{store =>

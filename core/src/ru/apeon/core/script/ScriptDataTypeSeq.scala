@@ -57,8 +57,8 @@ object ScriptDataTypeSeqDescription {
     def name = "foreach"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeUnit()
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) {
-      items.foreach {
-        item => f.run(env, item)
+      for(item <- items){
+        f.run(env, item)
       }
     }
   }

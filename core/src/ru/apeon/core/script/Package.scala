@@ -25,7 +25,7 @@ trait InPackage {
   def pack : Package
   def name : String
   def fullName = pack.nameOf(name)
+  override val hashCode = (getClass.hashCode*13) + fullName.hashCode
 
-  override def hashCode = fullName.hashCode
   override def toString = fullName
 }
