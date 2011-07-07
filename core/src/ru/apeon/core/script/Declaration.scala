@@ -146,12 +146,12 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
 
 case class Par(expression : Expression, name : Option[String] = None) {
   override def toString = name match {
-    case Some(name) => "%s = %s".format(name, expression)
+    case Some(nm) => "%s = %s".format(nm, expression)
     case None => expression.toString
   }
 
   def dataTypeString(env : Environment) : String = name match {
-    case Some(name) => "%s = %s".format(name, expression.dataType(env))
+    case Some(nm) => "%s = %s".format(nm, expression.dataType(env))
     case None => expression.dataType(env).toString
   }
 }

@@ -2,6 +2,7 @@ package ru.apeon.core.script
 
 import scala.collection._
 import mutable.{Builder}
+import java.util.Date
 
 abstract class ScriptDataTypeCollection extends ScriptDataType{
   def dataType : ScriptDataType
@@ -32,7 +33,7 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 
 object ScriptDataTypeSeqDescription {
   def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption,
-    last, lastOption, tail, HashCodeDeclaration, mapBy, sum)
+    last, lastOption, tail, HashCodeDeclaration, mapBy, sum, sortBy)
   def map = iterable ++ Seq(mapGet, mapApply, mapGetOrElse, mapUpdate, mapGetOrElseUpdate)
   def seq = iterable ++ Seq(seqApply)
 
@@ -93,10 +94,10 @@ object ScriptDataTypeSeqDescription {
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
       f.statement.dataType(env) match {
         case ScriptDataTypeInteger() => items.foldLeft(0) {
-          case (sum, v) => sum + f.run(env, v).asInstanceOf[Int]
+          case (ss, v) => ss + f.run(env, v).asInstanceOf[Int]
         }
         case ScriptDataTypeDecimal() => items.foldLeft(BigDecimal(0)) {
-          case (sum, v) => f.run(env, v).asInstanceOf[BigDecimal] + sum
+          case (ss, v) => f.run(env, v).asInstanceOf[BigDecimal] + ss
         }
         case ScriptDataTypeString() => items.map{v => f.run(env, v)}.mkString
       }
@@ -274,5 +275,18 @@ object ScriptDataTypeSeqDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[Traversable[Any]].tail
+  }
+
+  val sortBy = new OneBuiltInDeclaration{
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
+    def name = "sortBy"
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      f.statement.dataType(env) match {
+        case d : ScriptDataTypeInteger => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[Int]}
+        case d : ScriptDataTypeDecimal => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[BigDecimal]}
+        case d : ScriptDataTypeDate => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[Date]}
+        case d : ScriptDataTypeString => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[String]}
+      }
+    }
   }
 }

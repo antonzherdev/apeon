@@ -3,7 +3,7 @@ package ru.apeon.core.script
 import ru.apeon.core.entity._
 import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
-import java.util.Calendar
+import java.util.{Date, Calendar}
 
 /**
  * @author Anton Zherdev
@@ -128,6 +128,9 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(s ~ ref("tail")) should equal(Seq(3, 1))
       run(seq() ~ ref("headOption")) should equal(None)
       run(seq() ~ ref("lastOption")) should equal(None)
+    }
+    it("sortBy") {
+      run(seq(2, 3, 1) ~ ref("sortBy", bf(ref("_")))) should equal(Seq(1, 2, 3))
     }
   }
 
