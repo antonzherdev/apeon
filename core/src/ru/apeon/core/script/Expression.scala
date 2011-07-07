@@ -1,5 +1,7 @@
 package ru.apeon.core.script
 
+import java.util.Date
+
 trait Expression extends Statement {
   def dataType(env : Environment) : ScriptDataType
 
@@ -192,33 +194,39 @@ abstract class CompareOperator extends BooleanBinaryExpression {
     case (i : BigDecimal, j: Int) => evaluate(i, BigDecimal(j))
     case (i : Int, j: BigDecimal) => evaluate(BigDecimal(i), j)
     case (i : BigDecimal, j: BigDecimal) => evaluate(i, j)
+    case (i : Date, j : Date) => evaluate(i, j)
   }
   def evaluate(left : Int, right : Int) : Boolean
   def evaluate(left : BigDecimal, right : BigDecimal) : Boolean
+  def evaluate(left : Date, right : Date) : Boolean
 }
 
 case class More(left : Expression, right : Expression) extends CompareOperator {
   val name = ">"
   def evaluate(left: Int, right: Int) = left > right
   def evaluate(left: BigDecimal, right: BigDecimal) = left > right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) > 0
 }
 
 case class Less(left : Expression, right : Expression) extends CompareOperator {
   val name = "<"
   def evaluate(left: Int, right: Int) = left < right
   def evaluate(left: BigDecimal, right: BigDecimal) = left < right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) < 0
 }
 
 case class MoreOrEqual(left : Expression, right : Expression) extends CompareOperator {
   val name = ">="
   def evaluate(left: Int, right: Int) = left >= right
   def evaluate(left: BigDecimal, right: BigDecimal) = left >= right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) >= 0
 }
 
 case class LessOrEqual(left : Expression, right : Expression) extends CompareOperator {
   val name = "<="
   def evaluate(left: Int, right: Int) = left <= right
   def evaluate(left: BigDecimal, right: BigDecimal) = left <= right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) <= 0
 }
 
 case class And(left : Expression, right : Expression) extends BooleanBinaryExpression {

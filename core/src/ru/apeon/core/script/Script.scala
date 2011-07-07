@@ -30,7 +30,7 @@ object Script {
   def thrCatch(stm : Statement) : PartialFunction[Throwable, Any] = {
     case s @ ScriptException(message, cause, None, file) =>
       throw ScriptException(message, cause.orElse(Some(s)), Some(stm), file)
-    case t => throw ScriptException(t.getMessage, Some(t), Some(stm))
+    case t if !t.isInstanceOf[ScriptException] => throw ScriptException(t.getMessage, Some(t), Some(stm))
   }
 }
 

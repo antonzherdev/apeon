@@ -333,7 +333,9 @@ abstract class VariableDeclaration extends DeclarationStatement {
  * @param init выражение для значения
  * @param dataType тип данных, если указан
  */
-case class Val(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration
+case class Val(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration {
+  override def toString = "val %s%s = %s".format(name, dataType.map{_.toString}.getOrElse{""}, init)
+}
 
 /**
  * Объявление изменяемой переменной
@@ -341,7 +343,9 @@ case class Val(name : String, init : Expression, dataType : Option[ScriptDataTyp
  * @param init инициализирующее значение
  * @param dataType тип данных, если указан
  */
-case class Var(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration
+case class Var(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration {
+  override def toString = "var %s%s = %s".format(name, dataType.map{_.toString}.getOrElse{""}, init)
+}
 
 case class This(thisDataType : ScriptDataType) extends Declaration {
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.thisRef.get

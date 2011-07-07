@@ -178,7 +178,7 @@ class Entity(val manager : EntityManager,
   def copy(description : Description = id.description, dataSource : DataSource = id.dataSource) : Entity = {
     val ret = manager.insert(description, dataSource)
     val copyOnlyAttributes = id.dataSource != dataSource
-    description.fields.foreach{col =>
+    id.description.fields.foreach{col =>
       val field = description.fieldOption(col.name)
       if(field.isDefined) {
         field.get match {
