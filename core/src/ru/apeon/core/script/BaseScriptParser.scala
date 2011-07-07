@@ -8,7 +8,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
       "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]", "!", "->")
     lexical.reserved += (
-            "def", "as", "to", "where", "by", "entity", "column", "primary", "default",
+            "def", "as", "where", "by", "entity", "column", "primary", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
             "if", "else", "null", "import", "object", "join", "true", "false", "cached")
   }

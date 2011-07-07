@@ -109,7 +109,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   }
 
   def select(select : Select) = {
-    flush()
+//    flush()
 
     val from = select.from.asInstanceOf[FromEntity].entity
     if(!select.columns.isEmpty) throw new RuntimeException("Columns is not empty")

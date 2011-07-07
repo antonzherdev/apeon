@@ -56,6 +56,10 @@ object Plus {
       case _ => throw ScriptException("Unsupported datatype for plus with Decimal")
     }
     case s : String => s + right.toString
+    case m : collection.mutable.Map[Any, Any] => {
+      m += right.asInstanceOf[(Any, Any)]
+      m
+    }
     case l : Traversable[Any] => right match {
       case r : Traversable[Any] => l ++ r
       case r : Any => l ++ Seq(r)
