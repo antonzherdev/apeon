@@ -3,7 +3,7 @@ package ru.apeon.core.script
 import ru.apeon.core.entity._
 import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
-import java.util.{Date, Calendar}
+import java.util.{Calendar}
 
 /**
  * @author Anton Zherdev
