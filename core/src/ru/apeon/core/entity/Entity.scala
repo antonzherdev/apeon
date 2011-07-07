@@ -130,7 +130,8 @@ class Entity(val manager : EntityManager,
 
   override def equals(obj: Any) = obj match {
     case ent : Entity => ent.id == id && ent.manager == manager
-    case _ => id == obj
+    case id : EntityId => this.id == id
+    case _ => false
   }
 
   def toMap : collection.Map[String, Any] = _data

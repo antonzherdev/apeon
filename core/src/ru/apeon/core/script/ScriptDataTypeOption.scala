@@ -3,7 +3,7 @@ package ru.apeon.core.script
 case class ScriptDataTypeOption(dataType : ScriptDataType) extends ScriptDataType
 
 object ScriptDataTypeOptionDescription {
-  def declarations = Seq(get, isDefined, isEmpty, getOrElse, HashCodeDeclaration)
+  def declarations = Seq(get, isDefined, isEmpty, getOrElse, HashCodeDeclaration, map)
 
   def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeOption].dataType
 
@@ -40,5 +40,18 @@ object ScriptDataTypeOptionDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = tp(env)
     override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) = Seq()
     override def parameters = Seq(DefPar("default", ScriptDataTypeBuiltInFunction()))
+  }
+
+  def map = new Declaration{
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      env.ref.asInstanceOf[Option[Any]].map{v =>
+        parameters.get.head.value.asInstanceOf[BuiltInFunction].run(env, v)
+      }
+    }
+    def name = "map"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = env.dotType.get
+    override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) =
+      Seq(BuiltInParameterDef("_", tp(env)))
+    override def parameters = Seq(DefPar("value", ScriptDataTypeBuiltInFunction()))
   }
 }

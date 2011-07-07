@@ -2,7 +2,6 @@ package ru.apeon.core.script
 
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
-import ru.apeon.core.sql.Expression
 
 case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
   val valueOfFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")

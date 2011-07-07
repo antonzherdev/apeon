@@ -55,16 +55,16 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(Dot(ConstDecimal(BigDecimal(1.5)), Ref("round"))) should equal (2)
     }
     it("between") {
-      ConstInt(2) ~ ref("between", 1, 3) should equal (true)
-      ConstInt(1) ~ ref("between", 1, 3) should equal (true)
-      ConstInt(3) ~ ref("between", 1, 3) should equal (true)
-      ConstInt(0) ~ ref("between", 1, 3) should equal (false)
-      ConstInt(4) ~ ref("between", 1, 3) should equal (false)
-      ConstInt(2) ~ ref("between", 2, 2) should equal (true)
+      run(ConstInt(2) ~ ref("between", 1, 3)) should equal (true)
+      run(ConstInt(1) ~ ref("between", 1, 3)) should equal (true)
+      run(ConstInt(3) ~ ref("between", 1, 3)) should equal (true)
+      run(ConstInt(0) ~ ref("between", 1, 3)) should equal (false)
+      run(ConstInt(4) ~ ref("between", 1, 3)) should equal (false)
+      run(ConstInt(2) ~ ref("between", 2, 2)) should equal (true)
     }
     it("in") {
-      ConstInt(2) ~ ref("in", 3, 2, 1) should equal (true)
-      ConstInt(4) ~ ref("in", 3, 2, 1) should equal (false)
+      run(ConstInt(2) ~ ref("in", 3, 2, 1)) should equal (true)
+      run(ConstInt(4) ~ ref("in", 3, 2, 1)) should equal (false)
     }
   }
 
@@ -128,6 +128,13 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(s ~ ref("tail")) should equal(Seq(3, 1))
       run(seq() ~ ref("headOption")) should equal(None)
       run(seq() ~ ref("lastOption")) should equal(None)
+    }
+  }
+
+  describe("Option") {
+    it("map") {
+      run(seq() ~ ref("headOption") ~ ref("map", bf(ref("_") + 5))) should equal(None)
+      run(seq(3) ~ ref("headOption") ~ ref("map", bf(ref("_") + 5))) should equal(Some(8))
     }
   }
 
