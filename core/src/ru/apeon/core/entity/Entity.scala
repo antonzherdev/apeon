@@ -74,7 +74,7 @@ class Entity(val manager : EntityManager,
                 true
               }
             }
-          case _ => e.id.equalAny(value)
+          case _ => !e.id.equalAny(value)
         }
         if(upd) doUpdate(field, value)
         this
