@@ -51,7 +51,11 @@ object ScriptDataTypeDateDescription {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       val cal = Calendar.getInstance
       cal.setTime(env.ref.asInstanceOf[Date])
-      cal.get(field)
+      if(field == Calendar.MONTH) {
+        cal.get(field) + 1
+      } else {
+        cal.get(field)
+      }
     }
 
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()

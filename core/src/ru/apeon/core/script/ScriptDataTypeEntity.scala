@@ -31,7 +31,9 @@ case class ScriptDataTypeObject(query : ObjectBase) extends ScriptDataType {
 case class ScriptDataTypeEntityByDescription(description : Description) extends ScriptDataTypeEntity
 
 object ScriptDataTypeEntityTypeDescription {
-  def declarations = Seq(copy0, copy1, delete, fAsInstanceOf, fAsInstanceOfOption, fIsInstanceOf, HashCodeDeclaration)
+  def declarations = Seq(
+    copy0, copy1, delete, fAsInstanceOf, fAsInstanceOfOption, fIsInstanceOf, HashCodeDeclaration,
+    update, add)
 
   def delete = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) {
@@ -112,5 +114,28 @@ object ScriptDataTypeEntityTypeDescription {
       fAsInstanceOfOption.value(env, parameters, dataSource).asInstanceOf[Option[Entity]].isDefined
     }
     override def parameters = Seq(DefPar("entity", ScriptDataTypeEntityDescriptionTemplate()))
+  }
+
+  abstract class SetDecl extends Declaration {
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeUnit()
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _), Par(_, _))) => true
+      case _ => false
+    }
+  }
+
+  val update = new SetDecl {
+    def name = "update"
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) {
+      env.ref.asInstanceOf[Entity].update(parameters.get.apply(0).value.toString, parameters.get.apply(1).value)
+    }
+  }
+  val add = new SetDecl {
+    def name = "add"
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) {
+      val e = env.ref.asInstanceOf[Entity]
+      val nam = parameters.get.apply(0).value.toString
+      e.update(nam, Plus.evaluate(env, e(nam), parameters.get.apply(1).value))
+    }
   }
 }
