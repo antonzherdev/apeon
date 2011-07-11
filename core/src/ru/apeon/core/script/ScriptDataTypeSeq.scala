@@ -33,7 +33,7 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 
 object ScriptDataTypeSeqDescription {
   def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption,
-    last, lastOption, tail, HashCodeDeclaration, mapBy, sum, sortBy)
+    last, lastOption, tail, HashCodeDeclaration, mapBy, sum, sortBy, flatMapFunc)
   def map = iterable ++ Seq(mapGet, mapApply, mapGetOrElse, mapUpdate, mapGetOrElseUpdate)
   def seq = iterable ++ Seq(seqApply)
 
@@ -155,6 +155,13 @@ object ScriptDataTypeSeqDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(builtInDataType(env, parameters))
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
       items.map(item => f.run(env, item))
+  }
+
+  val flatMapFunc = new OneBuiltInDeclaration {
+    def name = "flatMap"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = builtInDataType(env, parameters)
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
+      items.flatMap(item => f.run(env, item).asInstanceOf[Iterable[Any]])
   }
 
   val toMap = new Declaration {
