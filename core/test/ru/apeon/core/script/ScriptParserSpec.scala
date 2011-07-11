@@ -4,19 +4,26 @@ import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
 import ru.apeon.core.entity._
 
-class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
-  val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
-  def script(statement : Statement*) = new Script(pack, statement.toSeq)
-  val article = Description(pack, "Article", Table("dba", "article"), Seq(Id))
-  sh.addEntityDescription(article)
+class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine with EntityDefine {
+  def script(statement : Statement*) = new Script(model, pack, statement.toSeq)
+  val article = desc("Article").decl(Id).b
 
-  val parser = new ScriptParser(sh, Some(pack))
+  object parser {
+    def parse(s : String) = {
+      ScriptParser.parse(model, CoreModule, pack, s)
+    }
+  }
 
   describe("Def") {
     it("Простая функция") {
       parser.parse("def articleSync = {}") should equal (
         script(Def(name = "articleSync", statement = Parentheses()))
+      )
+    }
+
+    it("Кэшированная функция") {
+      parser.parse("cached def articleSync = {}") should equal (
+        script(Def(name = "articleSync", statement = Parentheses(), cached = true))
       )
     }
   }
@@ -28,7 +35,7 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
       )
     }
     it("Val c типом данных") {
-      parser.parse("val i : integer = 3") should equal (
+      parser.parse("val i : Int = 3") should equal (
         script(Val("i", ConstInt(3), Some(ScriptDataTypeInteger())))
       )
     }
@@ -39,7 +46,7 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
       )
     }
     it("Var c типом данных") {
-      parser.parse("var i : int = 3") should equal (
+      parser.parse("var i : Int = 3") should equal (
         script(Var("i", ConstInt(3), Some(ScriptDataTypeInteger())))
       )
     }
@@ -58,6 +65,12 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
       parser.parse("\"Test\"") should equal (
         script(ConstString("Test"))
       )
+      parser.parse("\"Te\\nst\"") should equal (
+        script(ConstString("Te\nst"))
+      )
+      parser.parse("\"Te\\\"st\"") should equal (
+        script(ConstString("Te\"st"))
+      )
     }
     it("Число с зяпятой") {
       parser.parse("1.5") should equal (
@@ -65,6 +78,24 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
       )
       parser.parse("-1.7") should equal (
         script(ConstDecimal(BigDecimal(-1.7)))
+      )
+    }
+    it("Коллекция"){
+      parser.parse("[1, 5, 7]") should equal {
+        script(seq(1, 5, 7))
+      }
+    }
+    it("null") {
+      parser.parse("null") should equal (
+        script(ConstNull())
+      )
+    }
+    it("true/false") {
+      parser.parse("true") should equal (
+        script(ConstBoolean(true))
+      )
+      parser.parse("false") should equal (
+        script(ConstBoolean(false))
       )
     }
   }
@@ -103,54 +134,10 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
     }
   }
 
-  describe("Const") {
-    it("Строка") {
-      parser.parse("\"test\"") should equal (
-        script(ConstString("test"))
-      )
-    }
-    it("Целое") {
-      parser.parse("123") should equal (script(ConstInt(123)))
-      parser.parse("-123") should equal (script(ConstInt(-123)))
-    }
-    it("null") {
-      parser.parse("null") should equal (
-        script(ConstNull())
-      )
-    }
-  }
-
   describe("Eql") {
     it("Eql statement") {
       parser.parse("`from ToSync as s where s.entityName = 'Invoice'`.select") should equal (
         script(Dot(ConstEql("from ToSync as s where s.entityName = 'Invoice'"), Ref("select")))
-      )
-    }
-  }
-
-  describe("Sync") {
-    it("def") {
-      parser.parse("def articleSync =\n" +
-              "     sync Art as s to Article as a where `a.name = s.name and a.id <> s.id`") should equal (
-        script(Def("articleSync", SyncDeclaration(SyncRef("Art", "s"), SyncRef("Article", "a"), "a.name = s.name and a.id <> s.id")))
-      )
-    }
-    it("SyncWithCode") {
-      parser.parse("Article<\"db1\">(id) sync as s to Article<\"db2\"> as a\n" +
-              "     where `a.uid = s.uid` {\n" +
-              "         a.article\n" +
-              "     }") should equal (
-        script(
-          SyncEntity(Ref("Article", Ref("id"), Some(ConstString("db1"))),
-            "s", SyncRef("Article", "a", Some(ConstString("db2"))), "a.uid = s.uid", statements = Seq(
-              Dot(Ref("a"), Ref("article"))))
-        )
-      )
-    }
-    it("SyncBy") {
-      parser.parse("a.article sync by articleSync") should equal (
-        script(
-          SyncBy(Dot(Ref("a"), Ref("article")), Ref("articleSync")))
       )
     }
   }
@@ -162,7 +149,7 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
               "}") should equal (
         script(
           Dot(Dot(ConstEql("from ToSync as s where s.entityName = 'Invoice'"), Ref("select")),
-            ref("foreach", BuiltInFunction(Dot(Ref("ss"), Ref("delete")), Seq("ss")))
+            ref("foreach", bf("ss", Dot(Ref("ss"), Ref("delete"))))
           )
         ))
     }
@@ -231,6 +218,12 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
     }
   }
 
+  describe("->") {
+    it("->") {
+      parser.parse("1 -> \"a\"") should equal (script(MapItem(1, "a")))
+    }
+  }
+
   describe("If") {
     it("without Else") {
       parser.parse("if(1) 2") should equal (
@@ -270,6 +263,9 @@ class ScriptParserSpec extends Spec with ShouldMatchers with ScriptDefine {
     it("||") {
       parser.parse("1 == 1 || 2 == 3") should equal (script(
         Or(Equal(ConstInt(1), ConstInt(1)), Equal(ConstInt(2), ConstInt(3)))))
+    }
+    it("!") {
+      parser.parse("!1") should equal(script(Not(ConstInt(1))))
     }
   }
 

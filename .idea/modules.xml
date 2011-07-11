@@ -5,9 +5,12 @@
       <module fileurl="file://$PROJECT_DIR$/1c/1c.iml" filepath="$PROJECT_DIR$/1c/1c.iml" />
       <module fileurl="file://$PROJECT_DIR$/comtec/comtec.iml" filepath="$PROJECT_DIR$/comtec/comtec.iml" />
       <module fileurl="file://$PROJECT_DIR$/synch/comtec.iml" filepath="$PROJECT_DIR$/synch/comtec.iml" />
+      <module fileurl="file://$PROJECT_DIR$/comtec-jdbc/comtec-jdbc.iml" filepath="$PROJECT_DIR$/comtec-jdbc/comtec-jdbc.iml" />
       <module fileurl="file://$PROJECT_DIR$/core/core.iml" filepath="$PROJECT_DIR$/core/core.iml" />
       <module fileurl="file://$PROJECT_DIR$/cloud2/core.iml" filepath="$PROJECT_DIR$/cloud2/core.iml" />
       <module fileurl="file://$PROJECT_DIR$/erp/erp.iml" filepath="$PROJECT_DIR$/erp/erp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/excel/excel.iml" filepath="$PROJECT_DIR$/excel/excel.iml" />
+      <module fileurl="file://$PROJECT_DIR$/schedule/schedule.iml" filepath="$PROJECT_DIR$/schedule/schedule.iml" />
       <module fileurl="file://$PROJECT_DIR$/sync/sync.iml" filepath="$PROJECT_DIR$/sync/sync.iml" />
       <module fileurl="file://$PROJECT_DIR$/vaadin/view.iml" filepath="$PROJECT_DIR$/vaadin/view.iml" />
     </modules>

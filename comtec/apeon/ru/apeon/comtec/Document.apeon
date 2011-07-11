@@ -1,0 +1,21 @@
+package ru.apeon.comtec
+
+entity StandardDocument<comtec> {
+    column id Int primary key
+    column date(dat) Date
+    column number(nu) String(17)
+    column locked(data_lock) String(1)
+
+    def syncWhere = ["date", "number"]
+
+    def autoNumber(guidesId : Int) = {
+        this.number = Native.value(
+            "select doc_number((select id from browsers where nm = (select guides.nm + '.nu' from guides where guides.id = %d) and id_guides = %d), current timestamp)".format(guidesId, guidesId))
+    }
+}
+
+entity StandardSubDocument<comtec> {
+    column id Int primary key
+    column number(nu) Int
+    def syncWhere = ["parent", "number"]
+}

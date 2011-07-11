@@ -3,12 +3,10 @@ package ru.apeon.core.entity
 import ru.apeon.core.script._
 
 
-
-case class Query(pack : Package, name : String, declaredDeclarations : Seq[DeclarationStatement],
+case class Query(model : ObjectModel, module : Module, pack : Package, name : String, declaredDeclarations : Seq[DeclarationStatement],
                  extendsClass : Option[ClassBase] = None) extends ObjectBase
 {
-  def execute(parameters: Map[String, String] = Map()) = {
-
+  def execute(parameters: Map[String, Any] = Map()) = {
     val apply = declarations.find{
       case dec : Def =>
         dec.name == "apply" && parameters.size == dec.parameters.size && parameters.forall{
@@ -16,21 +14,17 @@ case class Query(pack : Package, name : String, declaredDeclarations : Seq[Decla
         }
       case _ => false
     }.get.asInstanceOf[Def]
-    val e = new DefaultEnvironment(pack.model, pack.dataSource)
+    val e = new DefaultEnvironment(model)
     e.start()
-    try {
-      e.atomic{
-        apply.value(e, apply.parameters.map {
-          par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
-        } match {
-          case Seq() => None
-          case s => Some(s)
-        })
-      }
-    }
-    finally {
-      e.end()
-    }
+    val ret = apply.value(e, apply.parameters.map {
+      par => ParVal(par.dataType.valueOf(parameters(par.name)), Some(par.name))
+    } match {
+      case Seq() => None
+      case s => Some(s)
+    }, None)
+
+    e.end()
+    ret
   }
 }
 

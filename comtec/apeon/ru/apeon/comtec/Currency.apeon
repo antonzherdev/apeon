@@ -1,0 +1,6 @@
+package ru.apeon.comtec
+
+entity Currency<comtec> extends StandardCatalog{
+    table dba.currency
+	def toString : String = Format.str("Валюта", id, name)
+}

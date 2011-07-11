@@ -10,19 +10,19 @@ import ru.apeon.core.entity._
 
 class ObjectModelSpec extends Spec with ShouldMatchers with EntityDefine {
   describe("Получение сущности") {
-    val model = new DefaultObjectModel
-    val pack1 = Package(model, "ru.apeon.core.test1", "1.0")
-    val pack2 = Package(model, "ru.apeon.core.test2", "1.0")
+    clearModel()
+
+    val pack1 = pack("ru.apeon.core.test1")
+    val pack2 = pack("ru.apeon.core.test2")
 
     def des(pack : Package, name : String) : Description = {
-      val ret = Description(pack, name, Table("", ""), Seq(Id))
-      model.addEntityDescription(ret)
-      ret
+      desc(name).in_package(pack).decl(Id).ds("ru.apeon.core.ds").b
     }
 
     val e1pack1 = des(pack1, "E1")
     val e1pack2 = des(pack2, "E1")
     val e2pack1 = des(pack1, "E2")
+    fillRef()
     it("Получение по полному имени") {
       model.entityDescription("ru.apeon.core.test1.E1") should equal(e1pack1)
       model.entityDescription("ru.apeon.core.test2.E1") should equal(e1pack2)

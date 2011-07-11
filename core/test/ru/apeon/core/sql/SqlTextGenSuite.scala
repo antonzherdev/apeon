@@ -56,6 +56,12 @@ class SqlTextGenSuite extends FunSuite with ShouldMatchers {
     Less(ConstNumeric(5), ConstNumeric(6)).toString should be("5 < 6")
     LessOrEqual(ConstNumeric(5), ConstNumeric(6)).toString should be("5 <= 6")
   }
+  test("+ - / *") {
+    Plus(ConstNumeric(5), ConstNumeric(6)).toString should be("5 + 6")
+    Minus(ConstNumeric(5), ConstNumeric(6)).toString should be("5 - 6")
+    Div(ConstNumeric(5), ConstNumeric(6)).toString should be("5 / 6")
+    Mul(ConstNumeric(5), ConstNumeric(6)).toString should be("5 * 6")
+  }
 
   test("Column reference") {
     Ref(FromTable(SqlTable("", "tt"), None), "nn").toString should be("\"tt\".\"nn\"")
@@ -174,7 +180,7 @@ class SqlTextGenSuite extends FunSuite with ShouldMatchers {
   test("ColumnSeq") {
     Select(From("test"), Seq(ColumnSeq(Seq(Column(ConstNumeric(4), "a"), Column(ConstNumeric(5), "b")), "i"))).
             toString should be(
-      "select\n\t\t4 as \"i.a\",\n\t\t5 as \"i.b\"\nfrom\n\t\"test\";")
+      "select\n\t\t4 as \"i__a\",\n\t\t5 as \"i__b\"\nfrom\n\t\"test\";")
   }
 
   test("Not") {

@@ -9,11 +9,17 @@ trait Constant extends Expression {
 
   def fillRef(env: Environment, imports: Imports) {}
 
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def preFillRef(env : Environment, imports: Imports) {}
+
+  override def toString = if(value == null) "null" else value.toString
 }
 
 case class ConstInt(value : Int) extends Constant {
   def dataType(env: Environment) = ScriptDataTypeInteger()
+}
+
+case class ConstBoolean(value : Boolean) extends Constant {
+  def dataType(env: Environment) = ScriptDataTypeBoolean()
 }
 
 case class ConstDecimal(value : BigDecimal) extends Constant {
@@ -32,14 +38,18 @@ case class ConstDate(value : Date) extends Constant {
 case class ConstSeq(expressions : Seq[Expression]) extends Expression{
   def evaluate(env: Environment) = expressions.map(_.evaluate(env))
 
-  def dataType(env: Environment) = ScriptDataTypeSeq(ScriptDataTypeAny())
-
-  def fillRef(env: Environment, imports: Imports) {
-    expressions.foreach(_.fillRef(env, imports))
+  def dataType(env: Environment) = expressions match {
+    case Seq() => ScriptDataTypeSeq(ScriptDataTypeAny())
+    case s => ScriptDataTypeSeq(expressions.head.dataType(env))
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    expressions.foreach(_.preFillRef(model, imports))
+
+  def fillRef(env: Environment, imports: Imports) {
+    expressions.foreach(exp => exp.fillRef(env, imports))
+  }
+
+  def preFillRef(env : Environment, imports: Imports) {
+    expressions.foreach(_.preFillRef(env, imports))
   }
 }
 

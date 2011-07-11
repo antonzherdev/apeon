@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="../core/module.xsd">
+    <name>ru.apeon.schedule</name>
+    <version>1.0</version>
+
+    <listener>ru.apeon.schedule.QuartzListener</listener>
+</module>

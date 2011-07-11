@@ -6,7 +6,7 @@ import ru.apeon.core.eql._
 
 class EntityServlet extends BaseHttpServlet {
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-    tr {
+    tr(resp) {
       redeploy(req)
 
       val entityDescription = EntityConfiguration.model.entityDescription(entityName(req))

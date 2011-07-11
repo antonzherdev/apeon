@@ -1,0 +1,8 @@
+package ru.apeon.sync
+/*
+buffer test {
+def apply(name : String, file : InputStream) = {
+    Log.error(name)
+    Log.error(file.toString)
+}
+}*/

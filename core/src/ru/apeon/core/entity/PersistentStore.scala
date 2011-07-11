@@ -3,11 +3,16 @@ package ru.apeon.core.entity
 import ru.apeon.core._
 
 import collection.Map
-import eql.{Update, Insert, Delete}
 import akka.util.{Logger, Logging}
+import eql._
+import java.sql.{ResultSet, Connection}
 
 trait ReadOnlyPersistentStore {
+  def load(){}
+  def unload(){}
   def name : String
+
+  def nativeOne(query : String) : Option[Any]
 
   /**
    * Выполнить запрос
@@ -49,43 +54,80 @@ trait PersistentStore extends ReadOnlyPersistentStore{
   }
 }
 
-class SqlPersistentStore(val name : String, val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource)
+abstract class SqlPersistentStoreBase
         extends PersistentStore with Logging
 {
   val readOnlyLog = Logger("ru.apeon.core.entity.ReadOnlyPersistentStore")
-  val e = new eql.Eql(){
-    override def dataSource = SqlPersistentStore.this.dataSource
+  protected val _eql = new Eql
+
+  class Eql extends eql.Eql {
+    override def getConnection = SqlPersistentStoreBase.this.getConnection
+    override def dialect = SqlPersistentStoreBase.this.dialect
+    override def generator = SqlPersistentStoreBase.this.generator
+    override def closeConnection() {
+      SqlPersistentStoreBase.this.closeConnection(connection)
+    }
   }
+
+
+  def nativeOne(query: String) = _eql.transaction{
+    val stm : java.sql.Statement = _eql.connection.createStatement
+    readOnlyLog.debug(query)
+    val rs : ResultSet = stm.executeQuery(query)
+    if(!rs.next)
+      None
+    else
+      Some(rs.getObject(1))
+   }
+
+  def closeConnection(connection : Connection) {
+    connection.close()
+  }
+  def getConnection : Connection
+  def dialect : sql.SqlDialect
+  def generator : SqlGenerator
 
   def select(select: eql.Select, parameters: Map[String, Any]) = {
     readOnlyLog.debug("<%s> %s", name, select)
-    e.select(select, parameters).toSeqMutableMap
+    _eql.select(select, parameters).toSeqMutableMap
   }
 
 
   def update(update: Update, parameters: Map[String, Any]) {
     log.debug("<%s> %s", name, update)
-    e.update(update, parameters)
+    _eql.update(update, parameters)
   }
 
   def insert(insert: Insert, parameters: Map[String, Any]) = {
     log.debug("<%s> %s", name, insert)
-    e.insert(insert, parameters)
+    _eql.insert(insert, parameters)
   }
 
   def delete(delete: Delete, parameters: Map[String, Any]) {
     log.debug("<%s> %s", name, delete)
-    e.delete(delete, parameters)
+    _eql.delete(delete, parameters)
   }
 
   def beginTransaction() {
-    e.beginTransaction()
+    _eql.beginTransaction()
   }
   def rollback() {
-    e.rollback()
+    _eql.rollback()
   }
   def commit() {
-    e.commit()
+    _eql.commit()
   }
 
+}
+
+class SqlPersistentStore(val name : String,
+                         val dataSource : sql.DataSource = sql.SqlConfiguration.dataSource,
+                         val generator : SqlGenerator = new SqlGenerator) extends SqlPersistentStoreBase {
+  def getConnection = {
+    val ret = dataSource.getConnection
+    ret.setAutoCommit(false)
+    ret
+  }
+
+  def dialect = dataSource.dialect
 }

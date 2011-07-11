@@ -13,12 +13,12 @@ trait Statement {
 
   def evaluate(env : Environment) : Any
 
-  def preFillRef(model : ObjectModel, imports : Imports)
+  def preFillRef(env : Environment, imports : Imports)
 
   /**
    * Заполнение ссылок
-   * @env окружение
-   * @imports импортировано
+   * @param env окружение
+   * @param imports импортировано
    */
   def fillRef(env : Environment, imports : Imports)
 }
@@ -34,18 +34,35 @@ abstract class StatementList extends Statement {
   def evaluate(env: Environment) = env.atomic{
     var ret : Any = null
     statements.foreach{statement =>
-      ret = statement.evaluate(env)
+      try {
+        ret = statement.evaluate(env)
+      }
+      catch tt(statement)
     }
     ret
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    statements.foreach(_.preFillRef(model, imports))
+  def preFillRef(env : Environment, imports: Imports) {
+    statements.foreach(stm =>
+      try {
+        stm.preFillRef(env, imports)
+      } catch tt(stm))
+  }
+
+  private def tt(stm : Statement) : PartialFunction[Throwable, Any] = {
+    case e @ ScriptException(_, _, None) =>
+      throw ScriptException(e.getMessage, Some(e), Some(stm))
+    case t : Throwable =>
+      throw ScriptException(t.getMessage, Some(t), Some(stm))
   }
 
   def fillRef(env : Environment, imports : Imports) {
     env.atomic {
-      statements.foreach(_.fillRef(env, imports))
+      statements.foreach{stm =>
+        try {
+          stm.fillRef(env, imports)
+        } catch tt(stm)
+      }
     }
   }
 }
@@ -54,7 +71,9 @@ abstract class StatementList extends Statement {
  * Фигурные скобочки.
  * Список опираторов
  */
-case class Parentheses(statements : Seq[Statement] = Seq()) extends StatementList
+case class Parentheses(statements : Seq[Statement] = Seq()) extends StatementList {
+  override def toString = "{\n\t" + statements.mkString("\n").replace("\n", "\t\n") + "\n}"
+}
 
 
 /**
@@ -83,17 +102,17 @@ case class Eql(string : String) extends Expression {
         case ScriptDataTypeSeq(ScriptDataTypeEntity(entity)) => env.em.select(select)
         case _ => select.dataSource.store.select(select)
       }
-      case update : eql.Update => update.dataSource.store.update(update)
-      case insert : eql.Insert => insert.dataSource.store.insert(insert)
-      case delete : eql.Delete => delete.dataSource.store.delete(delete)
+      //      case update : eql.Update => update.dataSource.store.update(update)
+      //      case insert : eql.Insert => insert.dataSource.store.insert(insert)
+      //      case delete : eql.Delete => delete.dataSource.store.delete(delete)
     }
   }
 
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-     stm = eql.EqlParser(string, model, Some(imports),Some({s : String =>
-      val external = new EqlExternalScript(new ScriptParser(model).parseStatement(s))
-      external.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    stm = eql.EqlParser(string, env.model, Some(imports),Some({s : String =>
+      val external = new EqlExternalScript(ScriptParser.parseStatement(env.model, s))
+      external.preFillRef(env, imports)
       externals.append(external)
       external
     }))
@@ -112,8 +131,8 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
     statement.fillRef(env, imports)
   }
 
-  def preFillRef(model : ObjectModel, imports : Imports) {
-    statement.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports : Imports) {
+    statement.preFillRef(env, imports)
   }
 
   def evaluate(env: Environment) {
@@ -133,21 +152,33 @@ class EqlExternalScript(val statement : Statement) extends eql.External {
 case class Dot(left : Expression, right : Ref) extends Expression{
   def dataType(env : Environment) = right.dataType(env)
 
-  def evaluate(env: Environment) = env.withDotRef(Some(left.evaluate(env))){
-    right.evaluate(env)
+  def evaluate(env: Environment) = {
+    val oldDotRef = env.dotRef
+    env.setDotRef(Some(left.evaluate(env)))
+    try {
+      right.evaluate(env)
+    } finally {
+      env.setDotRef(oldDotRef)
+    }
   }
 
   def fillRef(env : Environment, imports : Imports) {
     left.fillRef(env, imports)
-    env.withDotType(Some(left.dataType(env))) {
+    val old = env.dotType
+    env.setDotType(Some(left.dataType(env)))
+    try {
       right.fillRef(env, imports)
+    } finally {
+      env.setDotType(old)
     }
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    left.preFillRef(model, imports)
-    right.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    left.preFillRef(env, imports)
+    right.preFillRef(env, imports)
   }
+
+  override def toString = "%s.%s".format(left, right)
 }
 
 abstract class SetBase extends Expression {
@@ -156,21 +187,33 @@ abstract class SetBase extends Expression {
   def name : String
 
   def evaluate(env: Environment) = left match {
-    case ref @ Ref(name, None, None) => env.withSet(Some(this), None){
-      evaluate(env, ref)
+    case ref @ Ref(name, None, None) => {
+      val oldSet = env.currentSet
+      val oldEntity = env.leftEntity
+      env.setSet(Some(this), None)
+      try {
+        evaluate(env, ref)
+      } finally {
+        env.setSet(oldSet, oldEntity)
+      }
     }
     case Dot(expr, ref) => expr.dataType(env) match {
       case ScriptDataTypeEntity(entity) => expr.evaluate(env) match {
         case e : Entity => {
-          env.withSet(Some(this), Some(e)) {
+          val oldSet = env.currentSet
+          val oldEntity = env.leftEntity
+          env.setSet(Some(this), Some(e))
+          try {
             evaluate(env, e, ref)
+          }  finally {
+            env.setSet(oldSet, oldEntity)
           }
         }
-        case _ => throw ScriptException(env, "Return is not entity")
+        case _ => throw ScriptException("Return is not entity")
       }
-      case _ => throw ScriptException(env, "Unsupported datatype for dot in set")
+      case _ => throw ScriptException("Unsupported datatype for dot in set")
     }
-    case _ => throw ScriptException(env, "Unsupported expression for set")
+    case _ => throw ScriptException("Unsupported expression for set")
   }
 
   def evaluate(env: Environment, ref : Ref) : Any
@@ -182,11 +225,15 @@ abstract class SetBase extends Expression {
     left.fillRef(env, imports)
     right.fillRef(env, imports)
   }
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    left.preFillRef(model, imports)
-    right.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    left.preFillRef(env, imports)
+    right.preFillRef(env, imports)
   }
   override def toString = "%s %s %s".format(left, name, right)
+}
+
+object SetBase{
+  def unapply(sb : SetBase): Option[(Expression, Expression)] = Some(sb.left, sb.right)
 }
 
 case class Set(left : Expression, right : Expression) extends SetBase {
@@ -255,7 +302,7 @@ case class If(check : Expression, forTrue : Statement, forFalse : Option[Stateme
   def evaluate(env: Environment) = {
     val c : Boolean = check.evaluate(env) match {
       case b : Boolean => b
-      case _ => throw ScriptException(env, "Unsupported datatype for if")
+      case _ => throw ScriptException("Unsupported datatype for if")
     }
     if(c) forTrue.evaluate(env)
     else {
@@ -270,10 +317,10 @@ case class If(check : Expression, forTrue : Statement, forFalse : Option[Stateme
     if(forFalse.isDefined) forFalse.get.fillRef(env, imports)
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
-    check.preFillRef(model, imports)
-    forTrue.preFillRef(model, imports)
-    if(forFalse.isDefined) forFalse.get.preFillRef(model, imports)
+  def preFillRef(env : Environment, imports: Imports) {
+    check.preFillRef(env, imports)
+    forTrue.preFillRef(env, imports)
+    if(forFalse.isDefined) forFalse.get.preFillRef(env, imports)
   }
 }
 
@@ -284,5 +331,5 @@ case class Import(name : String) extends Statement {
 
   def fillRef(env : Environment, imports : Imports) {}
 
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def preFillRef(env : Environment, imports: Imports) {}
 }

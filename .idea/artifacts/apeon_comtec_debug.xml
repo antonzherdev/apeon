@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact build-on-make="true" name="apeon-comtec-debug">
+    <output-path>$PROJECT_DIR$/out-0.2/artifacts/apeon-comtec</output-path>
+    <root id="root">
+      <element id="directory" name="apeon">
+        <element id="dir-copy" path="$PROJECT_DIR$/comtec/apeon" />
+      </element>
+      <element id="directory" name="classes">
+        <element id="module-output" name="comtec" />
+      </element>
+      <element id="file-copy" path="$PROJECT_DIR$/comtec/module.xml" />
+    </root>
+  </artifact>
+</component>

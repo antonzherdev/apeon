@@ -2,7 +2,7 @@ package ru.apeon.core.entity
 
 import ru.apeon.core.script._
 import collection.mutable.Buffer
-
+import java.lang.RuntimeException
 
 /**
  * Сущность
@@ -15,29 +15,36 @@ import collection.mutable.Buffer
  * @param extendsEntityName имя сущности, от которой отнаследована текущая сущность
  * @param declaredJoinedTables подсоединенные таблицы для мультиапдейтных сущностей
  */
-case class Description(pack : Package,
+case class Description(module : Module,
+                       pack : Package,
                        name : String,
+                       defaultDataSourceName : String,
                        table : Table,
                        declaredDeclarations : Seq[DeclarationStatement],
                        discriminator : Discriminator = DiscriminatorNull(),
-                       defaultDataSourceName : Option[String] = None,
                        extendsEntityName : Option[String] = None,
                        declaredJoinedTables : Seq[JoinedTable] = Seq()) extends ClassBase
 {
   def attributes : Seq[Attribute] =
     fields.filter{_.isInstanceOf[Attribute]}.asInstanceOf[Seq[Attribute]]
 
-  def columnsWithColumn : Seq[FieldWithSource] =
+  def ones : Seq[ToOne] =
+    fields.filter{_.isInstanceOf[ToOne]}.asInstanceOf[Seq[ToOne]]
+
+  def manies : Seq[ToMany] =
+    fields.filter{_.isInstanceOf[ToMany]}.asInstanceOf[Seq[ToMany]]
+
+  def fieldsWithSource : Seq[FieldWithSource] =
     fields.filter{_.isInstanceOf[FieldWithSource]}.asInstanceOf[Seq[FieldWithSource]]
 
   /**
    * Список первичных ключей
    */
   lazy val _primaryKeys : Seq[Attribute] = fields.filter{
-    case a : Attribute => a.isPrimaryKey //&& a.tableName.getOrElse(table.name) == table.name
+    case a : FieldWithSource => a.isPrimaryKey //&& a.tableName.getOrElse(table.name) == table.name
     case _ => false}.asInstanceOf[Seq[Attribute]]
 
-  def primaryKeys : Seq[Attribute] = _primaryKeys
+  def primaryKeys : Seq[FieldWithSource] = _primaryKeys
 
   /**
    *  Получить колонку по имени
@@ -52,39 +59,35 @@ case class Description(pack : Package,
   }
 
 
-  override protected def declarationsLoad =
-    super.declarationsLoad ++ extendedFields
+  override protected def declarationsLoad = extendedDeclarations ++ super.declarationsLoad
 
   lazy val fields : Seq[Field] = declarations.filter(_.isInstanceOf[Field]).asInstanceOf[Seq[Field]]
   lazy val joinedTables : Seq[JoinedTable] = declaredJoinedTables ++ extendsClass.map{_.joinedTables}.getOrElse(Seq())
 
-  def extend(field : Field) {
-    extendedFields.append(field)
+  def extend(declaration : DeclarationStatement) {
+    extendedDeclarations.append(declaration)
   }
 
-  def model = pack.model
-
-  private var _defaultDataSource : Option[DataSource] = _
-  def defaultDataSource: Option[DataSource] = _defaultDataSource
+  private var _defaultDataSource : DataSource = _
+  def defaultDataSource: DataSource = _defaultDataSource
 
   private var _extendsEntity : Option[Description] = _
   def extendsClass : Option[Description] = _extendsEntity
 
   override def toString = fullName
 
-  def dataSource : DataSource = defaultDataSource.getOrElse(pack.dataSource)
+  def dataSource : DataSource = defaultDataSource
 
-
-  override def preFillRef(model : ObjectModel, imports: Imports) {
-    _extendsEntity = extendsEntityName.map{name => model.entityDescription(name, Some(imports))}
-    _defaultDataSource = defaultDataSourceName.map(name => model.dataSource(name, Some(imports)))
-    super.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    _extendsEntity = extendsEntityName.map{name => env.model.entityDescription(name, Some(imports))}
+    _defaultDataSource = env.model.dataSource(defaultDataSourceName, Some(imports))
+    super.preFillRef(env, imports)
   }
 
 
   override def fillRef(env: Environment, imports: Imports) {
     _toString = declarations.find{
-      case Def("toString", _, Seq(), _) => true
+      case Def("toString", _, Seq(), _, _) => true
       case _ => false
     }.asInstanceOf[Option[Def]]
     super.fillRef(env, imports)
@@ -100,17 +103,17 @@ case class Description(pack : Package,
    */
   def toString(entity : Entity) : String = _toString match {
     case None => entity.defaultToString
-    case Some(d) => evaluateDef(d, entity).toString
+    case Some(d) => evaluateDef(entity.manager.model, d, entity).toString
   }
 
-  private val extendedFields = Buffer[Field]()
+  private val extendedDeclarations = Buffer[DeclarationStatement]()
 
-  def evaluate(env: Environment) {
+  override def evaluate(env: Environment) = {
     env.model.addEntityDescription(this)
-    this
+    super.evaluate(env)
   }
 
-  def dataType(env: Environment) = ScriptDataTypeEntityDescription(this)
+  def dataType(env: Environment) = ScriptDataTypeEntityDescription(env.model, this)
 
   def elementDataType(env: Environment) = ScriptDataTypeEntityByDescription(this)
 
@@ -119,6 +122,30 @@ case class Description(pack : Package,
             case Some(e) => e == description || e.isInstanceOf(description)
             case None => false
           })
+
+  override def equals(obj: Any) = obj match {
+    case d : Description =>
+      this.module == d.module &&
+      this.pack == d.pack &&
+      this.name == d.name &&
+      this.defaultDataSourceName == d.defaultDataSourceName &&
+      this.table == d.table &&
+      this.declaredDeclarations.corresponds(d.declaredDeclarations){_ == _} &&
+      this.discriminator == d.discriminator &&
+      this.extendsEntityName == d.extendsEntityName &&
+      this.declaredJoinedTables.corresponds(d.declaredJoinedTables){_ == _}
+    case _ => false
+  }
+}
+
+case class DataSourceLink(dataSourceName : String) {
+  private var _dataSource : DataSource = _
+
+  def dataSource : DataSource = _dataSource
+
+  def preFillRef(env : Environment, imports: Imports) {
+    _dataSource = env.model.dataSource(dataSourceName)
+  }
 }
 
 case class JoinedTable(table : Table, column : String)
@@ -132,8 +159,6 @@ abstract class Field extends DeclarationStatement {
 
   override def toString = name
 
-  def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-
   def dataType(env: Environment) = scriptDataType
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
@@ -142,22 +167,40 @@ abstract class Field extends DeclarationStatement {
 }
 
 abstract class FieldWithSource extends Field {
+  def isPrimaryKey : Boolean
+
+  def source(dataSource : DataSource) : BaseFieldSource = sources(dataSource)
   /**
    * Имя таблицы для мультиапдейтных сущностей
    */
-  def tableName(dataSource : DataSource) : Option[String] = sources(dataSource).tableName
-  def columnName(dataSource : DataSource) : String = sources(dataSource).columnName
+  def tableName(dataSource : DataSource) : Option[String] = sources(dataSource).asInstanceOf[FieldSource].tableName
+  def columnName(dataSource : DataSource) : String = sources(dataSource).asInstanceOf[FieldSource].columnName
 
   val default : Option[Default]
 
   val sources : FieldSources
+
+  def isNullFor(dataSource : DataSource) : Boolean = sources(dataSource) match {
+    case NullFieldSource() => true
+    case _ => false
+  }
 }
 
-case class FieldSource(columnName : String, tableName : Option[String] = None)
-case class FieldSources(default : FieldSource, sources : Map[String, FieldSource] = Map()) {
-  def apply(dataSource : DataSource) : FieldSource = apply(dataSource.name)
+abstract class BaseFieldSource {
+  def isDefined : Boolean
+  def columnName : String
+}
+case class FieldSource(columnName : String, tableName : Option[String] = None) extends BaseFieldSource {
+  def isDefined = true
+}
+case class NullFieldSource() extends BaseFieldSource {
+  def isDefined = false
+  def columnName = throw new RuntimeException("Null field source")
+}
+case class FieldSources(default : BaseFieldSource, sources : Map[String, FieldSource] = Map()) {
+  def apply(dataSource : DataSource) : BaseFieldSource = apply(dataSource.name)
 
-  def apply(dataSourceName : String) : FieldSource = sources.getOrElse(dataSourceName, default)
+  def apply(dataSourceName : String) : BaseFieldSource = sources.getOrElse(dataSourceName, default)
 }
 
 case class Attribute(pack : Package, name : String, sources :  FieldSources,
@@ -170,7 +213,7 @@ case class Attribute(pack : Package, name : String, sources :  FieldSources,
 }
 
 case class ToOne(pack : Package, name : String, sources :  FieldSources,
-                 entityName : String, default : Option[Default] = None)
+                 entityName : String, default : Option[Default] = None, isPrimaryKey : Boolean = false)
         extends FieldWithSource
 {
   private var _entity : Description = _
@@ -179,25 +222,40 @@ case class ToOne(pack : Package, name : String, sources :  FieldSources,
   def scriptDataType = ScriptDataTypeEntityByDescription(entity)
 
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    _entity = model.entityDescription(entityName, Some(imports))
+  override def preFillRef(env : Environment, imports: Imports) {
+    _entity = env.entityDescription(entityName, Some(imports))
   }
-
 }
 
-case class ToMany(pack : Package, name : String, entityName : String, toOneName : String) extends Field {
-  val isPrimaryKey = false
+abstract class ToMany extends Field {
+  def entity : Description
+  def one : ToOne
 
+  def scriptDataType = ScriptDataTypeSeq(ScriptDataTypeEntityByDescription(entity))
+}
+
+case class ToManyRef(pack : Package, name : String, entityName : String, toOneName : String) extends ToMany {
   private var _entity : Description = _
 
   def entity = _entity
-  def toOne : ToOne = entity.field(toOneName).asInstanceOf[ToOne]
+  def one : ToOne = entity.field(toOneName).asInstanceOf[ToOne]
 
-  def scriptDataType = ScriptDataTypeSeq(ScriptDataTypeEntityByDescription(entity))
+  override def preFillRef(env: Environment, imports: Imports) {
+    _entity = env.entityDescription(entityName, Some(imports))
+  }
+}
 
+case class ToManyBuiltIn(pack : Package, name : String, entity : Description) extends ToMany {
+  def one : ToOne = entity.field("parent").asInstanceOf[ToOne]
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    _entity = model.entityDescription(entityName, Some(imports))
+  override def evaluate(env: Environment) {
+    entity.evaluate(env)
+  }
+  override def preFillRef(env: Environment, imports: Imports) {
+    entity.preFillRef(env, imports)
+  }
+  override def fillRef(env: Environment, imports: Imports) {
+    entity.fillRef(env, imports)
   }
 }
 
@@ -207,17 +265,16 @@ class EntityError(var s : String) extends Exception(s)
 
 abstract class Discriminator
 case class DiscriminatorNull() extends Discriminator
-case class DiscriminatorColumn(columnName : String, value : String) extends Discriminator
+case class DiscriminatorColumn(sources : FieldSources, value : Any) extends Discriminator
 
-case class ExtendEntity(entityName : String, fields : Seq[Field]) extends Statement {
+case class ExtendEntity(module : Module, entityName : String, declarations : Seq[DeclarationStatement]) extends Statement {
   def evaluate(env: Environment) {}
 
-
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    entityDescription = model.entityDescription(entityName, Some(imports))
-    fields.foreach{field =>
-      entityDescription.extend(field)
-      field.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    entityDescription = env.model.entityDescription(entityName, Some(imports))
+    declarations.foreach{declaration =>
+      entityDescription.extend(declaration)
+      declaration.preFillRef(env, imports)
     }
   }
 
@@ -226,9 +283,12 @@ case class ExtendEntity(entityName : String, fields : Seq[Field]) extends Statem
   def dataType(env: Environment) = ScriptDataTypeUnit()
 
   def fillRef(env : Environment, imports : Imports) {
-    fields.foreach{field =>
+    val old = env.thisType
+    env.setThisType(Some(ScriptDataTypeEntityByDescription(entityDescription)))
+    declarations.foreach{field =>
       field.fillRef(env, imports)
     }
+    env.setThisType(old)
   }
 }
 
@@ -236,14 +296,3 @@ abstract class Default
 case class DefaultString(value : String) extends Default
 case class DefaultInt(value : Int) extends Default
 
-trait EntityDefine {
-  implicit def string2EntityColumnSources(columnName : String) : FieldSources =
-    FieldSources(FieldSource(columnName))
-
-  implicit def string2EntityColumnSources(source : (String, String)) : FieldSources =
-    FieldSources(FieldSource(source._2, Some(source._1)))
-
-  implicit def string2Table(columnName : String) : Table =
-    Table("", columnName)
-
-}

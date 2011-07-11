@@ -27,115 +27,173 @@ trait Declaration{
    * Соответствует ли набор параметров тому, что можно выполнить
    * @param parameters параметры
    */
-  def correspond(env : Environment, parameters : Option[Seq[Par]]) : Boolean
+  def correspond(env : Environment, parameters : Option[Seq[Par]]) : Boolean = parameters match {
+    case None => this.parameters.isEmpty
+    case _ => parameters.get.corresponds(this.parameters){(p : Par, dp : DefPar) =>
+      dp.dataType.correspond(p.expression.dataType(env))
+    }
+  }
 
   /**
    * Вернуть типы параметров для встроенной функции
    * @param env окружение
+   * @param parametes параметры
    * @param parameterNumber номер параметра
    * @param parameter параметер
    */
-  def builtInParametersDataTypes(env : Environment, parameterNumber : Int, parameter : Par) : Seq[ScriptDataType] =
-    throw ScriptException(env, "Not supported")
+  def builtInParameters(env : Environment, parameters: Option[Seq[Par]], parameterNumber : Int, parameter : Par) : Seq[BuiltInParameterDef] =
+    throw ScriptException( "Not supported")
+
+  def declarationString : String = name + "(" + parameters.mkString(", ") + ")"
+
+  def equalsSignature(declaration : Declaration) : Boolean =
+    this.name == declaration.name && this.parameters.sameElements(declaration.parameters)
+
+  def parameters : Seq[DefPar] = Seq()
 }
 
+case class BuiltInParameterDef(defaultName : String, dataType : ScriptDataType)
+
 trait DeclarationStatement extends Statement with Declaration {
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def preFillRef(env: Environment, imports: Imports) {}
   def fillRef(env: Environment, imports: Imports) {}
   def evaluate(env: Environment) {}
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = dataType(env)
 }
 
+case class DeclarationThis(thisType : Option[ScriptDataType], declaration : Declaration, thisDeclaration : Option[Declaration] = None)
+
 /**
  * Ссылка на задекларированную переменную
  */
 case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource : Option[Expression] = None) extends Expression {
-  private var _declaration : Declaration = _
+  private var _declaration : DeclarationThis = _
+  def declaration : Declaration = _declaration.declaration
 
-  def declaration : Declaration = _declaration
+  def dataType(env : Environment) = {
+    val old = env.dotType
+    env.setDotType(_declaration.thisType)
+    val ret = declaration.dataType(env, parameters)
+    env.setDotType(old)
+    ret
+  }
 
-  def dataType(env : Environment) = _declaration.dataType(env, parameters)
+  def evaluate(env: Environment) = {
+    val old = env.dotType
+    env.setDotType(_declaration.thisType)
+    try {
+      val oldRef = env.dotRef
+      env.setDotRef(None)
+      val pars = parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
+      env.setDotRef(oldRef)
 
-  def evaluate(env: Environment) =
-    _declaration.value(env,
-      env.withDotRef(None) {
-        parameters.map(_.map(par => ParVal(par.expression.evaluate(env), par.name)))
-      },
-      dataSource)
+      if(_declaration.thisDeclaration.isDefined) {
+        env.setDotRef(Some(_declaration.thisDeclaration.get.value(env)))
+        val ret = declaration.value(env, pars, dataSource)
+        env.setDotRef(oldRef)
+        ret
+      } else {
+        declaration.value(env, pars, dataSource)
+      }
+    }
+    finally {
+      env.setDotType(old)
+    }
+  }
 
 
   def fillRef(env : Environment, imports : Imports) {
     if(dataSource.isDefined) {
-      env.withDotType(None) {
-        dataSource.get.fillRef(env, imports)
-      }
+      val old = env.dotType
+      env.setDotType(None)
+      dataSource.get.fillRef(env, imports)
+      env.setDotType(old)
     }
     if(parameters.isDefined && (!parameters.get.isEmpty)) {
-      env.withDotType(None) {
-        parameters.foreach(_.foreach(_.expression.fillRef(env, imports)))
-      }
+      val old = env.dotType
+      env.setDotType(None)
+      parameters.foreach(_.foreach(par => par.expression.fillRef(env, imports)))
+      env.setDotType(old)
     }
     _declaration = env.declaration(name, parameters, Some(imports))
     if(parameters.isDefined) {
       var number = 0
       parameters.get.foreach{par =>
         if(par.expression.isInstanceOf[BuiltInFunction]) {
-          env.withDotType(None) {
-            par.expression.asInstanceOf[BuiltInFunction].fillRef(env, imports, _declaration.builtInParametersDataTypes(env, number, par))
-          }
+          val old = env.dotType
+          env.setDotType(_declaration.thisType)
+          val bps = declaration.builtInParameters(env, parameters, number, par)
+          env.setDotType(None)
+          par.expression.asInstanceOf[BuiltInFunction].fillRef(env, imports, bps)
+          env.setDotType(old)
         }
         number += 1
       }
     }
   }
 
-  def preFillRef(model: ObjectModel, imports: Imports) {
+  def preFillRef(env : Environment, imports: Imports) {
     if(dataSource.isDefined) {
-      dataSource.get.preFillRef(model, imports)
+      dataSource.get.preFillRef(env, imports)
     }
-    parameters.foreach(_.foreach(_.expression.preFillRef(model, imports)))
+    parameters.foreach(_.foreach(par => par.expression.preFillRef(env, imports)))
+  }
+
+  override def toString = name +
+          dataSource.map(exp => "<%s>".format(exp)).getOrElse("") +
+          parameters.map(pars => "(%s)".format(pars.mkString(", "))).getOrElse("")
+}
+
+case class Par(expression : Expression, name : Option[String] = None) {
+  override def toString = name match {
+    case Some(name) => "%s = %s".format(name, expression)
+    case None => expression.toString
+  }
+
+  def dataTypeString(env : Environment) : String = name match {
+    case Some(name) => "%s = %s".format(name, expression.dataType(env))
+    case None => expression.dataType(env).toString
   }
 }
 
-case class Par(expression : Expression, name : Option[String] = None)
-
-case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq()) extends Constant {
+case class BuiltInFunction(statement : StatementList, aliases : Seq[String] = Seq()) extends Constant {
   def dataType(env: Environment) = ScriptDataTypeBuiltInFunction()
 
   def value = this
 
-  private var parameters : Seq[ParDeclaration] = _
-  def fillRef(env: Environment, imports: Imports, parametersTypes : Seq[ScriptDataType]) = {
+  private var _parameters : Seq[ParDeclaration] = _
+  def fillRef(env: Environment, imports: Imports, parametersTypes : Seq[BuiltInParameterDef]) = {
     val iAliases = aliases.iterator
-    parameters = parametersTypes.map(tp =>
-      ParDeclaration(if(iAliases.hasNext) iAliases.next() else "_", tp)
+    _parameters = parametersTypes.map(tp =>
+      ParDeclaration(if(iAliases.hasNext) iAliases.next() else tp.defaultName, tp.dataType)
     )
     env.atomic{
-      parameters.foreach(env.addDeclaration(_))
+      _parameters.foreach(env.addDeclaration(_))
       statement.fillRef(env, imports)
     }
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    statement.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    statement.preFillRef(env, imports)
   }
 
   case class ParDeclaration(name : String, dataType : ScriptDataType) extends  Declaration{
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.value(this)
     def dataType(env: Environment, parameters : Option[Seq[Par]]) = dataType
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 
-  def parameter(number : Int) = parameters(number)
+  def parameters : Seq[ParDeclaration] = _parameters
 
   def run(env: Environment, parameterValues : Any*) : Any = env.atomic{
     val iValues = parameterValues.iterator
-    parameters.foreach{parameter =>
+    _parameters.foreach{parameter =>
       env.addDeclaration(parameter)
       env.update(parameter, iValues.next())
     }
     statement.evaluate(env)
   }
+
+  override def toString = "%s =>\n%s".format(aliases.mkString(","), statement)
 }
 
 
@@ -146,8 +204,8 @@ case class BuiltInFunction(statement : Statement, aliases : Seq[String] = Seq())
  * @param resultType возвращаемый тип, если явно указан
  * @param statement выражение
  */
-case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = Seq(),
-               resultType : Option[ScriptDataType] = None)
+case class Def(name : String, statement : Statement, override val parameters : Seq[DefPar] = Seq(),
+               resultType : Option[ScriptDataType] = None, cached : Boolean = false)
         extends DeclarationStatement
 {
   def dataType(env : Environment) = resultType match {
@@ -159,49 +217,83 @@ case class Def(name : String, statement : Statement, parameters : Seq[DefPar] = 
     env.addDeclaration(this)
   }
 
-  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.atomic{
-    if(parameters.isDefined) {
-      val i = parameters.get.iterator
+  private def tt : PartialFunction[Throwable, Any] = {
+    case e @ ScriptException(_, _, None) =>
+      throw ScriptException(e.getMessage, Some(e), Some(statement))
+    case t : Throwable =>
+      throw ScriptException(t.getMessage, Some(t), Some(statement))
+  }
 
-      this.parameters.foreach{parameter =>
-        env.addDeclaration(parameter)
-        env.update(parameter, i.next().value)
-      }
-    }
-    env.withThisRef(env.dotRef) {
-      env.withDotRef(None) {
-        if(dataSource.isDefined) {
-          env.withDataSource(env.dataSource(dataSource)) {
+  private def eval(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Any =
+    try {
+      env.atomic{
+        if (parameters.isDefined) {
+          val i = parameters.get.iterator
+
+          this.parameters.foreach {
+            parameter =>
+              env.addDeclaration(parameter)
+              env.update(parameter, i.next().value)
+          }
+        }
+        val oldThisRef = env.thisRef
+        env.setThisRef(env.dotRef)
+        val oldDotRef = env.dotRef
+        env.setDotRef(None)
+        try{
+          if (dataSource.isDefined) {
+            val oldDS = env.currentDataSource
+            env.setCurrentDataSource(env.dataSource(dataSource))
+            val ret = statement.evaluate(env)
+            env.setCurrentDataSource(oldDS)
+            ret
+          } else {
             statement.evaluate(env)
           }
-        } else {
-          statement.evaluate(env)
+        } finally {
+          env.setThisRef(oldThisRef)
+          env.setDotRef(oldDotRef)
         }
       }
     }
-  }
+    catch tt
 
-  def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters match {
-    case None => this.parameters.isEmpty
-    case _ => parameters.get.corresponds(this.parameters){(p : Par, dp : DefPar) => dp.dataType == p.expression.dataType(env)}
-  }
-
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) =
+    if(cached){
+      env.cache.getOrElseUpdate((this, parameters.getOrElse{Seq()}.map{_.value}).hashCode(),
+        eval(env, parameters, dataSource))
+    } else {
+      eval(env, parameters, dataSource)
+    }
 
   override def fillRef(env: Environment, imports: Imports) {
-    env.addDeclaration(this)
-    env.atomic{
-      this.parameters.foreach{parameter =>
-        env.addDeclaration(parameter)
+    try {
+      env.addDeclaration(this)
+      env.atomic{
+        this.parameters.foreach{parameter =>
+          env.addDeclaration(parameter)
+        }
+        statement.fillRef(env, imports)
       }
-      statement.fillRef(env, imports)
+      if(resultType.isDefined) resultType.get.fillRef(env, imports)
     }
-    if(resultType.isDefined) resultType.get.fillRef(env, imports)
+    catch tt
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    statement.preFillRef(model, imports)
-    if(resultType.isDefined) resultType.get.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    try {
+      statement.preFillRef(env, imports)
+      if(resultType.isDefined) resultType.get.preFillRef(env, imports)
+      parameters.foreach{parameter =>
+        parameter.dataType.preFillRef(env, imports)
+      }
+    }
+    catch tt
   }
+
+  override def declarationString = name + "(" + parameters.mkString(", ") + ")" + resultType.map(" : " + _).getOrElse("")
+
+  override def toString = declarationString + " = " + statement
 }
 
 case class ParVal(value : Any, name : Option[String])
@@ -211,10 +303,8 @@ case class ParVal(value : Any, name : Option[String])
  */
 case class DefPar(name : String, dataType : ScriptDataType) extends Declaration {
   def dataType(env: Environment, parameters : Option[Seq[Par]]) = dataType
-
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.value(this)
-
-  def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
+  override def toString = "%s : %s".format(name, dataType)
 }
 
 abstract class VariableDeclaration extends DeclarationStatement {
@@ -228,13 +318,10 @@ abstract class VariableDeclaration extends DeclarationStatement {
   def dataType : Option[ScriptDataType]
 
   def dataType(env: Environment) = dataType match {
-      case Some(ret) => ret
-      case None => init.dataType(env)
-    }
+    case Some(ret) => ret
+    case None => init.dataType(env)
+  }
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) = env.value(this)
-
-  def correspond(env : Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-
   def init : Expression
 
   override def fillRef(env: Environment, imports: Imports) {
@@ -242,8 +329,8 @@ abstract class VariableDeclaration extends DeclarationStatement {
     init.fillRef(env, imports)
   }
 
-  override def preFillRef(model: ObjectModel, imports: Imports) {
-    init.preFillRef(model, imports)
+  override def preFillRef(env : Environment, imports: Imports) {
+    init.preFillRef(env, imports)
   }
 }
 
@@ -263,3 +350,8 @@ case class Val(name : String, init : Expression, dataType : Option[ScriptDataTyp
  */
 case class Var(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration
 
+case class This(thisDataType : ScriptDataType) extends Declaration {
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.thisRef.get
+  def name = "this"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = thisDataType
+}

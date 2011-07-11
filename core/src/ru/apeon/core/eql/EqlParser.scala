@@ -9,6 +9,7 @@ import util.parsing.combinator.lexical.StdLexical
 import util.parsing.input.CharArrayReader.EofCh
 import ru.apeon.core._
 import ru.apeon.core.script.{Imports, ObjectModel}
+import collection.mutable.Buffer
 
 /**
  * @author Anton Zherdev
@@ -46,7 +47,7 @@ class EqlParser(val model : ObjectModel,
   type Tokens = Lexer
   val lexical = new Tokens
 
-  lexical.delimiters ++= List(">=", ">", "<=", "<", "!=", ".", ",", "=", ":", "(", ")", "!", "<", ">")
+  lexical.delimiters ++= List(">=", ">", "<=", "<", "!=", ".", ",", "=", ":", "(", ")", "!", "<", ">", "+", "-", "/", "*")
   lexical.reserved += ("select", "from", "as", "where", "delete", "like", "and", "or", "null", "exists")
 
   def query : Parser[Statement] = (select | delete)
@@ -72,20 +73,28 @@ class EqlParser(val model : ObjectModel,
     }
   }
 
-  def from : Parser[From] = (toManyFromTable | entityFromTable)
+  def from : Parser[From] = rep1sep(ref, ".") ~ (dataSource?) ~ (alias?)  ^^ {
+    case refs ~ dataSource ~ alias =>
+      val entityName = Buffer[String]()
+      var entity : Option[Description] = None
+      for(part <- refs) {
+        if(entity.isEmpty) {
+          entityName.append(part.name)
+          entity = model.entityDescriptionOption(entityName.mkString("."), imports)
+        }
+        else {
+          entity = Some(entity.get.field(part.name).asInstanceOf[ToMany].entity)
+        }
+      }
+      entity match {
+        case Some(e) => FromEntity(e, alias, dataSource.getOrElse(DataSourceExpressionDefault()))
+        case None => FromToMany(ref(refs), alias)
+      }
 
-  def entityFromTable : Parser[FromEntity] = ident ~ (dataSource?) ~ (alias?)  ^^ {
-    case entity ~ dataSource ~ alias =>
-      FromEntity(model.entityDescription(entity, imports), alias, dataSource.getOrElse(DataSourceExpressionDefault()))
   }
 
   def dataSource : Parser[DataSourceExpression] = "<" ~> ident <~ ">" ^^ {
     case s => DataSourceExpressionDataSource(model.dataSource(s, imports))
-  }
-
-  def toManyFromTable : Parser[From] = columnRef ~ as ^^ {
-    case Ref(entity) ~ alias => FromEntity(model.entityDescription(entity, imports), Some(alias))
-    case ref ~ alias => FromToMany(ref, Some(alias))
   }
 
   def alias : Parser[String] = "as" ~> ident
@@ -142,26 +151,34 @@ class EqlParser(val model : ObjectModel,
     case s => ConstString(s)
   }
 
-  def ref = ident ~ opt("(" ~> repsep(exp, ",") <~ ")") ^^ {
-    case name ~ pars => new Ref(name, pars.getOrElse{Seq()})
-  }
-
-  def columnRef : Parser[Expression] = ident ~ opt("." ~> repsep(ref,".")) ^^ {
-    case ref ~ None => {
-      Ref(ref)
-    }
-    case r ~ Some(refs) => {
+  def ref(refs: List[Ref]): Expression = refs match {
+    case Seq(ref) => ref
+    case _ => {
       val i = refs.iterator
-      var ref = Dot(Ref(r), i.next())
-      while(i.hasNext)
+      var ref = Dot(i.next(), i.next())
+      while (i.hasNext)
         ref = Dot(ref, i.next())
       ref
     }
   }
 
+  def ref = ident ~ opt("(" ~> repsep(exp, ",") <~ ")") ^^ {
+    case name ~ pars => new Ref(name, pars.getOrElse{Seq()})
+  }
+
+  def columnRef : Parser[Expression] = rep1sep(ref,".") ^^ {
+    case refs => ref(refs)
+  }
+
 
   def binaryOp(level:Int):Parser[((Expression,Expression)=>Expression)] = {
     level match {
+      case 5 =>
+        "*" ^^^ { (a:Expression, b:Expression) => new Mul(a, b) } |
+        "/" ^^^ { (a:Expression, b:Expression) => new Div(a, b) }
+      case 4 =>
+        "+" ^^^ { (a:Expression, b:Expression) => new Plus(a, b) } |
+        "-" ^^^ { (a:Expression, b:Expression) => new Minus(a, b) }
       case 3 =>
         "=" ^^^ { (a:Expression, b:Expression) => new Equal(a, b) } |
         "like" ^^^ {(a:Expression, b:Expression) => new Like(a, b)} |
@@ -178,7 +195,7 @@ class EqlParser(val model : ObjectModel,
     }
   }
   val minPrec = 1
-  val maxPrec = 3
+  val maxPrec = 5
   def binary(level : Int) : Parser[Expression] =
     if (level > maxPrec) term
     else binary(level + 1) * binaryOp(level)

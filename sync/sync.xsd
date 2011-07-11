@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="sync" type="Sync"/>
+
+    <xs:complexType name="Sync">
+        <xs:sequence>
+            <xs:element name="buffer" type="Buffer" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Buffer">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="class" type="xs:string" use="required"/>
+        <xs:attribute name="url" type="xs:string" use="required"/>
+        <xs:attribute name="frequency" type="xs:int" use="optional"/>
+    </xs:complexType>
+</xs:schema>

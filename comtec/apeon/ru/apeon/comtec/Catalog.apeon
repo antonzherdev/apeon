@@ -1,0 +1,7 @@
+package ru.apeon.comtec
+
+entity StandardCatalog<comtec> {
+    column id Int primary key
+    column name(nm) String(254)
+    def syncWhere = ["name"]
+}

@@ -1,0 +1,18 @@
+<component name="libraryTable">
+  <library name="poi">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/poi.jar!/" />
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/dom4j-1.6.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/geronimo-stax-api_1.0_spec-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/poi-ooxml.jar!/" />
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/xmlbeans-2.3.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/poi-ooxml-schemas.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/poi-doc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/excel/lib/poi/poi-src.jar!/" />
+    </SOURCES>
+  </library>
+</component>

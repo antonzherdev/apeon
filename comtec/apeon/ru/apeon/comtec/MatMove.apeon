@@ -1,0 +1,86 @@
+package ru.apeon.comtec
+
+entity MatMove<comtec> extends StandardDocument{
+    table dba.jmat
+
+    one source(id_s) Partner
+    one destination(id_d) Partner
+
+    one consignor(id_s_cargo) Organization
+    one consignee(id_d_cargo) Organization
+
+    one guide(id_guide) Guide
+    column tp1 String(1)
+    column tp2 String(1)
+    column tp3 String(1)
+    column tp4 String(1)
+
+    column factOut(fact_out) String(1) default "1"
+
+    one currency(id_curr) Currency
+    column rate(curr) Dec(14, 6)
+    column rateDate(datv) Date
+
+    column inventoryStartDate(dat_top) Date
+
+    column ground(osn) String(127)        //Основание
+    column remark(rem) String       //Примечание
+    column byWhom(kogo) String(37)     //Через кого
+    column who(komy) String(37)  //Кому
+    column locked(data_lock) String(1)
+
+	one invoiceForPayment(id_jscet) InvoiceForPayment
+
+	def toString : String = Format.doc("Движение материалов", id, date, number)
+
+    one deliveryAddress(id_address) PartnerAddress //Адрес доставки
+
+    many materials(id_jmat) extends StandardSubDocument{
+        table dba.mat
+
+        one material(id_inv) Material
+
+        column quantity(kol1) Dec(17, 5)
+        column amount(summa_sale) Dec(17, 5)
+
+        column currencyAmount(summa_curr) Dec(17, 5) //Сумма в валюте в обычной накладной
+        column currencyAmountForImportExport(summa_salev) Dec(17, 5) //Сумма в валюте в валютной накладной
+        column currencyAccountAmount(summa_freev) Dec(17, 5) //Учетная сумма в валюте
+
+        column vat(percent_nds) Dec(6, 4)
+        column vatAmount(summa_nds_sale) Dec(19, 7) //Сумма НДС продажи
+        column vatAccountAmount(summa_nds) Dec(19, 7)
+
+        column accountAmount(summa) Dec(17, 5) //Учетная сумма
+
+
+        column quantity2(kol2) Dec(17, 5)
+        column mustHaveQuantity(kol3) Dec(17, 5) //Количество по документу
+        column priceListPrice(price_price) Dec(19, 7)
+
+        def toString : String = Format.sub("Пр.движения материалов", id, number, material.name, parent.toString)
+    }
+}
+
+object MatMove{
+	def insertToStorage : MatMove = {
+		val ret = MatMove.insert
+		ret.tp1 = "1"
+		ret.tp2 = "1"
+		ret.tp3 = "2"
+		ret.tp4 = "0"
+		ret.guide = 1120
+		ret.date = Date.now
+		ret
+	}
+	def insertFromStorage : MatMove = {
+		val ret = MatMove.insert
+		ret.tp1 = "1"
+		ret.tp2 = "2"
+		ret.tp3 = "1"
+		ret.tp4 = "0"
+		ret.guide = 1210
+		ret.date = Date.now
+		ret
+	}
+}

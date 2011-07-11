@@ -21,7 +21,7 @@ case class ConstEql(string : String) extends Constant {
     case e : eql.Expression => ScriptDataTypeEqlExpression()
   }
 
-  def value = _eql
+  def value = if(_eql == null) string else _eql
   def expression : eql.Expression = _eql.asInstanceOf[eql.Expression]
   def statement : eql.Statement = _eql.asInstanceOf[eql.Statement]
 
@@ -32,54 +32,93 @@ case class ConstEql(string : String) extends Constant {
 
   override def fillRef(env: Environment, imports: Imports) {
     val externalCreator = Some({s : String =>
-      val external = new EqlExternalScript(new ScriptParser(env.model).parseStatement(s))
+      val external = new EqlExternalScript(ScriptParser.parseStatement(env.model, s))
       external.fillRef(env, imports)
       externals.append(external)
       external
     })
     val parser = new eql.EqlParser(env.model, Some(imports), externalCreator)
-    val stm = parser.parseOption(string)
-    if(stm.isDefined) {
-      _eql = stm.get
-    }else {
-      externals.clear()
-      _eql = parser.parseExpression(string)
+    try {
+      val stm = parser.parseOption(string)
+      if(stm.isDefined) {
+        _eql = stm.get
+      }else {
+        externals.clear()
+        _eql = parser.parseExpression(string)
+      }
     }
-
+    catch {
+      case e : Throwable => throw ScriptException("%s while EQL parsing".format(e.getMessage), Some(e))
+    }
   }
+
+  override def toString = "`%s`".format(string)
 }
 
 case class ScriptDataTypeEqlExpression() extends ScriptDataType
 
 abstract class ScriptDataTypeEqlSelectBase extends ScriptDataType {
-  override def declarations = Seq(fSelect, fGet)
-
+  override lazy val declarations = ScriptDataTypeDescription.declarations(classOf[ScriptDataTypeEqlSelectBase])
   def sel(env : Environment) : eql.Select = env.ref.asInstanceOf[eql.Select]
-
-  def fSelect : FSelect = new FSelect
-  def fGet : FGet = new FGet
-
   def rowDataType : ScriptDataType
-
   def evaluate(env : Environment) : Seq[Any]
+}
+
+object ScriptDataTypeEqlSelectBaseDescription {
+  def declarations = Seq(fSelect, fGet, fFind, fFirst, fFirstOption)
+
+  val fSelect : FSelect = new FSelect
+  val fGet : FGet = new FGet
+  val fFind : FFind = new FFind
+  val fFirst = new FFirst
+  val fFirstOption = new FFirstOption
+
+  def tp(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeEqlSelectBase]
+  def rowDataType(env : Environment) = tp(env).rowDataType
+  def evaluate(env : Environment) = tp(env).evaluate(env)
 
   class FSelect extends Declaration{
     def name = "select"
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(rowDataType)
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(rowDataType(env))
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       evaluate(env)
-
   }
 
   class FGet extends Declaration{
     def name = "get"
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType(env)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
       case Seq(ret) => ret
-      case Seq() => throw ScriptException(env, "Not found")
-      case _ => throw ScriptException(env, "Have found many but get one")
+      case Seq() => throw ScriptException("Not found")
+      case _ => throw ScriptException( "Have found many but get one")
+    }
+  }
+
+  class FFind extends Declaration{
+    def name = "find"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeOption(rowDataType(env))
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
+      case Seq(ret) => Some(ret)
+      case Seq() => None
+      case _ => throw ScriptException("Have found many but get one")
+    }
+  }
+
+  class FFirst extends Declaration{
+    def name = "first"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = rowDataType(env)
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
+      case Seq() => throw ScriptException("Not found.")
+      case s : Seq[_] => s.head
+    }
+  }
+
+  class FFirstOption extends Declaration{
+    def name = "firstOption"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeOption(rowDataType(env))
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = evaluate(env) match {
+      case Seq() => None
+      case s : Seq[_] => Some(s.head)
     }
   }
 }
@@ -97,8 +136,10 @@ case class ScriptDataTypeEqlSelectOne(dataType : ScriptDataType) extends ScriptD
   def evaluate(env: Environment) = sel(env).evaluate.map{_.head._2}
 }
 
-case class ScriptDataTypeEqlStatement() extends ScriptDataType {
-  override def declarations = Seq(execute)
+case class ScriptDataTypeEqlStatement() extends ScriptDataType
+
+object ScriptDataTypeEqlStatementDescription {
+  def declarations = Seq(execute)
 
   def execute = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
@@ -110,6 +151,5 @@ case class ScriptDataTypeEqlStatement() extends ScriptDataType {
     }
     def name = "execute"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeUnit()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
 }

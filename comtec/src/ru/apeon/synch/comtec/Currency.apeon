@@ -1,6 +1,0 @@
-entity Currency(dba.currency) {
-    column id integer primary key
-    column name(nm) char(22)
-	
-	def toString : String = Format.str("Валюта", id, name)
-}

@@ -84,7 +84,7 @@ class Entity(val manager : EntityManager,
     id.description.field(columnName) match {
       case many : ToMany => {
         val entities = value.asInstanceOf[Traversable[Entity]]
-        entities.foreach{_.update(many.toOne, this)}
+        entities.foreach{_.update(many.one, this)}
         apply(columnName) match {
           case s : Traversable[Entity] => s.foreach{e =>
             if(entities.find(_.id == e.id).isEmpty) e.delete()
@@ -129,15 +129,31 @@ class Entity(val manager : EntityManager,
   }
 
   def saveId(id : Any) {
-    _id  = this.id match {
-      case i : TemporaryEntityId => {
-        SqlEntityId(i.dataSource, i.description, id.asInstanceOf[Int])
-      }
-      case d =>
-        throw new RuntimeException("Save id for not temporary id, for %s".format(d))
-    }
     this.id.description.primaryKeys match {
-      case Seq(pk) => _data.update(pk.name, id)
+      case Seq(pk) => {
+        _id  = this.id match {
+          case i : TemporaryEntityId => {
+            OneEntityId(i.dataSource, i.description, id)
+          }
+          case d =>
+            throw new RuntimeException("Save id for not temporary id, for %s".format(d))
+        }
+        _data.update(pk.name, id)
+      }
+      case pks => {
+        _id  = this.id match {
+          case i : TemporaryEntityId => {
+            MultiEntityId(i.dataSource, i.description, id.asInstanceOf[Seq[Any]])
+          }
+          case d =>
+            throw new RuntimeException("Save id for not temporary id, for %s".format(d))
+        }
+        val pkI = pks.iterator
+        val idI = id.asInstanceOf[Seq[Any]].iterator
+        while(pkI.hasNext) {
+          _data.update(pkI.next().name, idI.next())
+        }
+      }
     }
   }
 
@@ -186,6 +202,8 @@ trait EntityId {
   def eqlFindById(alias : Option[String] = None) : Expression
   def const : Expression
 
+  def data : Seq[Any]
+
   def equalAny(id : Any)  : Boolean
 
   override def equals(obj: Any) = obj match {
@@ -197,6 +215,8 @@ trait EntityId {
     (id.description.isInstanceOf(description) || description.isInstanceOf(id.description)) && equalId(id)
 
   def equalId(id : EntityId) : Boolean
+
+  def idFor(desc : Description) : EntityId
 }
 
 case class TemporaryEntityId(dataSource : DataSource, description : Description, id : Int) extends EntityId {
@@ -216,35 +236,85 @@ case class TemporaryEntityId(dataSource : DataSource, description : Description,
     case t : TemporaryEntityId => t.id == this.id
     case _ => false
   }
+
+  def data = Seq(id)
+
+  def idFor(desc: Description) = TemporaryEntityId(dataSource, desc, id)
 }
 
-case class SqlEntityId(dataSource : DataSource, description : Description, id : Int) extends EntityId {
+case class OneEntityId(dataSource : DataSource, description : Description, id : Any) extends EntityId {
   def isTemporary = false
 
   override def toString = id.toString
 
   override def equals(obj: Any) = obj match {
-    case sqlId : SqlEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description == description
+    case sqlId : OneEntityId => sqlId.id == id && sqlId.dataSource == dataSource && sqlId.description == description
     case _ => false
   }
 
   def eqlFindById(alias : Option[String]) = alias match {
-    case Some(a) => Equal(Dot(Ref(a), Ref(description.primaryKeys.head.name)), ConstNumeric(id))
-    case None => Equal(Ref(description.primaryKeys.head.name), ConstNumeric(id))
+    case Some(a) => Equal(Dot(Ref(a), Ref(description.primaryKeys.head.name)), Const(id))
+    case None => Equal(Ref(description.primaryKeys.head.name), Const(id))
   }
 
+  def const = Const(id)
 
-  def const = ConstNumeric(id)
-
-  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + id
+  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + id.hashCode
 
   def equalAny(id: Any) = id match {
-    case i : SqlEntityId => i == this
+    case i : OneEntityId => i == this
     case _ => id == this.id
   }
 
   def equalId(id: EntityId) = id match {
-    case t : SqlEntityId => t.id == this.id
+    case t : OneEntityId => t.id == this.id
     case _ => false
   }
+
+  def data = Seq(id)
+
+  def idFor(desc: Description) = OneEntityId(dataSource, desc, id)
+}
+
+case class MultiEntityId(dataSource : DataSource, description : Description, ids : Seq[Any]) extends EntityId {
+  def isTemporary = false
+
+  override def toString = ids.mkString("<", ",", ">")
+
+  override def equals(obj: Any) = obj match {
+    case sqlId : MultiEntityId => sqlId.ids.corresponds(this.ids){_ == _} && sqlId.dataSource == dataSource && sqlId.description == description
+    case _ => false
+  }
+
+  def eqlFindById(alias : Option[String]) = {
+    var ret : Option[Expression] = None
+    val i = ids.iterator
+    for(pk <- description.primaryKeys) {
+      val e = Equal(alias.map{a => Dot(a, pk.name)}.getOrElse(Ref(pk.name)), Const(i.next()))
+      ret = ret match {
+        case None => Some(e)
+        case Some(r) => Some(And(r, e))
+      }
+    }
+    ret.get
+  }
+
+  def const = throw new RuntimeException("Const is not supported for multi identity")
+
+  override def hashCode = ((629 + description.hashCode)*37 + dataSource.hashCode)*37 + ids.hashCode
+
+  def equalAny(id: Any) = id match {
+    case i : MultiEntityId => i == this
+    case s : Seq[Any] => s.corresponds(ids) {_ == _}
+    case _ => id == this.ids
+  }
+
+  def equalId(id: EntityId) = id match {
+    case t : MultiEntityId => t.ids.corresponds(this.ids){_ == _}
+    case _ => false
+  }
+
+  def data = ids
+
+  def idFor(desc: Description) = MultiEntityId(dataSource, desc, ids)
 }

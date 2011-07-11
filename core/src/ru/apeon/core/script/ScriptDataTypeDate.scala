@@ -4,14 +4,28 @@ import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
 
 case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
-  override def declarations = Seq(
+  val valueOfFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+  override def valueOf = {
+    case d : Date => d
+    case s : String => valueOfFormat.parse(s)
+  }
+}
+
+object ScriptDataTypeDateDescription {
+  def declarations = Seq(
     AddFunction("addDays", Calendar.DATE),
     AddFunction("addMonths", Calendar.MONTH),
     AddFunction("addYears", Calendar.YEAR),
     AddFunction("addSeconds", Calendar.SECOND),
     AddFunction("addMinutes", Calendar.MINUTE),
     AddFunction("addHours", Calendar.HOUR),
-    daysTo
+    daysTo,
+    Diff("diff", 0),
+    Diff("diffSeconds", 1000),
+    Diff("diffMinutes", 60000),
+    Diff("diffHours", 360000),
+    Diff("diffDays", 86400000)
   )
 
   case class AddFunction(name : String, field : Int) extends Declaration {
@@ -23,13 +37,10 @@ case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
     }
 
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDate()
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(p)) => p.expression.dataType(env) == ScriptDataTypeInteger()
-      case _ => false
-    }
+    override def parameters = Seq(DefPar("value", ScriptDataTypeInteger()))
   }
 
-  def daysTo = new Declaration {
+  val daysTo = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
       var start = env.ref.asInstanceOf[Date]
       val end = parameters.get.apply(0).value.asInstanceOf[Date]
@@ -44,18 +55,25 @@ case class ScriptDataTypeDate() extends ScriptDataTypeSimple("date") {
       }
       b.result()
     }
-
     def name = "daysTo"
-
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(ScriptDataTypeDate())
-
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
-      case Some(Seq(Par(dat, _))) => dat.dataType(env) == ScriptDataTypeDate()
-      case _ => false
-    }
+    override def parameters = Seq(DefPar("to", ScriptDataTypeDate()))
   }
 
-  val valueOfFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+  case class Diff(name : String, del : Int) extends Declaration {
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val cal1 = Calendar.getInstance()
+      val cal2 = Calendar.getInstance()
+      cal1.setTime(env.ref.asInstanceOf[Date])
+      cal2.setTime(parameters.get.head.value.asInstanceOf[Date])
+      var diff : Long = cal2.getTimeInMillis - cal1.getTimeInMillis
+      if(del != 0) {
+        diff /= del
+      }
+      diff.toInt
+    }
 
-  override def valueOf(str: String) = valueOfFormat.parse(str)
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
+    override def parameters = Seq(DefPar("end", ScriptDataTypeDate()))
+  }
 }

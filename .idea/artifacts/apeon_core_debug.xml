@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
-  <artifact type="exploded-war" name="apeon-core-debug">
-    <output-path>$PROJECT_DIR$/out-0.1/artifacts/apeon-core-debug-0.1</output-path>
+  <artifact type="exploded-war" build-on-make="true" name="apeon-core-debug">
+    <output-path>$PROJECT_DIR$/out-0.2/artifacts/apeon_core_debug</output-path>
     <root id="root">
       <element id="directory" name="WEB-INF">
         <element id="directory" name="classes">
@@ -10,8 +10,7 @@
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="scala" />
-          <element id="library" level="project" name="spring-security" />
-          <element id="library" level="project" name="quartz" />
+          <element id="library" level="project" name="spring" />
           <element id="library" level="project" name="slf4j" />
           <element id="library" level="project" name="log4j" />
           <element id="library" level="project" name="akka" />

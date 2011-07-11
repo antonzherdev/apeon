@@ -1,0 +1,5 @@
+package ru.apeon.c1
+
+entity Tabular<c1> {
+   column number(НомерСтроки) Int primary key
+}

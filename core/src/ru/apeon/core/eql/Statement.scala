@@ -30,8 +30,8 @@ case class Select(from : From,
   def dataSource = from.dataSource
 
   protected def fillRef(env: Environment) {
-    env.push(from)
     from.fillRef(env)
+    env.push(from)
     columns.foreach(_.expression.fillRef(env))
     if(where.isDefined)
       where.get.fillRef(env)
@@ -49,7 +49,7 @@ case class Column(expression : Expression, name : String)
 trait From {
   def name : String
   def field(name : String) : Field = fieldOption(name).getOrElse{
-    throw new RuntimeException("Column \"%s\" not found in %s.".format(name, this))}
+    throw EqlException("Column \"%s\" not found in \"%s\"".format(name, this))}
   def fieldOption(name : String) : Option[Field]
   def fields : Seq[Field]
   def dataSource : DataSource
@@ -62,7 +62,7 @@ trait From {
       None
 
   def from(alias : String) : From = fromOption(alias).getOrElse{
-    throw new RuntimeException("Alias \"%s\" not found in %s.".format(name, this))}
+    throw EqlException("Alias \"%s\" not found in \"%s\"".format(name, this))}
 }
 
 object From {
@@ -107,7 +107,7 @@ case class DataSourceExpressionDataSource(dataSource : DataSource) extends DataS
 
 case class DataSourceExpressionDefault() extends DataSourceExpression {
   def dataSource(entity: Description) = entity.dataSource
-  def isDefined = true
+  def isDefined = false
 }
 
 
@@ -132,7 +132,7 @@ case class FromToMany(ref : Expression, alias : Option[String])
     ref.fillRef(env)
     _entity = ref.dataType() match {
       case script.ScriptDataTypeSeq(e : script.ScriptDataTypeEntity) => e.description
-      case _ => throw new RuntimeException("Unsupported datatype")
+      case _ => throw EqlException("Unsupported datatype")
     }
     _toMany = ref match {
       case r : Ref => r.declaration.asInstanceOf[ToMany]
@@ -181,7 +181,7 @@ case class Insert(from : FromEntity, columns : Seq[InsertColumn]) extends Statem
 case class InsertColumn(columnName : String,  expression : Expression) {
   var column : FieldWithSource = null
   def fillRef(env: Environment) {
-    column = env.from.field(columnName).asInstanceOf[FieldWithSource]
+    column = env.from.get.field(columnName).asInstanceOf[FieldWithSource]
     expression.fillRef(env)
   }
 
@@ -204,7 +204,7 @@ case class Update(from : FromEntity, columns : Seq[UpdateColumn], where : Option
 case class UpdateColumn(columnName : String, expression : Expression) {
   var column : FieldWithSource = null
   def fillRef(env: Environment) {
-    column = env.from.field(columnName).asInstanceOf[FieldWithSource]
+    column = env.from.get.field(columnName).asInstanceOf[FieldWithSource]
     expression.fillRef(env)
   }
 }

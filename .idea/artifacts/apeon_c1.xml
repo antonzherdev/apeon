@@ -1,0 +1,12 @@
+<component name="ArtifactManager">
+  <artifact name="apeon-c1">
+    <output-path>$PROJECT_DIR$/out-0.2/artifacts/</output-path>
+    <root id="root">
+      <element id="archive" name="apeon-c1-0.2.zip">
+        <element id="directory" name="apeon-c1-0.2">
+          <element id="dir-copy" path="$PROJECT_DIR$/out-0.2/artifacts/apeon-c1" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>

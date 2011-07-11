@@ -1,0 +1,35 @@
+package ru.apeon.comtec
+
+entity ReqForSupplyToStorage<comtec> extends StandardDocument{
+    table dba.jscet
+
+    discriminator tp1="1"
+
+    def toString : String = Format.doc("Требование на поставку на склад", id, date, number)
+
+    one storage(id_d) Storage
+    one source(id_s) Organization
+    one order(id_jdog) Order //Договор
+
+    one currency(id_curr) Currency
+    column rate(curr) Dec(14, 6)
+    column rateDate(datv) Date //Дата курса
+
+    column remark(rem) String //Примечание
+    column supplyDate(dat_supply) Date
+
+    many materials(id_jmat) extends StandardSubDocument{
+        table dba.scet
+
+        one material(id_inv) Material
+
+        column quantity(kol1) Dec(17, 5)
+        column amount(summa_sale) Dec(17, 5)
+        column currencyAmount(summa_salev) Dec(17, 5)
+
+        column quantity2(kol2) Dec(17, 5) //Кол-во в доп ед
+        column amountForPayment(summa_oplata) Dec(19, 7) //Сумма оплаты
+
+        def toString : String = Format.sub("Пр.требования на поставку на склад", id, number, material.name, parent.toString)
+    }
+}

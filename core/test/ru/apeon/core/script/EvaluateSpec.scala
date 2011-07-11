@@ -19,13 +19,12 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     def dataType = ScriptDataTypeUnit()
     def fillRef(env: Environment, imports: Imports) {}
 
-    def preFillRef(model: ObjectModel, imports: Imports) {}
+    def preFillRef(env : Environment, imports: Imports) {}
   }
 
-  val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.test", "1.0.0")
-  val ds = new DataSource(pack, "ds") {
+  override def dataSource = new DataSource(pack, "ds") {
     override def store = new PersistentStore {
+      def nativeOne(query: String) = null
       def name = null
       def update(update: Update, parameters: Map[String, Any]) = null
       def rollback() {}
@@ -43,29 +42,28 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       }
     }
   }
-  sh.addDataSource(ds)
-  val pack2 = Package(sh, "ru.apeon.test2", "1.0.0")
+  val pack2 = Package("ru.apeon.test2")
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger())
   val plus = Def("plus", Plus(Ref("col1"), Ref("col2")))
   val toStr = Def("toStr", Dot("%d %d", Ref("format", Some(Seq(Par(Ref("col1")), Par(Ref("col2")))))))
-  val article = Description(pack, "Article", Table("dba", "article"), Seq(Id, col1, col2, plus, toStr))
-  val obj = Object(pack, "Article", Seq(Def("test", ConstInt(11))))
-  sh.addEntityDescription(article)
-  sh.addObj(obj)
-  EntityConfiguration.model = sh
-  FillRef(sh, pack, pack, article, obj)
+  val article = desc("Article").decl(Id, col1, col2, plus, toStr).b
+  val obj = Object(CoreModule, pack, "Article", Seq(Def("test", ConstInt(11))))
+  model.addObj(obj)
+  fillRef()
   val M = collection.mutable.Map
 
-  val emptyEm = new EmptyEntityManager
-  val article1 = new Entity(emptyEm, new SqlEntityId(EntityConfiguration.dataSource, article, 1), M("id" -> 1, "col1" -> 10, "col2" -> 12))
-  val article2 = new Entity(emptyEm, new SqlEntityId(EntityConfiguration.dataSource, article, 2), M("id" -> 2, "col1" -> 132, "col2" -> 122))
+  val emptyEm = new TestEntityManager
+  val article1 = new Entity(emptyEm, new OneEntityId(EntityConfiguration.dataSource, article, 1), M("id" -> 1, "col1" -> 10, "col2" -> 12))
+  val article2 = new Entity(emptyEm, new OneEntityId(EntityConfiguration.dataSource, article, 2), M("id" -> 2, "col1" -> 132, "col2" -> 122))
 
 
-  class TestedEntityManager extends EmptyEntityManager {
+  class TestedEntityManager extends TestEntityManager {
+    override val model = EvaluateSpec.this.model
+
     override def get(id: EntityId) = id.description match {
       case a if a == article => id match {
-        case id : SqlEntityId => id.id match {
+        case id : OneEntityId => id.id match {
           case 1 => Some(article1)
           case _ => None
         }
@@ -94,10 +92,11 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
   }
 
 
-  def run(statement : Statement*) = Script(pack, statement : _*).evaluate(new Env(new TestedEntityManager))
-  def run(pack : Package, statement : Statement*) = Script(pack, statement : _*).evaluate(new Env(new TestedEntityManager))
-  def run(env : Environment, statement : Statement*) = Script(pack, statement : _*).evaluate(env)
-  def run(em : EntityManager, statement : Statement*) = Script(pack, statement : _*).evaluate(env = new Env(em))
+  def run(statement : Statement*) = Script(model, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
+  def run(pack : Package, statement : Statement*) = Script(model, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
+  def run(model : ObjectModel, pack : Package, statement : Statement*) = Script(model, pack, statement : _*).evaluate(new Env(new TestedEntityManager))
+  def run(env : Environment, statement : Statement*) = Script(model, pack, statement : _*).evaluate(env)
+  def run(em : EntityManager, statement : Statement*) = Script(model, pack, statement : _*).evaluate(env = new Env(em))
 
   describe("Script") {
     it("eval") {
@@ -137,7 +136,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(
         Var("sum", ConstInt(0)),
         Dot(ConstSeq(Seq(ConstInt(111), ConstInt(222))), ref("foreach",
-          BuiltInFunction(Set(Ref("sum"), Plus(Ref("sum"), Ref("r"))), Seq("r")))
+          bf("r", Set(Ref("sum"), Plus(Ref("sum"), Ref("r")))))
         ),
         Ref("sum")
       ) should equal (333)
@@ -145,7 +144,7 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
     it("filter") {
       val s = ConstSeq(Seq(5, 1, 4, 2))
-      val f = BuiltInFunction(More(Ref("_"), 3))
+      val f = bf(More(Ref("_"), 3))
       run(Dot(s, ref("filter", f))) should equal (Seq(5, 4))
       run(Dot(s, ref("filterNot", f))) should equal (Seq(1, 2))
     }
@@ -202,11 +201,11 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
   describe("Dot") {
     it("Прямая ссылка на пакет") {
-      run(pack2, Dot(Dot(Dot(Ref("ru"), Ref("apeon")), Ref("test")), Ref("Article", ConstInt(1))))should equal(article1)
+      run(pack2, Dot(Dot(Dot(Ref("ru"), Ref("apeon")), Ref("core")), Ref("Article", ConstInt(1))))should equal(article1)
     }
 
     it("Ссылка на с импортом") {
-      run(pack2, Import("ru.apeon._"), Dot(Ref("test"), Ref("Article", ConstInt(1))))should equal(article1)
+      run(pack2, Import("ru.apeon._"), Dot(Ref("core"), Ref("Article", ConstInt(1))))should equal(article1)
     }
   }
 
@@ -219,18 +218,18 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
     it("Insert") {
       var ok = false
-      var e : Entity = null
-      val em = new EmptyEntityManager {
+      var ee : Entity = null
+      val em = new TestEntityManager {
         override def insert(description: Description, dataSource: DataSource) = {
           description should equal(article)
           ok = true
-          e = new Entity(this, new SqlEntityId(dataSource, description, -1))
-          e
+          ee = new Entity(this, new OneEntityId(dataSource, description, -1))
+          ee
         }
       }
       run(em,
         Dot(Ref("Article"), Ref("insert"))
-      ) should equal (e)
+      ) should equal (ee)
       ok should equal (true)
     }
 
@@ -299,6 +298,10 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(Or(Equal(ConstInt(1), ConstInt(1)), Equal(ConstInt(2), ConstInt(3)))) should equal (true)
       run(Or(Equal(ConstInt(1), ConstInt(2)), Equal(ConstInt(2), ConstInt(3)))) should equal (false)
     }
+    it("!") {
+      run(Not(ConstBoolean(false))) should equal(true)
+      run(Not(ConstBoolean(true))) should equal(false)
+    }
   }
 
   describe("Ariphmethic") {
@@ -363,26 +366,26 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
   }
 
   describe("Ref") {
-    def pfo(obj : Object) {
-      val ds = new DataSource(pack, "ds")
-      obj.pack.model.addDataSource(ds)
-      obj.pack.model.addObj(obj)
-      EntityConfiguration.model = obj.pack.model
-      FillRef(obj.pack.model, obj.pack, obj.pack, obj)
-    }
-    def pc = Package(new DefaultObjectModel, "ru.apeon.test", "1.0.0")
     it("This object ref") {
-      val pack = pc
-      pfo(Object(pack, "Test", Seq(Def("test", ConstInt(11)), Def("test2", Ref("test")))))
-      run(pack, Dot(Ref("Test"), Ref("test2"))) should equal (11)
-      EntityConfiguration.model = sh
+      object O extends EntityDefine{
+        def apply() {
+          model.addObj(Object(CoreModule, pack, "Test", Seq(Def("test", ConstInt(11)), Def("test2", Ref("test")))))
+          fillRef()
+          run(model, pack, Dot(Ref("Test"), Ref("test2"))) should equal (11)
+        }
+      }
+      O()
     }
     it("This object ref in parameters after dot") {
-      val pack = pc
-      pfo(Object(pack, "Test", Seq(Def("test", ConstInt(11)),
-        Def("test2", Dot("%d", Ref("format", Ref("test")))))))
-      run(pack, Dot(Ref("Test"), Ref("test2"))) should equal ("11")
-      EntityConfiguration.model = sh
+      object O extends EntityDefine{
+        def apply() {
+          model.addObj(Object(CoreModule, pack, "Test", Seq(Def("test", ConstInt(11)),
+            Def("test2", Dot("%d", Ref("format", Ref("test")))))))
+          fillRef()
+          run(model, pack, Dot(Ref("Test"), Ref("test2"))) should equal ("11")
+        }
+      }
+      O()
     }
     it("Entity field function ref") {
       run(
@@ -416,22 +419,37 @@ class EvaluateSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       ) should equal (30)
     }*/
   }
-}
 
-class EmptyEntityManager extends EntityManager {
-  def beginTransaction() {}
-  def select(select: eql.Select) : Seq[Entity] = Seq()
-  def register(entity: Entity) = null
-  def lazyLoad(entity: Entity, field : Field, data : Any) : Any = null
-  def insert(description: Description, dataStore: DataSource) : Entity = null
-  def get(id: EntityId) : Option[Entity] = None
-  def commit() {}
-  def beforeUpdate(entity: Entity, key: String, data: Any) {}
-  def beforeDelete(entity: Entity) {}
-  def afterUpdate(entity: Entity, key: String, data: Any) {}
-  def afterInsert(entity: Entity) {}
-  def afterDelete(entity: Entity) {}
-}
-class Env(override val em : EntityManager) extends DefaultEnvironment {
-  override protected def createEntityManager = null
+  describe("Функции с кэширование") {
+    it("Test") {
+      var ok1 = false
+      var ok2 = false
+      run(
+        new TestedEntityManager{
+          override def get(id: EntityId) = id.data match {
+            case Seq(1) => {
+              ok1 should equal(false)
+              ok1 = true
+              e(id)
+            }
+            case Seq(2) => {
+              ok2 should equal(false)
+              ok2 = true
+              e(id)
+            }
+          }
+        },
+        Def("t",
+          statement = ref("Article", ref("id")),
+          parameters = Seq(DefPar("id", ScriptDataTypeInteger())),
+          cached = true
+        ),
+        ref("t", 1),
+        ref("t", 1),
+        ref("t", 2)
+      )
+      ok1 should equal(true)
+      ok2 should equal(true)
+    }
+  }
 }

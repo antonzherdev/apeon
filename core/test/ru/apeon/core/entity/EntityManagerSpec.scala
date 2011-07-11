@@ -4,47 +4,40 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.Spec
 import collection.Map
 import ru.apeon.core.eql._
-import ru.apeon.core.script.{Package, DefaultObjectModel}
 
 /**
  * @author Anton Zherdev
  */
 
-class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
-  val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
-  val ps = new DataSource(pack, "apeon") {
+class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine {
+  override def createDataSource = new DataSource(pack, "ds") {
     override def store = EntityConfiguration.store
   }
-  sh.addDataSource(ps)
-
   var store2 : PersistentStore = _
 
   val ds2 = new DataSource(pack, "ds2") {
     override def store = store2
   }
-  sh.addDataSource(ds2)
+  model.addDataSource(ds2)
 
   val col1 = Attribute(pack, "col1", "col1", AttributeDataTypeInteger())
   val col2 = Attribute(pack, "col2", "col2", AttributeDataTypeInteger(), default = Some(DefaultInt(20)))
-  val invoicesCol = ToMany(pack, "invoices", "Invoice", "article")
-  val article = Description(pack, "Article", Table("dba", "article"), Seq(Id, col1, col2, invoicesCol))
-  sh.addEntityDescription(article)
+  val invoicesCol = ToManyRef(pack, "invoices", "Invoice", "article")
+  val article = desc("Article").decl(Id, col1, col2, invoicesCol).b
 
   val articleCol = ToOne(pack, "article", "id_article", "Article")
-  val invoice = Description(pack, "Invoice", Table("dba", "invoice"), Seq(Id, articleCol, col1))
-  sh.addEntityDescription(invoice)
+  val invoice = desc("Invoice").decl(Id, articleCol, col1).b
 
-  FillRef(sh, pack, pack, article, invoice)
+  fillRef()
 
   val M = collection.mutable.Map
-  EntityConfiguration.model = sh
+  EntityConfiguration.model = model
 
   def nem = new DefaultEntityManager
 
   abstract class PS extends PersistentStore {
     def name = "test"
-
+    def nativeOne(query: String) = null
     def update(update: Update, parameters: Map[String, Any]) {
       throw new RuntimeException("Unover")
     }
@@ -74,21 +67,21 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
       val entities = nem.select(Select(From(article)))
       entities.size should equal (2)
       val e1 = entities.head
-      e1.id should equal(new SqlEntityId(ps, article, 1))
+      e1.id should equal(new OneEntityId(dataSource, article, 1))
       e1("col1") should equal (2)
       val e2 = entities.tail.head
-      e2.id should equal(new SqlEntityId(ps, article, 2))
+      e2.id should equal(new OneEntityId(dataSource, article, 2))
       e2("col1") should equal (3)
     }
     it("Сущности должна получасться по идентификатору") {
-      val id = new SqlEntityId(ps, article, 1)
+      val id = new OneEntityId(dataSource, article, 1)
       val e = nem.get(id).get
       e.id should equal(id)
       e("col1") should equal (2)
     }
     it("Считование должно учитывать измения") {
       val em = nem
-      val id = new SqlEntityId(ps, article, 1)
+      val id = new OneEntityId(dataSource, article, 1)
       val e = em.get(id).get
       e("col1") should equal (2)
       e.update("col1", 33)
@@ -100,7 +93,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
       val entities = em.select(Select(From(article)))
       entities.size should equal (2)
       val e1 = entities.head
-      e1.id should equal(new SqlEntityId(ps, article, 1))
+      e1.id should equal(new OneEntityId(dataSource, article, 1))
       e1("col1") should equal (33)
     }
 
@@ -110,10 +103,10 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
           "article" -> collection.mutable.Map[String, Any]("id" -> 1, "col1" -> 222, "col2" -> 0)))
       }
       val em = nem
-      val id = new SqlEntityId(ps, invoice, 1)
+      val id = new OneEntityId(dataSource, invoice, 1)
       val e = em.get(id).get
       val a = e("article").asInstanceOf[Entity]
-      a.id should equal (new SqlEntityId(ps, article, 1))
+      a.id should equal (new OneEntityId(dataSource, article, 1))
       a("col1") should equal (222)
     }
 
@@ -133,14 +126,14 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
       val entities = em.select(Select(FromEntity(article, None, DataSourceExpressionDataSource(ds2))))
       entities.size should equal (3)
       val e1 = entities.head
-      e1.id should equal(new SqlEntityId(ds2, article, 1))
+      e1.id should equal(new OneEntityId(ds2, article, 1))
       e1("col1") should equal (22)
       val e2 = entities.tail.head
-      e2.id should equal(new SqlEntityId(ds2, article, 2))
+      e2.id should equal(new OneEntityId(ds2, article, 2))
       e2("col1") should equal (33)
     }
     it("Сущности должна получасться по идентификатору из неосновного источника данных") {
-      val id = new SqlEntityId(ds2, article, 1)
+      val id = new OneEntityId(ds2, article, 1)
       val e = nem.get(id).get
       e.id should equal(id)
       e("col1") should equal (22)
@@ -153,7 +146,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
       EntityConfiguration.store = new PS{
         override def insert(statement: Insert, parameters: Map[String, Any]) = {
           statement should equal(
-            Insert(FromEntity(article, None, DataSourceExpressionDataSource(ps)),
+            Insert(FromEntity(article, None, DataSourceExpressionDataSource(dataSource)),
               Seq(InsertColumn("col2", Const(20)), InsertColumn("col1", Const(555)))))
           ok = true
           111
@@ -168,7 +161,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
       e.update("col1", 555)
       em.commit()
 
-      e.id should equal(new SqlEntityId(ps, article, 111))
+      e.id should equal(new OneEntityId(dataSource, article, 111))
       e("id") should equal(111)
       e("col1") should equal (555)
       e("col2") should equal (20)
@@ -190,7 +183,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
       val e = em.insert(article, ds2)
       em.commit()
 
-      e.id should equal(new SqlEntityId(ds2, article, 112))
+      e.id should equal(new OneEntityId(ds2, article, 112))
       e("id") should equal(112)
       ok should equal (true)
     }
@@ -205,14 +198,14 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
 
         override def update(update: Update, parameters: Map[String, Any]) {
           update should equal(
-            Update(FromEntity(article, Some("t"), DataSourceExpressionDataSource(ps)), Seq(UpdateColumn("col1", Const(5565))),
+            Update(FromEntity(article, Some("t"), DataSourceExpressionDataSource(dataSource)), Seq(UpdateColumn("col1", Const(5565))),
               Some(Equal(Dot("t", "id"), Const(222)))))
           ok = true
         }
       }
       val em = nem
       em.beginTransaction()
-      val e = em.get(new SqlEntityId(ps, article, 222)).get
+      val e = em.get(new OneEntityId(dataSource, article, 222)).get
       e.update("col1", 5565)
       em.commit()
 
@@ -234,7 +227,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
       }
       val em = nem
       em.beginTransaction()
-      val e = em.get(new SqlEntityId(ds2, article, 1)).get
+      val e = em.get(new OneEntityId(ds2, article, 1)).get
       e.update("col1", 678)
       em.commit()
 
@@ -265,7 +258,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
         }
       }
       val em = nem
-      val e = em.get(new SqlEntityId(ps, article, 333)).get
+      val e = em.get(new OneEntityId(dataSource, article, 333)).get
       val invoices = e("invoices").asInstanceOf[Traversable[Entity]]
       invoices.size should equal(2)
       val c = em.insert(invoice)
@@ -284,7 +277,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
 
         override def delete(delete: Delete, parameters: Map[String, Any]) {
           delete should equal(
-            Delete(FromEntity(article, Some("t"), DataSourceExpressionDataSource(ps)),
+            Delete(FromEntity(article, Some("t"), DataSourceExpressionDataSource(dataSource)),
               Some(Equal(Dot("t", "id"), Const(333)))))
           ok = true
         }
@@ -292,7 +285,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
 
       val em = nem
       em.beginTransaction()
-      val e = em.get(new SqlEntityId(ps, article, 333)).get
+      val e = em.get(new OneEntityId(dataSource, article, 333)).get
       e.update("col1", 123)
       e.delete()
       em.commit()
@@ -316,7 +309,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
 
       val em = nem
       em.beginTransaction()
-      val e = em.get(new SqlEntityId(ds2, article, 1)).get
+      val e = em.get(new OneEntityId(ds2, article, 1)).get
       e.update("col1", 123)
       e.delete()
       em.commit()
@@ -338,7 +331,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
         }
       }
       val em = nem
-      val e = em.get(new SqlEntityId(ps, article, 333)).get
+      val e = em.get(new OneEntityId(dataSource, article, 333)).get
       val invoices = e("invoices").asInstanceOf[Traversable[Entity]]
       invoices.size should equal(2)
     }
@@ -351,7 +344,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
         }
       }
       val em = nem
-      val e = em.get(new SqlEntityId(ps, invoice, 1)).get
+      val e = em.get(new OneEntityId(dataSource, invoice, 1)).get
       val a = e("article").asInstanceOf[Entity]
       a("col1") should equal(11)
     }
@@ -364,7 +357,7 @@ class EntityManagerSpec extends Spec with ShouldMatchers with EntityDefine{
         }
       }
       val em = nem
-      val e = em.get(new SqlEntityId(ps, invoice, 1)).get
+      val e = em.get(new OneEntityId(dataSource, invoice, 1)).get
       e("article") should equal(null)
     }
   }

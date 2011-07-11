@@ -1,0 +1,116 @@
+package ru.apeon.comtec
+
+entity Partner<comtec> extends StandardCatalog{
+   table dba.voc_names
+   discriminator is_group="0"
+
+   many addresses PartnerAddress.partner
+   column number(code) String(7) //Код
+   column locked(data_lock) String(1)
+   
+   def toString : String = Format.str("Партнер", id, name)
+}
+
+entity Organization<comtec> extends Partner {
+    table dba.voc_names
+    join dba.post(id)
+
+    column inn(post.inn) String(14)
+    column kpp(post.kpp) String(10)
+    column okonh(post.okonx) String(5)
+    column okpo(post.okpo) String(10)
+    column okved(post.okved) String(8)
+    column phone String(37)
+
+    column email(post.e_mail) String(37)
+    column remark(rem) String(301) //Примечание
+
+    column legalAddress(address) String(355)
+    column actualAddress(address_fact) String(355)
+    column number(code) String(7)
+
+
+    one country(id_country) Country
+    one group(belong_id) OrganizationGroup default 3
+    many orders Order.organization
+	many bankAccounts BankAccount.organization
+    one defaultBankAccount(post.def_bank_id) BankAccount
+
+    one region(post.id_region_custom) Region //Регион для аналитики
+    one defaultAddress(post.id_address) PartnerAddress //Адрес доставки по умолчанию
+
+    def syncWhere = ["inn"]
+}
+
+entity OrganizationGroup<comtec> {
+    table dba.voc_names
+    discriminator is_group="1"
+
+    column id Int primary key
+    column name(nm) String(254)
+    one parent(belong_id) OrganizationGroup
+
+    many child OrganizationGroup.parent
+    many organizations Organization.group
+	
+	def toString : String = Format.str("Группа организаций", id, name)
+	def syncWhere = ["name", "parent.name"]
+
+	def syncProc(d : OrganizationGroup) = {
+        syncSkip("organizations")
+        syncSkip("child")
+    }
+}
+
+entity Place<comtec> extends Partner {
+    table dba.voc_names
+
+    column address String(1024) //Адрес
+}
+
+entity Storage<comtec> extends Place {
+    table dba.voc_names
+    join dba.storage(id)
+
+    column address String
+    column belong(belong_id) Int default 2
+}
+
+entity PartnerAddress<comtec>{
+    table dba.voc_names_address
+
+    column id Int primary key
+    column name(nm) String(203) //Альтернативное наименование организации
+    column address String(1024) //Адрес
+    column number(code) String(98) //Код
+    one partner(id_voc_names) Partner //Организация
+	
+	def toString : String = Format.str("Адрес партнера", id, name)
+	def syncWhere = ["partner", "name"]
+}
+
+entity Region<comtec> extends  StandardCatalog{
+    table dba.region_custom
+
+	def toString : String = Format.str("Регион", id, name)
+}
+
+
+entity Employee<comtec> extends Partner {
+    table dba.voc_names
+    join dba.kad(id)
+
+    one person(kad.id_person) Person
+    column group(belong_id) Int default 4
+}
+
+entity Person<comtec> {
+    table dba.person
+
+    column id Int primary key
+    column firstName(firstname) String(63)
+    column secondName(secondname) String(63)
+    column middleName(patronymic) String(63)
+
+    def syncWhere = ["firstName", "secondName", "middleName"]
+}

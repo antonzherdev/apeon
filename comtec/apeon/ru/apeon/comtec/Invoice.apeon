@@ -1,0 +1,52 @@
+package ru.apeon.comtec
+
+entity Invoice<comtec> extends StandardDocument{
+    table dba.jfact
+
+	column type(tp) String(1) //Тип счет-фактуры
+
+	def toString : String = Format.doc("Счет-фактура", id, date, number)
+
+    one consignor(id_d_cargo) Organization // Грузоотправитель
+    one consignee(id_s_cargo) Organization //Грузополучатель
+    column remark(rem) String(37) //Примечание
+    one order(id_jdog) Order // Договор
+    one customer(id_s_d) Organization // Покупатель
+
+    column incomeDate(dat_post) Date //Дата поступления
+    column postingDate(dat_oprihod) Date //Дата оприходования
+    one currency(id_curr) Currency//Валюта
+    column rate(curr) Dec(14, 6) //Курс валюты
+    column paymentDate(dat_oplat_for_otgr) Date //Дата оплаты (политика по отгрузке)
+    column materialCategory(kind_of_items) String(17) //Категория предметов счета-фактуры
+    column refundAmount(summa_vozvrat) Dec(19, 7) //Сумма возврата
+    column documentDate(p_dat) Date //Платежно расчетный документ(для произвольного ввода): дата
+    column documentNumber(p_nu) String(40) //Платежно расчетный документ(для произвольного ввода): номер
+    column considerInBooks(for_book) String(1) //Учитывать в книге покупок(продаж)
+
+    one guide(id_guide2) Guide
+
+    many materials(id_jfact) extends StandardSubDocument{
+        table dba.fact
+
+        one material(id_inv) Material
+        column materialName(inv_free_type) String(255) //Произвольное наименование
+
+        column accountAmount(summa) Dec(19, 7) //
+        column amount(summa_sale) Dec(19, 7) //Сумма продажи
+        column totalAmount(summa_post) Dec(19, 7) //Стоимость товаров всего с учетом налогов и НП
+
+        column vat(percent_nds) Dec(6, 4) //Ставка НДС
+        column vatAmount(summa_nds) Dec(19, 7) //Сумма НДС
+
+        column currencyAccountAmount(summav) Dec(19, 7) //Сумма продажи
+        column currencyAmount(summa_salev) Dec(19, 7) //Сумма продажи в валюте
+        column currencyVatAmount(summa_nds_v) Dec(19, 7) //Сумма НДС в валюте
+        column quantity(kol1) Dec(17, 5) //Сумма продажи в валюте
+
+        one country(id_country) Country
+        column entryNumber(custom_nu) String(30) //Номер ГТД
+
+        def toString : String = Format.sub("Пр.счета-фактуры", id, number, material.name, parent.toString)
+    }
+}

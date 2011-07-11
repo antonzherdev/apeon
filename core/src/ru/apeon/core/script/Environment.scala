@@ -2,6 +2,7 @@ package ru.apeon.core.script
 
 import collection.mutable.Stack
 import ru.apeon.core.entity._
+import collection.Seq
 
 trait Environment{
   def atomic(f : => Any) : Any = {
@@ -11,104 +12,61 @@ trait Environment{
     ret
   }
 
-  val stack = Stack[Statement]()
-
-  def evaluate(statement : Statement) : Any ={
-    stack.push(statement)
-    try {
-      statement.evaluate(this)
-    }
-    finally {
-      stack.pop()
-    }
-  }
-
-  def stackString = stack.mkString("\n")
-
   /**
    * Выражение в Set, которое слева.
    * Это необходимо, чтобы выражение справа могло действовавать в контексте выражения слева.
    */
   def currentSet : Option[SetBase]
   def leftEntity : Option[Entity]
-  def withSet[A](set : Option[SetBase], entity : Option[Entity])(f : => A) = {
-    val oldSet = currentSet
-    val oldEntity = leftEntity
-    setSet(set, entity)
-    val ret = f
-    setSet(oldSet, oldEntity)
-    ret
-  }
-  protected def setSet(set : Option[SetBase], entity : Option[Entity])
+
+  def setSet(set : Option[SetBase], entity : Option[Entity])
+
+  val cache : collection.mutable.Map[Any, Any] = collection.mutable.Map.empty[Any, Any]
 
   def start() {
     em.beginTransaction()
   }
   def end() {
     em.commit()
+    cache.clear()
   }
   def em : EntityManager
   def model : ObjectModel
-  def dataSource : DataSource
-  def dataSource(dataSourceName : Option[Expression], imports : Option[Imports] = None) : DataSource = dataSourceName match {
-    case Some(e) => e.evaluate(this) match {
-      case st : DataSource => st
-      case name => model.dataSource(name.toString, imports)
+
+  def entityDescription(name : String, imports : Option[Imports] = None) = {
+    model.entityDescriptionOption(name, imports).getOrElse{
+       throw ScriptException("Entity %s not found".format(name))
     }
-    case None => currentDataSource.getOrElse(dataSource)
   }
-  def withDataSource[A](dataSource : DataSource)( f : => A) : A = {
-    val old = this.currentDataSource
-    setCurrentDataSource(Some(dataSource))
-    val ret = f
-    setCurrentDataSource(old)
-    ret
+
+  def dataSource(dataSourceName : Option[Expression], imports : Option[Imports] = None) : Option[DataSource] = dataSourceName match {
+    case Some(e) => e.evaluate(this) match {
+      case st : DataSource => Some(st)
+      case name => Some(model.dataSource(name.toString, imports))
+    }
+    case None => currentDataSource
   }
-  protected def currentDataSource : Option[DataSource]
-  protected def setCurrentDataSource(dataSource : Option[DataSource])
+
+  def currentDataSource : Option[DataSource]
+  def setCurrentDataSource(dataSource : Option[DataSource])
 
   def thisType : Option[ScriptDataType]
-  protected def setThisType(tc : Option[ScriptDataType])
-  def withThisType[A](tc : ScriptDataType)( f : => A) : A = {
-    val old = dotType
-    setThisType(Some(tc))
-    val ret = f
-    setThisType(old)
-    ret
-  }
+  def setThisType(tc : Option[ScriptDataType])
 
   def dotType : Option[ScriptDataType]
-  def withDotType[A](tc : Option[ScriptDataType])( f : => A) : A = {
-    val old = dotType
-    setDotType(tc)
-    val ret = f
-    setDotType(old)
-    ret
-  }
-  protected def setDotType(tc : Option[ScriptDataType])
+
+  def setDotType(tc : Option[ScriptDataType])
 
   def refOption = if(dotRef.isDefined) dotRef else thisRef
   def ref = refOption.get
 
   def dotRef : Option[Any]
-  def withDotRef[A](tc : Option[Any])(f : => A) : A = {
-    val old = dotRef
-    setDotRef(tc)
-    val ret = f
-    setDotRef(old)
-    ret
-  }
-  protected def setDotRef(tc : Option[Any])
+
+  def setDotRef(tc : Option[Any])
 
   def thisRef : Option[Any]
-  def withThisRef[A](tc : Option[Any])(f : => A) : A = {
-    val old = thisRef
-    setThisRef(tc)
-    val ret = f
-    setThisRef(old)
-    ret
-  }
-  protected def setThisRef(tc : Option[Any])
+
+  def setThisRef(tc : Option[Any])
 
   def push()
   def pop()
@@ -116,34 +74,57 @@ trait Environment{
   def addDeclaration(declaration : Declaration)
   def declarationsMap : collection.Map[String, Seq[Declaration]]
   def declarations(name : String) : Seq[Declaration] = declarationsMap(name)
-  def declaration(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Declaration =
+  def declaration(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : DeclarationThis =
     declarationOption(name, parameters, imports).getOrElse{
-      if(dotType.isDefined) {
-        throw ScriptException(this, "Could not find ref \"%s\" in \"%s\"".format(name, dotType.get.toString))
+      val tp = dotType.orElse{thisType}
+      if(tp.isDefined) {
+        throw ScriptException(
+"""Could not find ref %s%s in "%s".
+DataTypes: %s%s
+Variants:
+%s""".format(
+          name, parameters.map("(" + _.mkString(", ") + ")").getOrElse(""), tp.get.toString,
+          name, parameters.map(pars => "(" + pars.map(par => par.dataTypeString(this)).mkString(", ") + ")").getOrElse(""),
+          tp.get.declarations.filter(_.name == name).map(_.declarationString).mkString("\n")
+        ))
       }
-      throw ScriptException(this, "Could not find ref \"%s\"".format(name))
+      throw ScriptException("Could not find ref \"%s\"".format(name))
     }
 
-  def declarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[Declaration] = {
+  def declarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[DeclarationThis] = {
     if(dotType.isDefined) {
       dotType.get.declaration(this, name, parameters)
     }
     else {
-      var ret = declarationsMap.getOrElse(name,Seq()).find(_.correspond(this, parameters))
-      if(!ret.isDefined) {
-        if(thisType.isDefined) {
-          ret = thisType.get.declaration(this, name, parameters)
-        }
+      if(name == "this") {
+        Some(DeclarationThis(None, This(thisType.get)))
+      } else {
+        val declarations: Seq[Declaration] = declarationsMap.getOrElse(name, Seq())
+        var ret : Option[DeclarationThis] = declarations.find(_.correspond(this, parameters)).map(r => DeclarationThis(None, r))
         if(!ret.isDefined) {
-          ret = globalDeclarationOption(name, parameters, imports)
+          ret = declarations.find(_.parameters.isEmpty).map{ declaration =>
+            declaration.dataType(this, None).declaration(this, "apply", parameters) match {
+              case Some(DeclarationThis(tt, dec, _)) => Some(DeclarationThis(tt, dec, Some(declaration)))
+              case None => None
+            }
+          }.filter(_.isDefined).map(_.get)
+          if(!ret.isDefined) {
+            if(thisType.isDefined) {
+              ret = thisType.get.declaration(this, name, parameters)
+            }
+            if(!ret.isDefined) {
+              ret = globalDeclarationOption(name, parameters, imports)
+            }
+          }
         }
+        ret
       }
-      ret
     }
   }
 
-  def globalDeclarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[Declaration] = {
+  def globalDeclarationOption(name : String, parameters : Option[Seq[Par]] = None, imports : Option[Imports] = None) : Option[DeclarationThis]  = {
     var ret : Option[Declaration] = model.dataSourceOption(name, imports)
+    var thisType : Option[ScriptDataType] = None
     if(!ret.isDefined) {
       ret = model.packOption(name, imports)
       if(!ret.isDefined) {
@@ -152,13 +133,14 @@ trait Environment{
           ret = model.objOption(name, imports)
         }
         if(ret.isDefined) {
-          if(parameters.isDefined)
-            ret = ret.get.dataType(this, None).declaration(this, "apply", parameters)
+          if(parameters.isDefined) {
+            thisType = Some(ret.get.dataType(this, None))
+            ret = thisType.get.declaration(this, "apply", parameters).map(d=> d.declaration)
+          }
         }
-
       }
     }
-    ret
+    ret.map{r => DeclarationThis(thisType, r)}
   }
 
 
@@ -178,8 +160,7 @@ trait Environment{
 }
 
 
-class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model,
-                         val dataSource : DataSource = EntityConfiguration.dataSource) extends Environment
+class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model) extends Environment
 {
   def push() {
     dataStack.push(data.save)
@@ -209,7 +190,7 @@ class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model,
 
 
   var thisType : Option[ScriptDataType] = None
-  protected def setThisType(tc: Option[ScriptDataType]) {
+  def setThisType(tc: Option[ScriptDataType]) {
     thisType = tc
   }
 
@@ -224,7 +205,7 @@ class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model,
   }
 
   var currentDataSource : Option[DataSource] = None
-  protected def setCurrentDataSource(dataSource: Option[DataSource]) {
+  def setCurrentDataSource(dataSource: Option[DataSource]) {
     currentDataSource = dataSource
   }
 

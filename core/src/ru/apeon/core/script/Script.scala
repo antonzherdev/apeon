@@ -1,16 +1,12 @@
 package ru.apeon.core.script
 
 object Script {
-  def apply(pack : Package, statements : Statement*) = {
-    new Script(pack, statements).preFillRef.fillRef()
+  def apply(model : ObjectModel, pack : Package, statements : Statement*) = {
+    new Script(model, pack, statements).preFillRef().fillRef()
   }
 
-  def apply(pack : Package, model : ObjectModel, statements : Statement*) = {
-    new Script(pack, statements).preFillRef.fillRef(new DefaultEnvironment(model, pack.dataSource))
-  }
-
-  def evaluate(pack : Package, statements : Seq[Statement]) : Any =
-    evaluate(new DefaultEnvironment(pack.model, pack.dataSource), statements)
+  def evaluate(model : ObjectModel, statements : Seq[Statement]) : Any =
+    evaluate(new DefaultEnvironment(model), statements)
 
   def evaluate(env : Environment, statements : Seq[Statement]) : Any = {
     var ret : Any = null
@@ -30,35 +26,42 @@ object Script {
   }
 }
 
-class Script(val pack : Package, val statements : Seq[Statement]){
-  def fillRef(env : Environment = new DefaultEnvironment(pack.model, pack.dataSource)) : Script = {
+class Script(val model : ObjectModel, val pack : Package, val statements : Seq[Statement], val fileName : Option[String] = None){
+  def fillRef(env : Environment = new DefaultEnvironment(model)) : Script = try{
     val imports = Imports(pack, statements.filter(_.isInstanceOf[Import]).map(_.asInstanceOf[Import].name))
-    statements.foreach(_.fillRef(env, imports))
+    statements.foreach(stm => stm.fillRef(env, imports))
     this
+  } catch tt
+
+  def tt : PartialFunction[Throwable, Script] = {
+    case s : Throwable if fileName.isDefined =>
+      throw new ScriptException("%s in file %s".format(s.getMessage, fileName.get), Some(s))
   }
 
-  def preFillRef = {
+  def preFillRef(env : Environment = new DefaultEnvironment(model)) : Script = try {
     val imports = Imports(pack, statements.filter(_.isInstanceOf[Import]).map(_.asInstanceOf[Import].name))
-    statements.foreach(_.preFillRef(pack.model, imports))
+    statements.foreach(stm => stm.preFillRef(env, imports))
     this
-  }
-
+  } catch tt
 
   override def equals(obj: Any) = obj match {
     case s : Script => s.statements.corresponds(this.statements){_ == _}
     case _ => false
   }
 
-  def evaluate(env : Environment = new DefaultEnvironment(pack.model, pack.dataSource)): Any =
+  def evaluate(env : Environment = new DefaultEnvironment(model)): Any = try {
     Script.evaluate(env, statements)
+  } catch tt
 
   override def toString = statements.map(_.toString).mkString("\n")
 }
 
-object ScriptException {
-  def apply(env : Environment, message : String) = {
-    new ScriptException("%s\nStack:\n%s".format(message, env.stackString))
+
+case class ScriptException(message : String,
+                           cause: Option[Throwable] = None,
+                           near : Option[Statement] = None) extends RuntimeException(message, cause.getOrElse{null}) {
+  override def getMessage = near match {
+    case None => message
+    case Some(n) => "%s near %s".format(message, n)
   }
 }
-
-class ScriptException(message : String) extends RuntimeException(message)

@@ -1,15 +1,24 @@
 package ru.apeon.core.eql
 
 import java.util.Date
-import java.lang.String
 import ru.apeon.core.entity._
 import ru.apeon.core._
-import script.{Imports, ObjectModel}
+import script.{Imports}
+import java.lang.{RuntimeException}
 
 abstract class Expression {
   def fillRef(env : Environment) {
-    children.foreach(_.fillRef(env))
+    try {
+      children.foreach(_.fillRef(env))
+    } catch {
+      case e : EqlException =>
+        if(e.cause == null)
+          throw EqlException("%s near %s".format(e.getMessage, this), e)
+        else
+          throw EqlException("%s near %s".format(e.cause.getMessage, this), e.cause)
+    }
   }
+  def isNear = false
 
   def foreach(f : (Expression) => Unit) {
     f(this)
@@ -51,30 +60,37 @@ abstract class BinaryBooleanExpression extends BinaryExpression {
 case class Equal(left : Expression, right : Expression) extends BinaryBooleanExpression {
   val name = "="
   def build(left: Expression, right: Expression) = Equal(left, right)
+  override def isNear = true
 }
 case class NotEqual(left : Expression, right : Expression) extends BinaryBooleanExpression {
   val name = "!="
   def build(left: Expression, right: Expression) = NotEqual(left, right)
+  override def isNear = true
 }
 case class More(left : Expression, right : Expression) extends BinaryBooleanExpression {
   val name = ">"
   def build(left: Expression, right: Expression) = More(left, right)
+  override def isNear = true
 }
 case class MoreOrEqual(left : Expression, right : Expression) extends BinaryBooleanExpression {
   val name = ">="
   def build(left: Expression, right: Expression) = MoreOrEqual(left, right)
+  override def isNear = true
 }
 case class Less(left : Expression, right : Expression) extends BinaryBooleanExpression {
   val name = "<"
   def build(left: Expression, right: Expression) = Less(left, right)
+  override def isNear = true
 }
 case class LessOrEqual(left : Expression, right : Expression) extends BinaryBooleanExpression {
   val name = "<="
   def build(left: Expression, right: Expression) = LessOrEqual(left, right)
+  override def isNear = true
 }
 case class Like(left : Expression, right : Expression) extends BinaryBooleanExpression{
   val name = "like"
   def build(left: Expression, right: Expression) = Like(left, right)
+  override def isNear = true
 }
 case class And(left : Expression, right : Expression) extends BinaryBooleanExpression {
   val name = "and"
@@ -84,6 +100,27 @@ case class Or(left : Expression, right : Expression) extends BinaryBooleanExpres
   val name = "or"
   def build(left: Expression, right: Expression) = Or(left, right)
 }
+
+abstract class BinaryArExpression extends BinaryExpression {
+  def dataType(env: script.Environment) = left.dataType(env)
+}
+case class Plus(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "+"
+  def build(left: Expression, right: Expression) = Plus(left, right)
+}
+case class Minus(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "-"
+  def build(left: Expression, right: Expression) = Minus(left, right)
+}
+case class Mul(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "*"
+  def build(left: Expression, right: Expression) = Mul(left, right)
+}
+case class Div(left : Expression, right : Expression) extends BinaryArExpression{
+  val name = "/"
+  def build(left: Expression, right: Expression) = Div(left, right)
+}
+
 
 object Dot{
   def apply(left : Expression, right : Ref) : Dot = new Dot(left, right)
@@ -131,6 +168,7 @@ class Dot(val left : Expression, val right : Ref) extends Expression {
   def dataType(env: script.Environment) = right.dataType(env)
 
   override protected def children = Seq(left, right)
+  override def isNear = true
 }
 
 object Ref {
@@ -144,12 +182,12 @@ object Ref {
 
 class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends Expression{
   abstract class RefData {
-    def from : From = throw new RuntimeException("No from")
-    def declaration : script.Declaration = throw new RuntimeException("No declaration")
+    def from : From = throw EqlException("No from")
+    def declaration : script.Declaration = throw EqlException("No declaration")
     def dataType(env: script.Environment) : script.ScriptDataType
   }
   case class NoData() extends RefData{
-    def dataType(env: script.Environment) =  throw new RuntimeException("No data")
+    def dataType(env: script.Environment) =  throw EqlException("No data")
   }
   case class FromData(override val from : From) extends RefData {
     def dataType(env: script.Environment) = ScriptDataTypeFrom(from)
@@ -158,7 +196,7 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
     def dataType(env: script.Environment) = declaration.dataType(env, None)
   }
   protected[eql] var data : RefData = NoData()
-  private var _defaultFrom : From = _
+  private var _defaultFrom : Option[From] = _
 
   def this(from : From) {
     this(from.name)
@@ -173,14 +211,16 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
   override def fillRef(env: Environment) {
     data = env.dot match {
       case None => env.fromOption(name) match {
-        case None => DeclarationData(env.from.field(name))
+        case None => DeclarationData(env.from.getOrElse{
+          throw EqlException("Field or entity \"%s\" not found".format(name))
+        }.field(name))
         case Some(from) => FromData(from)
       }
       case Some(dot) => {
         val e = new script.DefaultEnvironment(env.model)
         val declaration = dot.left.dataType(e).declaration(e, name, parameters.map{
           par => script.Par(new script.Expression{
-            def preFillRef(model: ObjectModel, imports: Imports){}
+            def preFillRef(model: script.Environment, imports: Imports){}
             def fillRef(env: script.Environment, imports: Imports){}
             def evaluate(env: script.Environment) = null
             def dataType(env: script.Environment) = par.dataType(env)
@@ -189,10 +229,10 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
           case Seq() => None
           case s => Some(s)
         }).getOrElse{
-          throw new RuntimeException("Function %s not found".format(name))
-        }
+          throw EqlException("Function %s not found".format(name))
+        }.declaration
         if(!declaration.isInstanceOf[SqlGeneration] && !declaration.isInstanceOf[Field]) {
-          throw new RuntimeException("Function %s is not supported in eql".format(name))
+          throw EqlException("Function %s is not supported in eql".format(name))
         }
         DeclarationData(declaration)
       }
@@ -209,7 +249,7 @@ class Ref(val name : String, val parameters : Seq[Expression] = Seq()) extends E
   def defaultFrom = _defaultFrom
 
   case class ScriptDataTypeFrom(from : From) extends script.ScriptDataType {
-    override def declarations = from.fields
+    override lazy val declarations = from.fields
   }
 
   def isFrom = data.isInstanceOf[FromData]
@@ -245,8 +285,13 @@ object Const {
     case d : Date =>  ConstDate(d)
     case e : Expression => e
     case e : Entity => e.id.const
+    case c : ConstObject => c.expression
     case _ => new ConstString(v.toString)
   }
+}
+
+trait ConstObject {
+  def expression : Expression
 }
 
 case class ConstString(value : String) extends Expression {
@@ -319,3 +364,5 @@ case class Exists(from : From, where : Option[Expression] = None) extends Expres
 abstract class External extends Expression {
   def eqlExpression : Expression
 }
+
+case class EqlException(message : String, cause: Throwable = null) extends RuntimeException(message, cause)

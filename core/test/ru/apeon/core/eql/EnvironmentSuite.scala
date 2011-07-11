@@ -3,19 +3,18 @@ package ru.apeon.core.eql
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.FunSuite
 import ru.apeon.core.entity._
-import ru.apeon.core.script._
+import ru.apeon.core.script.Package
 
 /**
  * @author Anton Zherdev
  */
 
-class EnvironmentSuite extends FunSuite with ShouldMatchers{
-  val sh = new DefaultObjectModel
-  val pack = Package(sh, "ru.apeon.core.test", "1.0.0")
-  val test1 = Description(pack, "test1", Table("", "test1"), Seq(Id))
+class EnvironmentSuite extends FunSuite with ShouldMatchers with EntityDefine {
+  val test1 = desc("test1").decl(Id).b
+  fillRef()
 
   test("Alias1") {
-    val env = new DefaultEnvironment(sh)
+    val env = new DefaultEnvironment(model)
     env.fromOption("s") should equal(None)
     val f = From(test1, "s")
     env.push(f)
@@ -25,7 +24,7 @@ class EnvironmentSuite extends FunSuite with ShouldMatchers{
   }
 
   test("Alias2") {
-    val env = new DefaultEnvironment(sh)
+    val env = new DefaultEnvironment(model)
     env.fromOption("a") should equal(None)
     env.fromOption("s") should equal(None)
     val fa = From(test1, "a")

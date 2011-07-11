@@ -1,38 +1,64 @@
 package ru.apeon.core.entity
 
 import ru.apeon.core._
+import loader.Loader
 import script._
-import javax.naming.{Context, InitialContext}
-import sql.ComtecAsaSqlDialect
-
-/**
- * @author Anton Zherdev
- */
 
 case class DataSource(pack : Package, name : String) extends Statement with Declaration with InPackage {
   def evaluate(env: Environment) {
-    pack.model.addDataSource(this)
+    env.model.addDataSource(this)
   }
 
   def dataType(env: Environment) = ScriptDataTypeDataSource()
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDataSource()
+  def fillRef(env: Environment, imports: Imports) {}
+  def preFillRef(env : Environment, imports: Imports) {}
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
 
-  private lazy val _persistentStore : PersistentStore = new SqlPersistentStore(fullName, new sql.DataSource((new InitialContext).lookup("java:comp/env") match {
-        case envContext : Context => envContext.lookup("datasource/" + name) match {
-          case ds : javax.sql.DataSource => ds
-          case _ => throw new RuntimeException("Could not get datasource")
-        }
-        case _ => throw new RuntimeException("Could not get enviroment context")
-      }, new ComtecAsaSqlDialect))
+  private lazy val xml = Loader.apeonXml.\\("datasource").find(_.\("@name").text == fullName).getOrElse{
+    throw new RuntimeException("Datasource \"%s\" nor found in apeon.xml.".format(fullName))}
+  private lazy val impl =
+    xml.\("@class").headOption.map{className =>
+      Loader.loadClass(className.text).getConstructor(classOf[DataSource]).newInstance(this).asInstanceOf[DataSourceImpl]
+    }.getOrElse(new DataSourceImplLookup(this))
+
+  private var loaded = false
+  private lazy val _persistentStore : PersistentStore = {
+    val ret = impl.persistentStore(xml)
+    ret.load()
+    loaded = true
+    ret
+  }
 
   def store : PersistentStore = _persistentStore
 
-  def fillRef(env: Environment, imports: Imports) {}
-  def preFillRef(model: ObjectModel, imports: Imports) {}
+  def load() {
+  }
 
-  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = this
+  def unload() {
+    if(loaded) {
+      store.unload()
+    }
+  }
 
-  def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
+  def insert(em : EntityManager, entity : Entity) {
+    impl.insert(em, entity)
+  }
 
-  override def toString = fullName
+  def update(em : EntityManager, entity : Entity, fields: collection.Set[FieldWithSource]) {
+    impl.update(em, entity, fields)
+  }
+
+  def delete(em : EntityManager, entity : Entity) {
+    impl.delete(em, entity)
+  }
+
+  def lazyLoad(em : EntityManager, entity : Entity, many : ToMany) = {
+    impl.lazyLoad(em, entity, many)
+  }
+
+  def lazyLoad(em : EntityManager, entity : Entity, one : ToOne, data : Any) : Entity = {
+    impl.lazyLoad(em, entity, one, data)
+  }
 }
+

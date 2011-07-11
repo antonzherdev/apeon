@@ -1,0 +1,17 @@
+package ru.apeon.comtec
+
+entity BankAccount<comtec> {
+    table dba.bank
+
+    def syncWhere = ["organization", "number"]
+    column id Int primary key
+    one organization(id_voc) Organization
+    column bankName(nm) String(98)
+    column number(rs) String(20)
+    column corrAccountNumber(ks) String(20)
+    column bik String(9)
+    column city String(30)
+    column remark(rem) String(98)
+
+    def toString = "Реквизиты банка(%d: %s: %s)".format(id, bankName, number)
+}

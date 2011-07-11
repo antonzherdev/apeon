@@ -1,12 +1,12 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Core" type="#com.intellij.j2ee.web.tomcat.TomcatRunConfigurationFactory" factoryName="Local" APPLICATION_SERVER_NAME="Tomcat 7">
     <option name="OPEN_IN_BROWSER" value="false" />
-    <option name="OPEN_IN_BROWSER_URL" value="http://localhost:8080/apeon-core-0.1/" />
-    <option name="UPDATING_POLICY" value="restart-server" />
+    <option name="OPEN_IN_BROWSER_URL" value="http://localhost:8080/apeon-core-0.2/" />
+    <option name="UPDATING_POLICY" value="redeploy-artifacts" />
     <deployment>
       <artifact name="apeon-core-debug">
         <settings>
-          <option name="CONTEXT_PATH" value="/apeon-core-0.1" />
+          <option name="CONTEXT_PATH" value="/apeon-core-0.2" />
         </settings>
       </artifact>
     </deployment>

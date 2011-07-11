@@ -4,8 +4,10 @@ import ru.apeon.core.eql._
 import collection.mutable.Buffer
 import akka.util.Logging
 import ru.apeon.core.script.{ObjectModel}
+import org.aspectj.weaver.ast.Var
 
 trait EntityManager {
+  def model : ObjectModel
 
   /**
    * Получить сущность
@@ -48,9 +50,11 @@ trait EntityManager {
     commit()
     ret
   }
+
+  def toEntity(ds: DataSource, description: Description, data: collection.mutable.Map[String, Any]): Entity
 }
 
-class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) extends EntityManager with Logging {
+class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) extends EntityManager with Logging {
   protected val entities = collection.mutable.Map[EntityId, Entity]()
   protected val touchedEntities = collection.mutable.Map[Entity, Set[String]]()
   protected val insertedEntities = Buffer[Entity]()
@@ -71,6 +75,40 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
       }
     }
 
+  def toEntity(ds: DataSource, description: Description, data: collection.mutable.Map[String, Any]): Entity = {
+    val id = description.primaryKeys match {
+      case Seq(pk) => new OneEntityId(ds, description, data(pk.name))
+      case Seq() => throw new RuntimeException("No primary key for entity \"%s\".".format(description.fullName))
+      case pks => new MultiEntityId(ds, description, pks.map {
+        pk => data(pk.name)
+      })
+    }
+    var ret = entities.get(id)
+    if (ret.isEmpty) {
+      val r = data.map {
+        case ((columnName, value)) =>
+          description.field(columnName) match {
+            case o: ToOne => value match {
+              case m: collection.mutable.Map[String, Any] => {
+                val iid = m(o.entity.primaryKeys.head.name)
+                if (iid == null) (columnName, null)
+                else {
+                  val oid = new OneEntityId(ds, o.entity, iid)
+                  (columnName, entities.getOrElse(oid, {
+                    new Entity(this, oid, m)
+                  }))
+                }
+              }
+              case _ => (columnName, value)
+            }
+            case _ => (columnName, value)
+          }
+      }
+      ret = Some(new Entity(this, id, r))
+    }
+    ret.get
+  }
+
   def select(select : Select) = {
     val from = select.from.asInstanceOf[FromEntity].entity
     if(!select.columns.isEmpty) throw new RuntimeException("Columns is not empty")
@@ -79,29 +117,7 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
     val store = ds.store
     store.transaction{
       store.select(select).map{row =>
-        val id = new SqlEntityId(ds, from, row(from.primaryKeys.head.name).asInstanceOf[Int])
-        var ret = entities.get(id)
-        if(ret.isEmpty) {
-          val r = row.map{case ((columnName, value)) =>
-            from.field(columnName) match {
-              case o : ToOne => value match {
-                case m : collection.mutable.Map[String, Any] =>{
-                  val iid = m(o.entity.primaryKeys.head.name)
-                  if(iid == null) (columnName, null)
-                  else {
-                    val oid = new SqlEntityId(ds, o.entity, iid.asInstanceOf[Int])
-                    (columnName, entities.getOrElse(oid, {new Entity(this, oid, m)}))
-                  }
-                }
-                case i : Int => (columnName, i)
-                case _ => throw new RuntimeException("Not map")
-              }
-              case _ => (columnName, value)
-            }
-          }
-          ret = Some(new Entity(this, id, r))
-        }
-        ret.get
+        toEntity(ds, from, row)
       }
     }
   }
@@ -119,7 +135,7 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
   def commit() {
     try{
       if(log.logger.isDebugEnabled) {
-        val sb = new StringBuilder
+        /*val sb = new StringBuilder
         sb.append("Commit")
         if(!insertedEntities.isEmpty) {
           sb.append("\nInserted:\n")
@@ -133,60 +149,48 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
           sb.append("\nDeleted:\n")
           sb.append(deletedEntities.mkString("\n"))
         }
-        log.debug(sb.toString())
+        log.debug(sb.toString())*/
+        log.debug("Commit")
       }
 
+      var i = 0
+      var size = insertedEntities.size
       insertedEntities.foreach{e =>
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
         }
         touchedEntities.remove(e)
-        val id = e.id.store.insert(Insert(FromEntity(e.id.description, None, DataSourceExpressionDataSource(e.id.dataSource)),
-          e.data.map{kv =>
-            (e.id.description.field(kv._1), kv._2)
-          }.filter(_._2 != null).filter{kv =>
-            kv._1 match {
-              case a : Attribute => !a.isPrimaryKey
-              case o : ToOne => {
-                if(kv._2.isInstanceOf[Entity]) {
-                  val data = kv._2.asInstanceOf[Entity]
-                  if(data.id.isTemporary) {
-                    afterUpdate(e, o.name, data)
-                    false
-                  }
-                  else true
-                } else true
-              }
-              case _ => false
-            }}.map{kv =>
-            InsertColumn(kv._1.name, Const(kv._2))
-          }.toSeq
-        ))
-        e.saveId(id)
+        e.id.dataSource.insert(this, e)
+        i += 1
+        log.debug("%d of %d".format(i, size))
       }
 
+      i = 0
+      size = touchedEntities.size
       touchedEntities.foreach{kv =>
         val e = kv._1
         val columns = kv._2
-        if(!touchedStories.contains(e.id.store)) {
+        if (!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
         }
-        e.id.store.update(Update(FromEntity(e.id.description, Some("t"), DataSourceExpressionDataSource(e.id.dataSource)),
-          where = Some(e.id.eqlFindById(Some("t"))),
-          columns = columns.map{e.id.description.field(_)}.
-                  map{column => UpdateColumn(column.name, Const(e.apply(column)))}.toSeq
-        ))
+        e.id.dataSource.update(this, e, columns.map(column => e.id.description.field(column).asInstanceOf[FieldWithSource]))
+        i += 1
+        log.debug("%d of %d".format(i, size))
       }
 
+
+      i = 0
+      size = deletedEntities.size
       deletedEntities.foreach{e =>
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
         }
-        e.id.store.delete(Delete(FromEntity(e.id.description, Some("t"), DataSourceExpressionDataSource(e.id.dataSource)),
-          where = Some(e.id.eqlFindById(Some("t")))))
+        e.id.dataSource.delete(this, e)
+        i += 1
+        log.debug("%d of %d".format(i, size))
       }
 
       transactionCounter -= 1
@@ -243,13 +247,9 @@ class DefaultEntityManager(model : ObjectModel = EntityConfiguration.model) exte
   def lazyLoad(entity : Entity, field : Field, data : Any) : Any = field match {
     case many : ToMany =>
       if(entity.id.isTemporary) Set()
-      else select( Select(FromEntity(many.entity, Some("m"), DataSourceExpressionDataSource(entity.id.dataSource)),
-        where = Some(Equal(Dot(Ref("m"), Ref(many.toOne)), entity.id.const)))).toSet
+      else entity.id.dataSource.lazyLoad(this, entity, many)
     case one : ToOne =>
-      data match {
-        case id : Int => get(new SqlEntityId(entity.id.dataSource, one.entity, id)).getOrElse(null)
-        case _ => throw new RuntimeException("Data not int")
-      }
+      entity.id.dataSource.lazyLoad(this, entity, one, data)
     case _ =>
       throw new RuntimeException("Not support lazy load for not to one and not to many in field \"%s\" for \"%s\"".format(field, entity))
   }

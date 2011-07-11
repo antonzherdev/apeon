@@ -1,21 +1,62 @@
 package ru.apeon.core.script
 
 import util.parsing.combinator.syntactical.StdTokenParsers
-import ru.apeon.core.entity._
 import util.parsing.combinator.lexical.StdLexical
 import util.parsing.input.CharArrayReader.EofCh
 import util.parsing.combinator.token.Tokens
 
 object ScriptParser{
-  def parse(pack : Package, code: String) : Script = (new ScriptParser(pack.model, Some(pack))).parse(code)
-  def parse(model : ObjectModel, code: String) : Script = (new ScriptParser(model, None)).parse(code)
+  def parse(model : ObjectModel, module : Module, code: String, fileName : Option[String] = None, decorators : Seq[Class[_]] = Seq()) : Script = {
+    val data = new ScriptParserParser
+    data._model = model
+    data._module = module
+    data._fileName = fileName
+    data._component = new BaseScriptParser(data)
+    data._component = decorators.foldLeft(data._component){case (ret, cls) =>
+      cls.getConstructor(classOf[ScriptParserComponent]).newInstance(ret).asInstanceOf[ScriptParserComponent]
+    }
+    data.parse(code)
+  }
+
+  def parse(model : ObjectModel, module : Module, pack : Package, code: String) : Script = {
+    val data = new ScriptParserParser
+    data._model = model
+    data._module = module
+    data._fileName = None
+    data.pack = Some(pack)
+    data._component = new BaseScriptParser(data)
+    data.parse(code)
+  }
+
+  def parseStatement(model : ObjectModel, code: String) : Statement = {
+    val data = new ScriptParserParser
+    data._model = model
+    data._module = CoreModule
+    data._fileName = None
+    data._component = new BaseScriptParser(data)
+    data.parseStatement(code)
+  }
 }
 
-class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) extends StdTokenParsers with ApeonTokens{
+final class ScriptParserParser extends StdTokenParsers with ApeonTokens
+{
+  private[script] var _model : ObjectModel = _
+  private[script] var _module : Module =  CoreModule
+  private[script] var _fileName : Option[String] = None
+  var pack : Option[Package] = None
+
+  private[script] var _component : ScriptParserComponent = _
+
+  def model = _model
+  def fileName = _fileName
+  def component = _component
+  def module = _module
   type Tokens = Lexer
   val lexical = new Tokens
 
-  def parse(code : String) = {
+  def parse(code : String) : Script = {
+    component.init(lexical)
+
     val parser = phrase(script)
     val scanner = new lexical.Scanner(code)
     val ret = parser.apply(scanner)
@@ -26,6 +67,8 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
   }
 
   def parseStatement(code : String) : Statement = {
+    component.init(lexical)
+
     val parser = phrase(statement)
     val scanner = new lexical.Scanner(code)
     val ret = parser.apply(scanner)
@@ -35,337 +78,117 @@ class ScriptParser(model : ObjectModel, var pack : Option[Package] = None) exten
     }
   }
 
-  lexical.delimiters ++= List( "&&", "||",
-    ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
-    "+=", "-=", "*=", "/=", "+", "-", "*", "/")
-  lexical.reserved += (
-          "def", "sync", "as", "to", "where", "by", "entity", "column", "primary", "key", "default",
-          "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
-          "if", "else", "null", "import", "object")
-
   def script : Parser[Script] = (statement*) ^^{case statements => {
-    new Script(pack.getOrElse(statements.find(_.isInstanceOf[Package])).asInstanceOf[Package], statements)
+    new Script(model, pack.get, statements, fileName)
   }}
 
 
-  def statement : Parser[Statement] =
-    ( defStatement
-    | valStatement
-    | varStatement
-    | importStm
-    | entity
-    | extendEntity
-    | query
-    | objectDef
-    | packDef
-    | datasource
-    | "{" ~> (statement*) <~ "}" ^^{case statements => Parentheses(statements)}
-    | syncDef
-    | expression
-    )
+  def statement : Parser[Statement] = ( component.statementDef.asInstanceOf[Parser[Statement]] | expression)
 
-  def expression : Parser[Expression] = e500
+  def expression : Parser[Expression] = component.expressionDef.asInstanceOf[Parser[Expression]]
 
-  def term : Parser[Expression] = string | numeric | ref | eqlConst | nullConst | ifExpr | builtInFunction | bracket
-
-  def e200 : Parser[Expression] = term ~ opt("." ~> ref ~ opt("." ~> repsep(ref, "."))) ^^{
-    case e ~ Some(r) => {
-      var dot = Dot(e, r._1)
-      r._2.foreach(_.foreach({ref => dot = Dot(dot, ref)}))
-      dot
-    }
-    case e ~ None => e
-  }
-
-  def e300 : Parser[Expression] = e200 ~ opt(
-    (("*" | "/") ~! e300) |
-            (("=" | "+=" | "-=" | "*=" | "/=") ~! expression)
-  ) ^^ {
-    case left ~ Some(r) => r._1 match {
-      case "*" => Mul(left, r._2)
-      case "/" => Div(left, r._2)
-      case "=" => Set(left, r._2)
-      case "+=" => SetPlus(left, r._2)
-      case "-=" => SetMinus(left, r._2)
-      case "*=" => SetMul(left, r._2)
-      case "/=" => SetDiv(left, r._2)
-    }
-    case left ~ None => left
-  }
-  def e400 : Parser[Expression] = e300 ~ opt(("+" | "-") ~! e400) ^^ {
-    case left ~ Some(r) => r._1 match {
-      case "+" => Plus(left, r._2)
-      case "-" => Minus(left, r._2)
-    }
-    case left ~ None => left
-  }
-  def e450 : Parser[Expression] = e400 ~
-          opt((("==" | "!=" | ">=" | "<=") ~! e400 )  |
-                  (("<" | ">") ~ e400))  ^^
-          {
-            case left ~ Some(r) => r._1 match {
-              case "==" => Equal(left, r._2)
-              case "!=" => NotEqual(left, r._2)
-              case ">=" => MoreOrEqual(left, r._2)
-              case ">" => More(left, r._2)
-              case "<=" => LessOrEqual(left, r._2)
-              case "<" => Less(left, r._2)
-            }
-            case left ~ None => left
-          }
-
-  def e470 : Parser[Expression] = e450 ~
-          opt("&&" ~! e470) ^^ {
-    case left ~ Some(r) =>  r match {
-      case ~("&&", right : Expression) => And(left, right)
-    }
-    case left ~ None => left
-  }
-
-  def e500 : Parser[Expression] = e470 ~
-          opt(
-            ("||" ~! e500) ^^ {case o ~ e => new ~(o, e) : Any} |
-                    ("sync" ~> "by" ~! expression) |
-                    syncWith
-          ) ^^ {
-    case left ~ Some(r) =>  r match {
-      case ~("||", right : Expression) => Or(left, right)
-      case ~("by", by : Expression) => SyncBy(left, by)
-      case right : SyncRight => SyncEntity(left, right.sourceAlias, right.destination, right.where, right.statements)
-    }
-    case left ~ None => left
-  }
-
-  case class SyncRight(sourceAlias : String, destination : SyncRef, where : String, statements : Seq[Statement])
-  def syncWith : Parser[SyncRight] =
-    ("sync" ~> (as?)) ~ ("to" ~> ident) ~! (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
-      case sourceAs ~ destination ~ dataSource ~ destinationAs ~ where ~ statements =>
-        SyncRight(sourceAs.getOrElse{"source"},
-          SyncRef(destination, destinationAs.getOrElse{"dest"}, dataSource),
-          where,
-          statements.getOrElse{Seq()})
-    }
-
-
-  def valStatement : Parser[Val] =
-    "val" ~> ident ~! (dataTypeSpec?) ~ ("=" ~> expression) ^^ {
-      case name ~ dt ~ e => Val(name, e, dt)
-    }
-  def varStatement : Parser[Var] =
-    "var" ~> ident ~! (dataTypeSpec?) ~ ("=" ~> expression) ^^ {
-      case name ~ dt ~ e => Var(name, e, dt)
-    }
-
-  def defStatement : Parser[Def] =
-    ("def" ~> ident) ~! (defParameters?) ~ (dataTypeSpec?) ~ ("=" ~> statement) ^^
-            {case name ~ parameters ~ result ~ statement => Def(name, statement, parameters.getOrElse{Seq()}, result)}
-  def defParameters : Parser[Seq[DefPar]] = "(" ~> repsep(defParameter, ",") <~ ")"
-  def defParameter : Parser[DefPar] = ident ~ dataTypeSpec ^^ {case name ~ dataType => DefPar(name, dataType)}
-
-
-  def dataType : Parser[ScriptDataType] = ident ^^ {
-    case "Boolean" => ScriptDataTypeBoolean()
-    case "Date" => ScriptDataTypeDate()
-    case "Dec" => ScriptDataTypeDecimal()
-    case "Int" => ScriptDataTypeInteger()
-    case "String" => ScriptDataTypeString()
-    case entity => ScriptDataTypeEntityByName(entity)
-  }
-  def dataTypeSpec : Parser[ScriptDataType] = ":" ~> dataType
-
-  def syncDef : Parser[SyncDeclaration] =
-    ("sync"~> ident) ~ (as?) ~ ("to" ~> ident) ~ (dataSourceRef?) ~ (as?) ~ ("where" ~> eqlConstString) ~ opt("{" ~> (statement*) <~ "}") ^^ {
-      case source ~ sourceAs ~ destination ~ dataSource ~ destinationAs ~ where ~ statements =>
-        SyncDeclaration(
-          SyncRef(source, sourceAs.getOrElse{"source"}),
-          SyncRef(destination, destinationAs.getOrElse{"dest"}, dataSource),
-          where,
-          statements.getOrElse{Seq()}
-        )
-    }
-
-
-  def as : Parser[String] = "as" ~> ident
-
-  def eqlConst : Parser[ConstEql] = eqlConstString ^^ (ConstEql(_))
-
-  def eqlConstString: Parser[String] =
-    elem("Eql constant", _.isInstanceOf[EqlConstLit]) ^^ (_.chars)
-
-
-  def builtInFunction : Parser[BuiltInFunction] = "{" ~> opt(repsep(ident, ",") <~ "=>") ~! (statement*) <~ "}" ^^ {
-    case aliases ~ statements => BuiltInFunction(statements match {
-      case Seq(one) => one
-      case _ => Parentheses(statements)
-    }, aliases.getOrElse{Seq()})
-  }
-
-  def ref : Parser[Ref] = ident ~ (dataSourceRef?) ~ (parameters?) ~ (builtInFunction?) ^^ {
-    case name ~ dataSource ~ parameters ~ Some(function) => Ref(name, Some(parameters.getOrElse(Seq()) :+ Par(function)), dataSource)
-    case name ~ dataSource ~ parameters ~ None => Ref(name, parameters, dataSource)
-  }
-  def dataSourceRef : Parser[Expression] = "<" ~> (ref | string) <~ ">"
-
-  def parameters : Parser[Seq[Par]] =  "(" ~> repsep(expression, ",") <~ ")" ^^ {case parameters => parameters.map{Par(_)}}
-
-  def ifExpr : Parser[If] = ("if" ~> "(" ~> expression <~ ")") ~! statement ~ opt("else" ~> statement) ^^ {
-    case e ~ t ~ f => If(e, t, f)
-  }
-
-  def entity : Parser[Description] =
-    "entity" ~> ident ~ opt("(" ~> table <~ ")") ~! (_extends?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
-      case name ~ table ~ ext ~ rows => Description(pack.get,
-        name, table.getOrElse(Table("", name)).asInstanceOf[Table],
-        rows.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]],
-        rows.find(_.isInstanceOf[Discriminator]).getOrElse(DiscriminatorNull()).asInstanceOf[Discriminator],
-        extendsEntityName = ext,
-        declaredJoinedTables = rows.filter(_.isInstanceOf[JoinedTable]).asInstanceOf[Seq[JoinedTable]]
-      )
-    }
-
-  def _extends = "extends" ~> entityRef
-
-  def entityRef = ident
-
-  def entityStatement : Parser[Any] = (attribute | one | many | discriminator | joinTable | objectStatement)
-
-  def attribute : Parser[Attribute] =
-    ("column" ~> ident) ~! (dbName?) ~ attributeDataType ~ primaryKey ~ (default?)  ^^ {
-      case name ~ dbName ~ dataType ~ pk ~ default => {
-        val names = dbName.getOrElse(Map())
-        Attribute(pack.get, name,
-          FieldSources(names.getOrElse("", FieldSource(name)), names.filterNot(_._1.isEmpty)),
-          dataType, isPrimaryKey = pk, default = default
-        )
-      }
-    }
-
-  def one : Parser[ToOne] =
-    ("one" ~> ident) ~! (dbName?) ~ entityRef ~ (default?)  ^^ {
-      case name ~ dbName ~ entity ~ default => {
-        val names = dbName.getOrElse(Map())
-        ToOne(pack.get, name,
-          FieldSources(names.getOrElse("", FieldSource(name + "_id")), names.filterNot(_._1.isEmpty)),
-          entity, default = default)
-      }
-    }
-
-  def default : Parser[Default] = "default" ~>
-          ( numericLit ^^ {case n => DefaultInt(n.toInt)}
-                  | stringLit ^^ {case n => DefaultString(n)})
-
-  def many : Parser[ToMany] =
-    ("many" ~> ident) ~! entityRef ~ ("(" ~> ident <~ ")")  ^^ {
-      case name ~ entity ~ column =>
-        ToMany(pack.get, name, entity, column)
-    }
-
-  def dbName : Parser[Map[String, FieldSource]] =
-    ("(" ~> repsep(dbName1, ",") <~ ")") ^^ {
-      case ns => ns.toMap
-    }
-
-  def dbName1 : Parser[(String, FieldSource)] =
-    opt((ident | stringLit) <~ ".") ~ (ident | stringLit) ~ opt("<" ~> ident  <~ ">") ^^ {
-      case table ~ column ~ dataSource => (dataSource.getOrElse(""), FieldSource(column, table))
-    }
-
-  def attributeDataType : Parser[AttributeDataType] = ident ~ opt(attributeDataTypePar) ^^ {
-    case n ~ w => AttributeDataType(n, w.getOrElse((0, 0))._1, w.getOrElse((0, 0))._2)
-  }
-  def attributeDataTypePar : Parser[(Int, Int)]= "(" ~> numericLit ~ opt("," ~> numericLit) <~ ")" ^^ {
-    case width ~ scale => (width.toInt, scale.getOrElse("0").toInt)
-  }
-
-  def primaryKey : Parser[Boolean] = opt("primary" ~> "key") ^^ {case v => v.isDefined}
-
-  def table : Parser[Table] = opt(ident <~ ".") ~ ident ^^ {case schema ~ table => Table(schema.getOrElse(""), table)}
-  def discriminator : Parser[Discriminator] = "discriminator" ~> ident ~! ("=" ~> stringLit) ^^ {
-    case column ~ value => DiscriminatorColumn(column, value)
-  }
-
-  def joinTable: Parser[JoinedTable] = "table" ~> table ~! ("(" ~> ident <~ ")") ^^ {
-    case table ~ column => JoinedTable(table, column)
-  }
-
-  def query : Parser[Query] = "query" ~> ident ~! ("{" ~> (statement*) <~ "}") ^^ {
-    case name ~ statements => {
-      val span = statements.span(_.isInstanceOf[Def])
-      if(span._1.find{
-        case Def("apply", _, Seq(), _) => true
-        case _ => false}.isDefined)
-      {
-        Query(pack.get, name, statements.filter(_.isInstanceOf[DeclarationStatement]).asInstanceOf[Seq[DeclarationStatement]] )
-      }
-      else {
-        Query(pack.get, name,
-          Def("apply", span._2 match {
-            case Seq(stm) => stm
-            case _ => Parentheses(span._2)
-          }) +: span._1.asInstanceOf[Seq[Def]]
-        )
-      }
-    }
-  }
-
-  def objectDef : Parser[Object] = "object" ~> ident ~! ("{" ~> (objectStatement*) <~ "}") ^^ {
-    case name ~ statements => Object(pack.get, name, statements)
-  }
-
-  def packDef : Parser[Package] = "package" ~> repsep(ident, ".") ~! ("(" ~> repsep(numericLit, ".") <~ ")") ~
-          opt("{" ~> (packStatement*) <~ "}") ^^ {
-    case names ~ versions ~ statementsOption => {
-      pack.getOrElse{
-        val statements = statementsOption.getOrElse(Seq())
-        pack = Some(new Package(model, names, Some(versions.map(_.toInt)),
-          defaultDataSourceName = statements.find(_.isInstanceOf[DefaultDataSource]).map(_.asInstanceOf[DefaultDataSource].name)))
-        pack.get
-      }
-    }
-  }
-
-  def packStatement : Parser[Any] = defaultDataSource
-  case class DefaultDataSource(name : String)
-  def defaultDataSource : Parser[DefaultDataSource] = "default" ~> "datasource" ~> ident ^^ {case name => DefaultDataSource(name)}
-
-  def datasource = "datasource" ~> ident ^^ {case name => DataSource(pack.get, name)}
-
-  def bracket = "(" ~> expression <~ ")"
-
-  def nullConst = "null" ^^^ {ConstNull()}
-  def string = stringLit ^^ {case s => ConstString(s)}
-  def numeric =
-    (numericLit ~ opt("." ~> numericLit) ^^ {
-      case s ~ None => ConstInt(s.toInt)
-      case s ~ Some(d) => ConstDecimal(BigDecimal((s + "." + d).toDouble))
-    } |
-     "-" ~> numericLit ~ opt("." ~> numericLit) ^^ {
-      case s ~ None => ConstInt(-s.toInt)
-      case s ~ Some(d) => ConstDecimal(BigDecimal(-(s + "." + d).toDouble))
-    })
-
-  def extendEntity = "extend" ~> "entity" ~> ident ~ ("{" ~> (extendEntityStatement*) <~ "}") ^^ {
-    case name ~ statements => ExtendEntity(name, statements)
-  }
-
-  def extendEntityStatement = (attribute | one | many)
-
-  def importStm = "import" ~> repsep(ident, ".") ^^ {case n => Import(n.mkString("."))}
-
-  def objectStatement : Parser[DeclarationStatement] =
-    (defStatement
-    | valStatement
-    | varStatement
-    )
+  def word(w : String) : Parser[String] =
+    elem("identifier", { ch =>
+      ch .isInstanceOf[lexical.Identifier] && ch.asInstanceOf[lexical.Identifier].chars == w
+    }) ^^ (_.chars)
 }
+
+abstract class ScriptParserComponent {
+  val parser : ScriptParserParser
+  type Parser[T] = parser.Parser[T]
+
+  def init(lexical : Lexer)
+
+  def statementDef : Parser[Statement]
+  def expressionDef : Parser[Expression]
+
+  implicit def keyword(chars: String) = parser.keyword(chars)
+  implicit def accept(e: parser.Elem) = parser.accept(e)
+
+  def repsep[T](p: => Parser[T], q: => Parser[Any]): Parser[List[T]] =
+    parser.repsep(p, q)
+
+  def rep1sep[T](p : => Parser[T], q : => Parser[Any]): Parser[List[T]] =
+    parser.rep1sep(p, q)
+
+  def opt[T](p: => Parser[T]): Parser[Option[T]] =
+    parser.opt(p)
+  def ident: Parser[String] = parser.ident
+
+  def word(w : String) : Parser[String] = parser.word(w)
+
+  type ~[a, b] = parser.~[a, b]
+  lazy val ~ = parser.~
+
+  def elem(e: parser.Elem): Parser[parser.Elem] = parser.elem(e)
+  def elem(kind: String, p: parser.Elem => Boolean) = parser.elem(kind, p)
+
+  def numericLit: Parser[String] = parser.numericLit
+  def stringLit: Parser[String] = parser.stringLit
+
+  def expression = parser.component.expressionDef.asInstanceOf[Parser[Expression]]
+  def statement =  (parser.component.statementDef.asInstanceOf[Parser[Statement]] | expression)
+
+  def dataSourceRef : Parser[Expression]
+  def ref : Parser[Ref]
+  def eqlConstString: Parser[String]
+
+  def objectStatement : Parser[DeclarationStatement]
+}
+
+abstract class ScriptParserDecorator extends ScriptParserComponent{
+  val decorated : ScriptParserComponent
+  val parser = decorated.parser
+
+  def init(lexical: Lexer) {
+    decorated.init(lexical)
+  }
+  def statementDef = decorated.statementDef.asInstanceOf[Parser[Statement]]
+  def expressionDef = decorated.expressionDef.asInstanceOf[Parser[Expression]]
+
+  def dataSourceRef = decorated.dataSourceRef.asInstanceOf[Parser[Expression]]
+  def ref = decorated.ref.asInstanceOf[Parser[Ref]]
+  def eqlConstString = decorated.eqlConstString.asInstanceOf[Parser[String]]
+  def objectStatement = decorated.objectStatement.asInstanceOf[Parser[DeclarationStatement]]
+}
+
 
 case class ParserException(msg : String) extends RuntimeException(msg)
 
 class Lexer extends StdLexical with ApeonTokens {
+  def mkString(chars: List[Char]): String = {
+    val b = new StringBuilder
+    var lastSymbol = '\0'
+    for(char <- chars) {
+      if(lastSymbol == '\\') {
+        b.append(char match {
+          case 'n' => '\n'
+          case 't' => '\t'
+          case s => s
+        })
+        lastSymbol = '\0'
+      } else {
+        if(char != '\\') {
+          b.append(char)
+        }
+        lastSymbol = char
+      }
+    }
+    b.result()
+  }
+
   override def token =
     ( '`' ~ rep(chrExcept('`', EofCh)) ~ '`' ^^ {case '`' ~ chars ~ '`' => EqlConstLit(chars mkString "")}
     |'`' ~> failure("unclosed eql literal")
-    | super.token
+    | identChar ~ rep( identChar | digit )              ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
+    | digit ~ rep( digit )                              ^^ { case first ~ rest => NumericLit(first :: rest mkString "") }
+    | '\'' ~ rep( str('\'') ) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(mkString(chars)) }
+    | '\"' ~ rep( str('\"') ) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(mkString(chars)) }
+    | EofCh                                             ^^^ EOF
+    | '\'' ~> failure("unclosed string literal")
+    | '\"' ~> failure("unclosed string literal")
+    | delim
+    | failure("illegal character")
     )
 
   override def whitespace: Parser[Any] = rep(
@@ -383,6 +206,15 @@ class Lexer extends StdLexical with ApeonTokens {
     prevSymbol = ch
     ret
   })
+
+  def str(par : Char) = elem("String", ch => {
+    val ret = if(prevSymbol != '\\') {
+      ch != par && ch != EofCh
+    } else true
+    prevSymbol = ch
+    ret
+  })
+
 }
 
 trait ApeonTokens extends Tokens {

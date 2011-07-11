@@ -1,0 +1,15 @@
+package ru.apeon.c1
+
+entity Catalog<c1> {
+    column id(Ref) String(36) primary key
+    column code(Код) String(254)
+    column name(Наименование) String(254)
+}
+
+entity CatalogGroup<c1> extends Catalog {
+    discriminator ЭтоГруппа = 1
+}
+
+entity CatalogRecord<c1> extends Catalog {
+    discriminator ЭтоГруппа = 0
+}

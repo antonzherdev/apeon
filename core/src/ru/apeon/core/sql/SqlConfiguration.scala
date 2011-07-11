@@ -18,7 +18,7 @@ trait SqlConfiguration {
 
 object DefaultSqlConfiguration extends SqlConfiguration {
   def apply() {
-    SqlConfiguration.dialect = new ComtecAsaSqlDialect
+    SqlConfiguration.dialect = new DefaultSqlDialect
     SqlConfiguration.dataSource = {
       new DataSource((new InitialContext).lookup("java:comp/env") match {
         case envContext : Context => envContext.lookup("datasource/apeon") match {

@@ -1,10 +1,9 @@
 package ru.apeon.core.script
 
-/**
- * @author Anton Zherdev
- */
+object EntityManagerObject extends ObjectBase {
+  def module = CoreModule
+  def pack = EmptyPackage
 
-case class EntityManagerObject(pack : Package) extends ObjectBase {
   def name = "EntityManager"
   def extendsClass = None
   def declaredDeclarations = Seq(new DeclarationStatement{
@@ -13,7 +12,6 @@ case class EntityManagerObject(pack : Package) extends ObjectBase {
       env.em.transaction{}
     }
     def name = "commit"
-    def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters.isEmpty
   }
   )
 }
