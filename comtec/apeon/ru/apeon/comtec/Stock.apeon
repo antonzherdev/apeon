@@ -1,0 +1,24 @@
+package ru.apeon.comtec
+
+entity Stock<comtec>{
+    table dba.accounts_register
+
+    def syncWhere = ["date", "number"]
+
+    column id Int primary key
+    column date(acc_date) Date
+    column number(nu) String(17)
+
+    one place(id_voc) Place
+    column locked(data_lock) String(1)
+    column remark(rem) String
+
+    many materials(id_register) {
+        table dba.register_details
+        column id Int primary key
+
+        one material(id_inv) Material
+
+        column averageOutput(average_dtc) Dec(19, 7)
+    }
+}
