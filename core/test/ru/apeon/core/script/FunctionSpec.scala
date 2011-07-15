@@ -3,7 +3,7 @@ package ru.apeon.core.script
 import ru.apeon.core.entity._
 import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
-import java.util.Calendar
+import java.util.{Calendar}
 
 /**
  * @author Anton Zherdev
@@ -54,6 +54,22 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
 
       run(Dot(ConstDecimal(BigDecimal(1.5)), Ref("round"))) should equal (2)
     }
+    it("between") {
+      run(ConstInt(2) ~ ref("between", 1, 3)) should equal (true)
+      run(ConstInt(1) ~ ref("between", 1, 3)) should equal (true)
+      run(ConstInt(3) ~ ref("between", 1, 3)) should equal (true)
+      run(ConstInt(0) ~ ref("between", 1, 3)) should equal (false)
+      run(ConstInt(4) ~ ref("between", 1, 3)) should equal (false)
+      run(ConstInt(2) ~ ref("between", 2, 2)) should equal (true)
+    }
+    it("in") {
+      run(ConstInt(2) ~ ref("in", 3, 2, 1)) should equal (true)
+      run(ConstInt(4) ~ ref("in", 3, 2, 1)) should equal (false)
+    }
+    it("to") {
+      run(ConstInt(1) ~ ref("to", 5)) should equal(Seq(1, 2, 3, 4, 5))
+      run(ConstInt(1) ~ ref("to", 5, 2)) should equal(Seq(1, 3, 5))
+    }
   }
 
   describe("Датные функции") {
@@ -96,6 +112,11 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
         ref("_") ~ ref("length")
       ))) should equal (Map( 1 -> Seq("A", "C"), 2 -> Seq("CC", "AA", "BB")))
     }
+    it("mapBy") {
+      run(seq("CCC", "A", "AA") ~ ref("mapBy", bf(
+        ref("_") ~ ref("length")
+      ))) should equal (Map( 1 -> "A", 2 -> "AA", 3 -> "CCC"))
+    }
     it("map") {
       run(seq("A", "BBB", "CC", "DD") ~ ref("map", bf(
         ref("_") ~ ref("length")
@@ -112,6 +133,16 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
       run(seq() ~ ref("headOption")) should equal(None)
       run(seq() ~ ref("lastOption")) should equal(None)
     }
+    it("sortBy") {
+      run(seq(2, 3, 1) ~ ref("sortBy", bf(ref("_")))) should equal(Seq(1, 2, 3))
+    }
+  }
+
+  describe("Option") {
+    it("map") {
+      run(seq() ~ ref("headOption") ~ ref("map", bf(ref("_") + 5))) should equal(None)
+      run(seq(3) ~ ref("headOption") ~ ref("map", bf(ref("_") + 5))) should equal(Some(8))
+    }
   }
 
   describe("Карты") {
@@ -124,6 +155,23 @@ class FunctionSpec extends Spec with ShouldMatchers with EntityDefine with Scrip
     }
     it("apply") {
       run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("apply", 1)) should equal ("A")
+    }
+    it("getOrElse") {
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("getOrElse", 1, bf(ConstString("No")))) should equal ("A")
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("getOrElse", 3, bf(ConstString("No")))) should equal ("No")
+    }
+    it("update") {
+      run(seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap") ~ ref("update", 3, "C")) should equal (
+        Map(1 -> "A", 2 -> "B", 3 -> "C")
+      )
+    }
+    it("getOrElseUpdate") {
+      run(
+        Val("m", seq(MapItem(1, "A"), MapItem(2, "B")) ~ ref("toMap")),
+        ref("m") ~ ref("getOrElseUpdate", 1, bf(ConstString("No"))),
+        ref("m") ~ ref("getOrElseUpdate", 3, bf(ConstString("No"))),
+        ref("m")
+      ) should equal (Map(1 -> "A", 2 -> "B", 3 -> "No"))
     }
   }
 }

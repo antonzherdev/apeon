@@ -25,7 +25,14 @@ object ScriptDataTypeDateDescription {
     Diff("diffSeconds", 1000),
     Diff("diffMinutes", 60000),
     Diff("diffHours", 360000),
-    Diff("diffDays", 86400000)
+    Diff("diffDays", 86400000),
+    between,
+    Part("day", Calendar.DATE),
+    Part("month", Calendar.MONTH),
+    Part("year", Calendar.YEAR),
+    Part("second", Calendar.SECOND),
+    Part("minute", Calendar.MINUTE),
+    Part("hour", Calendar.HOUR)
   )
 
   case class AddFunction(name : String, field : Int) extends Declaration {
@@ -38,6 +45,20 @@ object ScriptDataTypeDateDescription {
 
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeDate()
     override def parameters = Seq(DefPar("value", ScriptDataTypeInteger()))
+  }
+
+  case class Part(name : String, field : Int) extends Declaration {
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val cal = Calendar.getInstance
+      cal.setTime(env.ref.asInstanceOf[Date])
+      if(field == Calendar.MONTH) {
+        cal.get(field) + 1
+      } else {
+        cal.get(field)
+      }
+    }
+
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
   }
 
   val daysTo = new Declaration {
@@ -75,5 +96,9 @@ object ScriptDataTypeDateDescription {
 
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
     override def parameters = Seq(DefPar("end", ScriptDataTypeDate()))
+  }
+  val between = new BetweenDeclaration[Date] {
+    def dataType = ScriptDataTypeDate()
+    def compare(min: Date, max: Date) = min.compareTo(max) <= 0
   }
 }

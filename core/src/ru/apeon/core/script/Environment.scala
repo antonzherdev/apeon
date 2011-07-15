@@ -236,6 +236,7 @@ class DefaultEnvironment(val model : ObjectModel = EntityConfiguration.model) ex
 
   override def start() {
     _em = createEntityManager
+    super.start()
   }
 
   protected def createEntityManager : EntityManager = new DefaultEntityManager

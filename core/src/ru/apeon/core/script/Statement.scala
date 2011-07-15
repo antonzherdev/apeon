@@ -37,7 +37,7 @@ abstract class StatementList extends Statement {
       try {
         ret = statement.evaluate(env)
       }
-      catch tt(statement)
+      catch Script.thrCatch(statement)
     }
     ret
   }
@@ -46,14 +46,7 @@ abstract class StatementList extends Statement {
     statements.foreach(stm =>
       try {
         stm.preFillRef(env, imports)
-      } catch tt(stm))
-  }
-
-  private def tt(stm : Statement) : PartialFunction[Throwable, Any] = {
-    case e @ ScriptException(_, _, None) =>
-      throw ScriptException(e.getMessage, Some(e), Some(stm))
-    case t : Throwable =>
-      throw ScriptException(t.getMessage, Some(t), Some(stm))
+      } catch Script.thrCatch(stm))
   }
 
   def fillRef(env : Environment, imports : Imports) {
@@ -61,7 +54,7 @@ abstract class StatementList extends Statement {
       statements.foreach{stm =>
         try {
           stm.fillRef(env, imports)
-        } catch tt(stm)
+        } catch Script.thrCatch(stm)
       }
     }
   }
@@ -252,9 +245,13 @@ case class SetPlus(left : Expression, right : Expression) extends SetBase {
     env.update(ref.declaration, Plus.evaluate(env, ref.declaration.value(env), right.evaluate(env)))
 
   def evaluate(env: Environment, entity: Entity, ref: Ref) = {
-    val ret = Plus.evaluate(env, entity(ref.name), right.evaluate(env))
-    entity.update(ref.name, ret)
-    ret
+    ref.declaration match {
+      case many : ToMany => entity.append(many, right.evaluate(env).asInstanceOf[Entity])
+      case _ =>
+        val ret = Plus.evaluate(env, entity(ref.name), right.evaluate(env))
+        entity.update(ref.name, ret)
+        ret
+    }
   }
   def name = "+="
 }

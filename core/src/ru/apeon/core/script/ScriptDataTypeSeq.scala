@@ -1,5 +1,8 @@
 package ru.apeon.core.script
 
+import scala.collection._
+import mutable.{Builder}
+import java.util.Date
 
 abstract class ScriptDataTypeCollection extends ScriptDataType{
   def dataType : ScriptDataType
@@ -29,8 +32,9 @@ case class ScriptDataTypeMapItem(keyDataType : ScriptDataType, valueDataType : S
 }
 
 object ScriptDataTypeSeqDescription {
-  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption, last, lastOption, tail)
-  def map = iterable ++ Seq(mapGet, mapApply)
+  def iterable = Seq(foreach, filter, filterNot, find, isEmpty, size, groupBy, mapFunc, toMap, head, headOption,
+    last, lastOption, tail, HashCodeDeclaration, mapBy, sum, sortBy, flatMapFunc)
+  def map = iterable ++ Seq(mapGet, mapApply, mapGetOrElse, mapUpdate, mapGetOrElseUpdate)
   def seq = iterable ++ Seq(seqApply)
 
   def t(env : Environment) = env.dotType.get.asInstanceOf[ScriptDataTypeCollection]
@@ -44,14 +48,18 @@ object ScriptDataTypeSeqDescription {
     }
     def value(env : Environment, items : Iterable[Any], f : BuiltInFunction) : Any
     override def parameters = Seq(DefPar("f", ScriptDataTypeBuiltInFunction()))
+    protected def builtInDataType(env: Environment, parameters: Option[Seq[Par]]): ScriptDataType = {
+      parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env)
+    }
+
   }
 
   val foreach = new OneBuiltInDeclaration{
     def name = "foreach"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeUnit()
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) {
-      items.foreach {
-        item => f.run(env, item)
+      for(item <- items){
+        f.run(env, item)
       }
     }
   }
@@ -80,6 +88,22 @@ object ScriptDataTypeSeqDescription {
     }
   }
 
+  val sum = new OneBuiltInDeclaration{
+    def name = "sum"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = builtInDataType(env, parameters)
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      f.statement.dataType(env) match {
+        case ScriptDataTypeInteger() => items.foldLeft(0) {
+          case (ss, v) => ss + f.run(env, v).asInstanceOf[Int]
+        }
+        case ScriptDataTypeDecimal() => items.foldLeft(BigDecimal(0)) {
+          case (ss, v) => f.run(env, v).asInstanceOf[BigDecimal] + ss
+        }
+        case ScriptDataTypeString() => items.map{v => f.run(env, v)}.mkString
+      }
+    }
+  }
+
   val isEmpty = new Declaration {
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[Traversable[_]].isEmpty
@@ -98,16 +122,46 @@ object ScriptDataTypeSeqDescription {
     def name = "groupBy"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       ScriptDataTypeMap(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env), t(env))
-    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
-      items.groupBy(item => f.run(env, item))
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      val m = mutable.Map.empty[Any, Builder[Any, Any]]
+      for (elem <- items) {
+        val key = f.run(env, elem)
+        val bldr = m.getOrElseUpdate(key, Seq.newBuilder[Any])
+        bldr += elem
+      }
+      val b = mutable.Map.empty[Any, Any]
+      for ((k, v) <- m)
+        b += ((k, v.result()))
+      b
+    }
+  }
+
+  val mapBy = new OneBuiltInDeclaration {
+    def name = "mapBy"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      ScriptDataTypeMap(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env), tp(env))
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      val m = mutable.Map.empty[Any, Any]
+      for (elem <- items) {
+        val key = f.run(env, elem)
+        m.update(key, elem)
+      }
+      m
+    }
   }
 
   val mapFunc = new OneBuiltInDeclaration {
     def name = "map"
-    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
-      ScriptDataTypeSeq(parameters.get.head.expression.evaluate(env).asInstanceOf[BuiltInFunction].statement.dataType(env))
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeSeq(builtInDataType(env, parameters))
     def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
       items.map(item => f.run(env, item))
+  }
+
+  val flatMapFunc = new OneBuiltInDeclaration {
+    def name = "flatMap"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = builtInDataType(env, parameters)
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) =
+      items.flatMap(item => f.run(env, item).asInstanceOf[Iterable[Any]])
   }
 
   val toMap = new Declaration {
@@ -116,8 +170,13 @@ object ScriptDataTypeSeqDescription {
       case Some(ScriptDataTypeSeq(item : ScriptDataTypeMapItem)) => ScriptDataTypeMap(item.keyDataType, item.valueDataType)
       case s => throw ScriptException("Unsupported collection data type %s".format(s))
     }
-    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Traversable[(_, _)]].toMap
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val r = mutable.Map.empty[Any, Any]
+      for(i <- env.ref.asInstanceOf[Traversable[(_, _)]]) {
+        r += i
+      }
+      r
+    }
   }
 
   val mapGet = new Declaration {
@@ -125,18 +184,62 @@ object ScriptDataTypeSeqDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       ScriptDataTypeOption(env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Map[Any, Any]].get(parameters.get.head.value)
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].get(parameters.get.head.value)
     override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
       case Some(Seq(Par(_, _))) => true
       case _ => false
     }
   }
+  val mapGetOrElse = new Declaration {
+    def name = "getOrElse"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].getOrElse(parameters.get.head.value, {
+        parameters.get.apply(1).value.asInstanceOf[BuiltInFunction].run(env)
+      })
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _), Par(bf : BuiltInFunction, _))) => true
+      case _ => false
+    }
+    override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) = Seq()
+  }
+
+  val mapUpdate = new Declaration {
+    def name = "update"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      val m = env.ref.asInstanceOf[mutable.Map[Any, Any]]
+      m.update(parameters.get.head.value, parameters.get.apply(1).value)
+      m
+    }
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _), Par(_, _))) => true
+      case _ => false
+    }
+  }
+  val mapGetOrElseUpdate = new Declaration {
+    def name = "getOrElseUpdate"
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) =
+      env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType
+    def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = {
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].getOrElseUpdate(parameters.get.head.value,
+        parameters.get.apply(1).value.asInstanceOf[BuiltInFunction].run(env))
+    }
+    override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
+      case Some(Seq(Par(_, _), Par(bf : BuiltInFunction, _))) => true
+      case _ => false
+    }
+    override def builtInParameters(env: Environment, parameters: Option[Seq[Par]], parameterNumber: Int, parameter: Par) = Seq()
+  }
+
   val mapApply = new Declaration {
     def name = "apply"
     def dataType(env: Environment, parameters: Option[Seq[Par]]) =
       env.dotType.get.asInstanceOf[ScriptDataTypeMap].valueDataType
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
-      env.ref.asInstanceOf[Map[Any, Any]].apply(parameters.get.head.value)
+      env.ref.asInstanceOf[mutable.Map[Any, Any]].apply(parameters.get.head.value)
     override def correspond(env: Environment, parameters: Option[Seq[Par]]) = parameters match {
       case Some(Seq(Par(_, _))) => true
       case _ => false
@@ -179,5 +282,18 @@ object ScriptDataTypeSeqDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[Traversable[Any]].tail
+  }
+
+  val sortBy = new OneBuiltInDeclaration{
+    def dataType(env: Environment, parameters: Option[Seq[Par]]) = t(env)
+    def name = "sortBy"
+    def value(env: Environment, items: Iterable[Any], f: BuiltInFunction) = {
+      f.statement.dataType(env) match {
+        case d : ScriptDataTypeInteger => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[Int]}
+        case d : ScriptDataTypeDecimal => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[BigDecimal]}
+        case d : ScriptDataTypeDate => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[Date]}
+        case d : ScriptDataTypeString => items.toSeq.sortBy{i => f.run(env, i).asInstanceOf[String]}
+      }
+    }
   }
 }

@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="apeon-comtec-jdbc">
-    <output-path>$PROJECT_DIR$/out-0.2/artifacts/</output-path>
+    <output-path>$PROJECT_DIR$/out-0.3/artifacts/</output-path>
     <root id="archive" name="comtec-jdbc.jar">
       <element id="module-output" name="comtec-jdbc" />
       <element id="extracted-dir" path="$PROJECT_DIR$/comtec-jdbc/lib/asa/jTDS3d.jar" path-in-jar="/" />

@@ -14,6 +14,7 @@ object SyncObject extends ObjectBase {
   val NoAutoUpdateToMany = 8
   val ToManyAppend = 16
   val UpdateOnly = 32
+  val HashIndexOptimization = 64
 
   def module = CoreModule
   def pack = EmptyPackage
@@ -27,6 +28,7 @@ object SyncObject extends ObjectBase {
     ConstDeclaration("NoAutoToMany", NoAutoUpdateToMany),
     ConstDeclaration("ToManyAppend", ToManyAppend),
     ConstDeclaration("UpdateOnly", UpdateOnly),
+    ConstDeclaration("HashIndexOptimization", HashIndexOptimization),
     SyncDate
   )
 

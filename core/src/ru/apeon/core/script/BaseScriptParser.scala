@@ -8,7 +8,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       ">=", "<=", "=>", "==", "!=", "=", "(", ")", "{", "}", "``", "`", ".", ",", "<", ">", ":",
       "+=", "-=", "*=", "/=", "+", "-", "*", "/", "[", "]", "!", "->")
     lexical.reserved += (
-            "def", "as", "to", "where", "by", "entity", "column", "primary", "default",
+            "def", "as", "where", "by", "entity", "column", "primary", "default",
             "table", "discriminator", "one", "many", "query", "package", "datasource", "extends", "var", "val", "extend",
             "if", "else", "null", "import", "object", "join", "true", "false", "cached")
   }
@@ -24,7 +24,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     | objectDef
     | packDef
     | datasource
-    | "{" ~> (statement*) <~ "}" ^^{case statements => Parentheses(statements)}
+    | "{" ~> (statement*) <~ a("}", "in statement") ^^{case statements => Parentheses(statements)}
     )
 
   def valStatement : Parser[Val] =
@@ -63,7 +63,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     elem("Eql constant", _.isInstanceOf[parser.lexical.EqlConstLit]) ^^ (_.chars)
 
 
-  def builtInFunction : Parser[BuiltInFunction] = "{" ~> opt(repsep(ident, ",") <~ "=>") ~! (statement*) <~ "}" ^^ {
+  def builtInFunction : Parser[BuiltInFunction] = "{" ~> opt(repsep(ident, ",") <~ "=>") ~ (statement*) <~ a("}", "in builtin function") ^^ {
     case aliases ~ statements => BuiltInFunction(Parentheses(statements), aliases.getOrElse{Seq()})
   }
 
@@ -91,7 +91,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     }}) ~! (("<" ~> ident <~ ">") ^^ {case ds => {
       dataSourceName = ds
       ds
-    }}) ~ (extendz?) ~ ("{" ~> (entityStatement*) <~ "}") ^^ {
+    }}) ~ (extendz?) ~ ("{" ~> (entityStatement*) <~ a("}", "in entity")) ^^ {
       case name ~ ds ~ ext ~ rows => {
         description(rows, ext)
       }
@@ -150,7 +150,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
   def manyRef : Parser[ToManyRef] =
     ("many" ~> ident) ~ repsep(ident, ".")  ^^ {
       case name ~ column =>{
-        if(column.size < 2) throw ParserException("Not set column or entity for to many %s".format(name))
+        if(column.size < 2) throw ParserException("Not set column or entity for to many %s".format(name), null)
         ToManyRef(parser.pack.get, name, column.take(column.size - 1).mkString(".") , column.last)
       }
 
@@ -164,7 +164,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     }})) ~ (dbName?) ~ (extendz?) ~ ("{" ^^ {case "{" => {
       entityName.push(builtInName)
       "{"
-    }}) ~! ((entityStatement*) <~ "}")  ^^ {
+    }}) ~! ((entityStatement*) <~ a("}", "in builtin many"))  ^^ {
       case name ~ dbName ~ extendz ~ "{" ~ statements => {
         ToManyBuiltIn(parser.pack.get, name, description(
           statements.find{
@@ -219,7 +219,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     case table ~ column => JoinedTable(table, column)
   }
 
-  def query : Parser[Query] = "query" ~> ident ~! ("{" ~> (statement*) <~ "}") ^^ {
+  def query : Parser[Query] = "query" ~> ident ~! ("{" ~> (statement*) <~ a("}", "for query")) ^^ {
     case name ~ statements => {
       val span = statements.span(_.isInstanceOf[Def])
       if(span._1.find{
@@ -239,7 +239,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     }
   }
 
-  def objectDef : Parser[Object] = "object" ~> ident ~! ("{" ~> (objectStatement*) <~ "}") ^^ {
+  def objectDef : Parser[Object] = "object" ~> ident ~! ("{" ~> (objectStatement*) <~ a("}", "in object")) ^^ {
     case name ~ statements => Object(parser.module, parser.pack.get, name, statements)
   }
 
@@ -252,7 +252,10 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
 
   def datasource = "datasource" ~> ident ^^ {case name => DataSource(parser.pack.get, name)}
 
-  def bracket = "(" ~> expression <~ ")"
+  def bracket = "(" ~> rep1sep(expression, ",") <~ ")" ^^ {
+    case Seq(e) => e
+    case s => Tuple(s)
+  }
 
   def nullConst = "null" ^^^ {ConstNull()}
   def string = stringLit ^^ {case s => ConstString(s)}
@@ -265,8 +268,13 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
       case s ~ None => ConstInt(-s.toInt)
       case s ~ Some(d) => ConstDecimal(BigDecimal(-(s + "." + d).toDouble))
     })
+  def minus = "-" ~> expression ^^ {
+    case ConstInt(i) => ConstInt(-i)
+    case ConstDecimal(i) => ConstDecimal(-i)
+    case e => UMinus(e)
+  }
   def seq = "[" ~> repsep(expression, ",") <~ "]" ^^ {s => ConstSeq(s)}
-  def extendEntity = "extend" ~> "entity" ~> entityRef ~ ("{" ~> (extendEntityStatement*) <~ "}") ^^ {
+  def extendEntity = "extend" ~> "entity" ~> entityRef ~ ("{" ~> (extendEntityStatement*) <~ a("}", "in extend entity")) ^^ {
     case name ~ statements => ExtendEntity(parser.module, name, statements)
   }
 
@@ -280,7 +288,7 @@ class BaseScriptParser(val parser : ScriptParserParser) extends ScriptParserComp
     | varStatement
     )
 
-  def term : Parser[Expression] = string | numeric | eqlConst | nullConst |
+  def term : Parser[Expression] = string | numeric | minus | eqlConst | nullConst |
           ifExpr | builtInFunction | bracket | seq | not |
           "true" ^^^ {ConstBoolean(true)} | "false" ^^^ {ConstBoolean(false)} | ref
 

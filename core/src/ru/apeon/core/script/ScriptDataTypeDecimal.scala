@@ -10,7 +10,7 @@ case class ScriptDataTypeDecimal() extends ScriptDataTypeSimple("dec") {
 }
 
 object ScriptDataTypeDecimalDescription {
-  def declarations = Seq(roundPar, round)
+  def declarations = Seq(roundPar, round, HashCodeDeclaration)
 
   def roundPar = new Declaration {
     def name = "round"
@@ -24,5 +24,10 @@ object ScriptDataTypeDecimalDescription {
     def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
     def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
       env.ref.asInstanceOf[BigDecimal].round(new MathContext(1)).toInt
+  }
+
+  val between = new BetweenDeclaration[BigDecimal] {
+    def dataType = ScriptDataTypeDecimal()
+    def compare(min: BigDecimal, max: BigDecimal) = min <= max
   }
 }

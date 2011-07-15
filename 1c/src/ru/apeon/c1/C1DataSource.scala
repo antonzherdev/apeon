@@ -5,8 +5,12 @@ import ru.apeon.core.entity._
 import akka.util.Logging
 import com.ipc.oce.objects._
 import com.ipc.oce.{OCVariant}
+import org.jinterop.dcom.common.JISystem
+import java.util.logging.Level
 
 class C1DataSource(val dataSource : DataSource) extends DataSourceImpl with Logging{
+  JISystem.getLogger.setLevel(Level.WARNING);
+
   def persistentStore(xml: NodeSeq) = new C1PersistentStore(dataSource.name, xml.\("@url").text,
     xml.\("@userName").text, xml.\("@password").text)
 

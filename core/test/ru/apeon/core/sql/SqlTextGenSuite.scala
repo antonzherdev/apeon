@@ -200,4 +200,11 @@ class SqlTextGenSuite extends FunSuite with ShouldMatchers {
       "cast('4' as int)"
     )
   }
+
+  test("between") {
+    Between(ConstNumeric(4), ConstNumeric(3), ConstNumeric(5)).toString should be("4 between 3 and 5")
+  }
+   test("In") {
+    In(ConstNumeric(4), Seq(ConstNumeric(3), ConstNumeric(4), ConstNumeric(5))).toString should be("4 in (3, 4, 5)")
+  }
 }

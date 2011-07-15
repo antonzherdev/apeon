@@ -2,6 +2,7 @@ package ru.apeon.core.script
 
 import collection.mutable
 import mutable.Buffer
+import ru.apeon.core.{sql, eql}
 
 abstract class ScriptDataType {
   lazy val declarations : Seq[Declaration] = ScriptDataTypeDescription.declarations(this.getClass)
@@ -48,10 +49,14 @@ object ScriptDataTypeDescription {
     addDeclaration(classOf[ScriptDataTypeEqlStatement], ScriptDataTypeEqlStatementDescription.declarations : _*)
 
     addDeclaration(classOf[ScriptDataTypeInputStream], ScriptDataTypeInputStreamDescription.declarations : _*)
+    addDeclaration(classOf[ScriptDataTypeInteger], ScriptDataTypeIntegerDeclaration.declarations : _*)
 
-    addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration)
-    addDeclaration(classOf[ScriptDataTypeAny], ToStringDeclaration)
+    addDeclaration(classOf[ScriptDataTypeAny], ToStringDeclaration, InDeclaration)
     addDeclaration(classOf[ScriptDataTypeBoolean], ToStringDeclaration)
+    addDeclaration(classOf[ScriptDataTypeDate], ToStringDeclaration, InDeclaration)
+    addDeclaration(classOf[ScriptDataTypeDecimal], ToStringDeclaration, InDeclaration)
+    addDeclaration(classOf[ScriptDataTypeInteger], ToStringDeclaration, InDeclaration)
+    addDeclaration(classOf[ScriptDataTypeString], ToStringDeclaration, InDeclaration)
   }
   load()
 }
@@ -71,12 +76,6 @@ case class ScriptDataTypePackage(pack : Package) extends ScriptDataType {
 
 abstract class ScriptDataTypeSimple(val name : String) extends ScriptDataType
 case class ScriptDataTypeBoolean() extends ScriptDataTypeSimple("boolean")
-case class ScriptDataTypeInteger() extends ScriptDataTypeSimple("int") {
-  override def valueOf = {
-    case v : String => v.toInt
-    case i : Int => i
-  }
-}
 
 case class ScriptDataTypeBuiltInFunction() extends ScriptDataType
 
@@ -84,4 +83,33 @@ object ToStringDeclaration extends Declaration {
   def name = "toString"
   def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeString()
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref.toString
+}
+
+object HashCodeDeclaration extends Declaration {
+  def name = "hashCode"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeInteger()
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.ref.hashCode()
+}
+
+abstract class BetweenDeclaration[T] extends Declaration with eql.SqlGeneration {
+  def name = "between"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+    compare(parameters.get.apply(0).value.asInstanceOf[T], env.ref.asInstanceOf[T]) &&
+    compare(env.ref.asInstanceOf[T], parameters.get.apply(1).value.asInstanceOf[T])
+  override def parameters = Seq(DefPar("min", dataType), DefPar("max", dataType))
+  def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) = sql.Between(ref, parameters(0), parameters(1))
+  def dataType : ScriptDataType
+  def compare(min : T, max : T) : Boolean
+}
+
+object InDeclaration extends Declaration with eql.SqlGeneration {
+  def name = "in"
+  def dataType(env: Environment, parameters: Option[Seq[Par]]) = ScriptDataTypeBoolean()
+  def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) =
+    parameters.get.find(_.value == env.ref).isDefined
+  override def correspond(env: Environment, parameters: Option[Seq[Par]]) =
+    parameters.isDefined && !parameters.get.isEmpty
+  def generateSql(ref: sql.Expression, parameters: Seq[sql.Expression]) =
+    sql.In(ref, parameters)
 }

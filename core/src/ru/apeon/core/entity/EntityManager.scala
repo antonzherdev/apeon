@@ -4,7 +4,6 @@ import ru.apeon.core.eql._
 import collection.mutable.Buffer
 import akka.util.Logging
 import ru.apeon.core.script.{ObjectModel}
-import org.aspectj.weaver.ast.Var
 
 trait EntityManager {
   def model : ObjectModel
@@ -110,6 +109,8 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   }
 
   def select(select : Select) = {
+//    flush()
+
     val from = select.from.asInstanceOf[FromEntity].entity
     if(!select.columns.isEmpty) throw new RuntimeException("Columns is not empty")
 
@@ -123,6 +124,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   }
 
   def beginTransaction() {
+    log.debug("beginTransaction")
     transactionCounter += 1
   }
 
@@ -133,9 +135,22 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
   }
 
   def commit() {
+    checkTransaction()
+    log.debug("Commit %d".format(transactionCounter))
+    flush()
+
+    transactionCounter -= 1
+    if(transactionCounter == 0) {
+      touchedStories.foreach(_.commit())
+      touchedStories.clear()
+    }
+  }
+
+  def flush() {
+    log.debug("Flush")
     try{
-      if(log.logger.isDebugEnabled) {
-        /*val sb = new StringBuilder
+      /*if(log.logger.isDebugEnabled) {
+        val sb = new StringBuilder
         sb.append("Commit")
         if(!insertedEntities.isEmpty) {
           sb.append("\nInserted:\n")
@@ -149,13 +164,12 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
           sb.append("\nDeleted:\n")
           sb.append(deletedEntities.mkString("\n"))
         }
-        log.debug(sb.toString())*/
-        log.debug("Commit")
-      }
+        log.debug(sb.toString())
+      }*/
 
       var i = 0
       var size = insertedEntities.size
-      insertedEntities.foreach{e =>
+      for(e <- insertedEntities) {
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
@@ -168,7 +182,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
 
       i = 0
       size = touchedEntities.size
-      touchedEntities.foreach{kv =>
+      for(kv <- touchedEntities) {
         val e = kv._1
         val columns = kv._2
         if (!touchedStories.contains(e.id.store)) {
@@ -183,7 +197,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
 
       i = 0
       size = deletedEntities.size
-      deletedEntities.foreach{e =>
+      for(e <- deletedEntities) {
         if(!touchedStories.contains(e.id.store)) {
           e.id.store.beginTransaction()
           touchedStories.add(e.id.store)
@@ -193,11 +207,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
         log.debug("%d of %d".format(i, size))
       }
 
-      transactionCounter -= 1
-      if(transactionCounter == 0) {
-        touchedStories.foreach(_.commit())
-        touchedStories.clear()
-      }
+
     } catch {
       case e : Throwable => {
         touchedStories.foreach{store =>
@@ -231,7 +241,7 @@ class DefaultEntityManager(val model : ObjectModel = EntityConfiguration.model) 
       val value : Any = field match {
         case s : FieldWithSource => s.default match {
           case Some(DefaultInt(i)) => i
-          case Some(DefaultString(s)) => s
+          case Some(DefaultString(ss)) => ss
           case None => null
         }
         case _=> Set()

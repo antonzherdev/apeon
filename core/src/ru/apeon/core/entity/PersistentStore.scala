@@ -115,6 +115,7 @@ abstract class SqlPersistentStoreBase
     _eql.rollback()
   }
   def commit() {
+    log.debug("commit")
     _eql.commit()
   }
 

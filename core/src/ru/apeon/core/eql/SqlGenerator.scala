@@ -31,7 +31,8 @@ class SqlGenerator {
 
   def default(q : Insert, table : Table) =
     q.from.entity.fieldsWithSource.filter{col =>
-      q.columns.find(_.column == col).isEmpty &&
+      (!col.isNullFor(q.dataSource)) &&
+              q.columns.find(_.column == col).isEmpty &&
               col.default.isDefined &&
               col.tableName(q.dataSource).getOrElse(q.from.entity.table.name) == table.name
     }.map { col =>
@@ -70,16 +71,16 @@ class SqlGenerator {
       Seq(genMainInsert(q))
     case _ => {
       genMainInsert(q) +:
-      q.from.entity.joinedTables.map{join =>
-        var columns =
-          sql.InsertColumn(join.column, sql.Parameter("l_identity")) +: q.columns.filterNot(_.column.isNullFor(q.dataSource)).filter{
-            _.column.tableName(q.dataSource).getOrElse(q.from.entity.table.name) ==join.table.name
-          }.map{column =>
-            sql.InsertColumn(column.column.columnName(q.dataSource), genExpression(column.expression, new EqlSqlFrom(q.dataSource)))
-          }
-        columns = columns ++ default(q, join.table)
-        sql.Insert(sqlTable(join.table), columns)
-      }
+              q.from.entity.joinedTables.map{join =>
+                var columns =
+                  sql.InsertColumn(join.column, sql.Parameter("l_identity")) +: q.columns.filterNot(_.column.isNullFor(q.dataSource)).filter{
+                    _.column.tableName(q.dataSource).getOrElse(q.from.entity.table.name) ==join.table.name
+                  }.map{column =>
+                    sql.InsertColumn(column.column.columnName(q.dataSource), genExpression(column.expression, new EqlSqlFrom(q.dataSource)))
+                  }
+                columns = columns ++ default(q, join.table)
+                sql.Insert(sqlTable(join.table), columns)
+              }
 
     }
   }

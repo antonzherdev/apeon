@@ -146,12 +146,12 @@ case class Ref(name : String, parameters : Option[Seq[Par]] = None, dataSource :
 
 case class Par(expression : Expression, name : Option[String] = None) {
   override def toString = name match {
-    case Some(name) => "%s = %s".format(name, expression)
+    case Some(nm) => "%s = %s".format(nm, expression)
     case None => expression.toString
   }
 
   def dataTypeString(env : Environment) : String = name match {
-    case Some(name) => "%s = %s".format(name, expression.dataType(env))
+    case Some(nm) => "%s = %s".format(nm, expression.dataType(env))
     case None => expression.dataType(env).toString
   }
 }
@@ -217,13 +217,6 @@ case class Def(name : String, statement : Statement, override val parameters : S
     env.addDeclaration(this)
   }
 
-  private def tt : PartialFunction[Throwable, Any] = {
-    case e @ ScriptException(_, _, None) =>
-      throw ScriptException(e.getMessage, Some(e), Some(statement))
-    case t : Throwable =>
-      throw ScriptException(t.getMessage, Some(t), Some(statement))
-  }
-
   private def eval(env: Environment, parameters: Option[scala.Seq[ParVal]], dataSource: Option[Expression]): Any =
     try {
       env.atomic{
@@ -256,7 +249,7 @@ case class Def(name : String, statement : Statement, override val parameters : S
         }
       }
     }
-    catch tt
+    catch Script.thrCatch(this)
 
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource : Option[Expression]) =
     if(cached){
@@ -277,7 +270,7 @@ case class Def(name : String, statement : Statement, override val parameters : S
       }
       if(resultType.isDefined) resultType.get.fillRef(env, imports)
     }
-    catch tt
+    catch Script.thrCatch(this)
   }
 
   override def preFillRef(env : Environment, imports: Imports) {
@@ -288,7 +281,7 @@ case class Def(name : String, statement : Statement, override val parameters : S
         parameter.dataType.preFillRef(env, imports)
       }
     }
-    catch tt
+    catch Script.thrCatch(this)
   }
 
   override def declarationString = name + "(" + parameters.mkString(", ") + ")" + resultType.map(" : " + _).getOrElse("")
@@ -340,7 +333,9 @@ abstract class VariableDeclaration extends DeclarationStatement {
  * @param init выражение для значения
  * @param dataType тип данных, если указан
  */
-case class Val(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration
+case class Val(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration {
+  override def toString = "val %s%s = %s".format(name, dataType.map{_.toString}.getOrElse{""}, init)
+}
 
 /**
  * Объявление изменяемой переменной
@@ -348,7 +343,9 @@ case class Val(name : String, init : Expression, dataType : Option[ScriptDataTyp
  * @param init инициализирующее значение
  * @param dataType тип данных, если указан
  */
-case class Var(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration
+case class Var(name : String, init : Expression, dataType : Option[ScriptDataType] = None) extends VariableDeclaration {
+  override def toString = "var %s%s = %s".format(name, dataType.map{_.toString}.getOrElse{""}, init)
+}
 
 case class This(thisDataType : ScriptDataType) extends Declaration {
   def value(env: Environment, parameters: Option[Seq[ParVal]], dataSource: Option[Expression]) = env.thisRef.get

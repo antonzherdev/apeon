@@ -1,5 +1,7 @@
 package ru.apeon.core.script
 
+import java.util.Date
+
 trait Expression extends Statement {
   def dataType(env : Environment) : ScriptDataType
 
@@ -56,6 +58,10 @@ object Plus {
       case _ => throw ScriptException("Unsupported datatype for plus with Decimal")
     }
     case s : String => s + right.toString
+    case m : collection.mutable.Map[Any, Any] => {
+      m += right.asInstanceOf[(Any, Any)]
+      m
+    }
     case l : Traversable[Any] => right match {
       case r : Traversable[Any] => l ++ r
       case r : Any => l ++ Seq(r)
@@ -188,33 +194,39 @@ abstract class CompareOperator extends BooleanBinaryExpression {
     case (i : BigDecimal, j: Int) => evaluate(i, BigDecimal(j))
     case (i : Int, j: BigDecimal) => evaluate(BigDecimal(i), j)
     case (i : BigDecimal, j: BigDecimal) => evaluate(i, j)
+    case (i : Date, j : Date) => evaluate(i, j)
   }
   def evaluate(left : Int, right : Int) : Boolean
   def evaluate(left : BigDecimal, right : BigDecimal) : Boolean
+  def evaluate(left : Date, right : Date) : Boolean
 }
 
 case class More(left : Expression, right : Expression) extends CompareOperator {
   val name = ">"
   def evaluate(left: Int, right: Int) = left > right
   def evaluate(left: BigDecimal, right: BigDecimal) = left > right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) > 0
 }
 
 case class Less(left : Expression, right : Expression) extends CompareOperator {
   val name = "<"
   def evaluate(left: Int, right: Int) = left < right
   def evaluate(left: BigDecimal, right: BigDecimal) = left < right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) < 0
 }
 
 case class MoreOrEqual(left : Expression, right : Expression) extends CompareOperator {
   val name = ">="
   def evaluate(left: Int, right: Int) = left >= right
   def evaluate(left: BigDecimal, right: BigDecimal) = left >= right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) >= 0
 }
 
 case class LessOrEqual(left : Expression, right : Expression) extends CompareOperator {
   val name = "<="
   def evaluate(left: Int, right: Int) = left <= right
   def evaluate(left: BigDecimal, right: BigDecimal) = left <= right
+  def evaluate(left: Date, right: Date) = left.compareTo(right) <= 0
 }
 
 case class And(left : Expression, right : Expression) extends BooleanBinaryExpression {
@@ -258,4 +270,20 @@ case class MapItem(key : Expression, value : Expression) extends Expression {
   }
   def evaluate(env: Environment) = (key.evaluate(env), value.evaluate(env))
   def dataType(env: Environment) = ScriptDataTypeMapItem(key.dataType(env), value.dataType(env))
+}
+
+case class UMinus(exp : Expression) extends Expression {
+  def preFillRef(env: Environment, imports: Imports) {
+    exp.preFillRef(env, imports)
+  }
+  def fillRef(env: Environment, imports: Imports) {
+    exp.fillRef(env, imports)
+  }
+  def evaluate(env: Environment) = {
+    exp.evaluate(env) match {
+      case i : Int => -i
+      case i : BigDecimal => -i
+    }
+  }
+  def dataType(env: Environment) = exp.dataType(env)
 }
